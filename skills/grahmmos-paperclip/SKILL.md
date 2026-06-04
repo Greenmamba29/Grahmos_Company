@@ -103,6 +103,9 @@ JSON document body manually.
 Use `./scripts/paperclip-api.sh issue-plan-latest-revision-current` when you only
 need the latest `plan` revision id for inspection or for a custom confirmation
 flow.
+Use `./scripts/paperclip-api.sh issue-plan-restore-revision-current REVISION_ID`
+to roll back the `plan` document to a prior revision before retrying the
+approval flow.
 Use `./scripts/paperclip-api.sh issue-plan-from-markdown-current ISSUE-ID PLAN.md ...`
 when you want to both save the markdown plan and create the matching
 `request_confirmation` interaction in one step.
@@ -152,6 +155,8 @@ Example authenticated flows:
   "Implementation plan" "Initial plan draft"
 
 ./scripts/paperclip-api.sh issue-plan-latest-revision-current
+
+./scripts/paperclip-api.sh issue-plan-restore-revision-current REVISION_ID
 
 ./scripts/paperclip-api.sh issue-plan-from-markdown-current ISSUE-123 PLAN.md \
   "Implementation plan" "Initial plan draft"

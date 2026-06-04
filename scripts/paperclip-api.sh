@@ -39,8 +39,12 @@ Usage:
   ./scripts/paperclip-api.sh issue-document-revisions-current KEY
   ./scripts/paperclip-api.sh issue-document-latest-revision ISSUE_ID KEY
   ./scripts/paperclip-api.sh issue-document-latest-revision-current KEY
+  ./scripts/paperclip-api.sh issue-document-restore-revision ISSUE_ID KEY REVISION_ID
+  ./scripts/paperclip-api.sh issue-document-restore-revision-current KEY REVISION_ID
   ./scripts/paperclip-api.sh issue-plan-latest-revision ISSUE_ID
   ./scripts/paperclip-api.sh issue-plan-latest-revision-current
+  ./scripts/paperclip-api.sh issue-plan-restore-revision ISSUE_ID REVISION_ID
+  ./scripts/paperclip-api.sh issue-plan-restore-revision-current REVISION_ID
   ./scripts/paperclip-api.sh issue-plan-confirmation ISSUE_ID [ISSUE_REF]
   ./scripts/paperclip-api.sh issue-plan-confirmation-current [ISSUE_REF]
   ./scripts/paperclip-api.sh issue-plan-from-markdown ISSUE_ID ISSUE_REF MARKDOWN_FILE|- [TITLE] [CHANGE_SUMMARY]
@@ -88,6 +92,7 @@ Examples:
     ./scripts/paperclip-api.sh issue-document-put-current plan -
   ./scripts/paperclip-api.sh issue-document-put-markdown-current plan plan.md "Implementation plan" "Initial plan draft"
   ./scripts/paperclip-api.sh issue-plan-latest-revision-current
+  ./scripts/paperclip-api.sh issue-plan-restore-revision-current 123e4567-e89b-12d3-a456-426614174000
   ./scripts/paperclip-api.sh issue-plan-confirmation-current ISSUE-123
   ./scripts/paperclip-api.sh issue-plan-from-markdown-current ISSUE-123 plan.md "Implementation plan" "Initial plan draft"
   printf '{"kind":"ask_user_questions","title":"Need board input"}\n' | \
@@ -117,6 +122,7 @@ Notes:
   - `build-markdown-document` wraps plain markdown into the JSON shape expected by issue document updates.
   - `build-plan-confirmation` prints a request_confirmation payload targeting the `plan` document for a specific revision id.
   - `issue-document-latest-revision*` prints the latest revision id for a document key.
+  - `issue-document-restore-revision*` restores a prior document revision.
   - `issue-plan-confirmation*` resolves the latest `plan` document revision and posts the matching request_confirmation interaction.
   - `issue-plan-from-markdown*` performs the full markdown plan update + confirmation flow in one command.
   - `session` checks whether the current shell has a board-authenticated session.
@@ -1080,6 +1086,29 @@ case "$cmd" in
     issue_id="$(resolve_current_issue_id)"
     resolve_latest_document_revision_id "$issue_id" "$key"
     ;;
+  issue-document-restore-revision)
+    require_auth
+    issue_id="${2:-}"
+    key="${3:-}"
+    revision_id="${4:-}"
+    if [[ -z "$issue_id" || -z "$key" || -z "$revision_id" ]]; then
+      echo "error: ISSUE_ID, KEY, and REVISION_ID are required" >&2
+      exit 2
+    fi
+    encoded_key="$(url_encode "$key")"
+    request_issue_path POST "$issue_id" "/documents/$encoded_key/revisions/$revision_id/restore"
+    ;;
+  issue-document-restore-revision-current)
+    require_auth
+    key="${2:-}"
+    revision_id="${3:-}"
+    if [[ -z "$key" || -z "$revision_id" ]]; then
+      echo "error: KEY and REVISION_ID are required" >&2
+      exit 2
+    fi
+    encoded_key="$(url_encode "$key")"
+    request_current_issue_path POST "/documents/$encoded_key/revisions/$revision_id/restore"
+    ;;
   issue-plan-latest-revision)
     issue_id="${2:-}"
     if [[ -z "$issue_id" ]]; then
@@ -1091,6 +1120,27 @@ case "$cmd" in
   issue-plan-latest-revision-current)
     issue_id="$(resolve_current_issue_id)"
     resolve_latest_document_revision_id "$issue_id" "plan"
+    ;;
+  issue-plan-restore-revision)
+    require_auth
+    issue_id="${2:-}"
+    revision_id="${3:-}"
+    if [[ -z "$issue_id" || -z "$revision_id" ]]; then
+      echo "error: ISSUE_ID and REVISION_ID are required" >&2
+      exit 2
+    fi
+    encoded_key="$(url_encode "plan")"
+    request_issue_path POST "$issue_id" "/documents/$encoded_key/revisions/$revision_id/restore"
+    ;;
+  issue-plan-restore-revision-current)
+    require_auth
+    revision_id="${2:-}"
+    if [[ -z "$revision_id" ]]; then
+      echo "error: REVISION_ID is required" >&2
+      exit 2
+    fi
+    encoded_key="$(url_encode "plan")"
+    request_current_issue_path POST "/documents/$encoded_key/revisions/$revision_id/restore"
     ;;
   issue-plan-confirmation)
     require_auth
