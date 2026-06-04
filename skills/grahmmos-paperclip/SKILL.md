@@ -104,6 +104,9 @@ suite, including shell syntax checks and both smoke tests.
 See `./scripts/paperclip-payload-examples.md` for ready-to-send payloads covering
 resume comments, current-issue updates, blocked disposition, and the supported
 interaction kinds.
+For the most common execution-contract actions, prefer the built-in shortcuts
+`issue-resume-current`, `issue-done-current`, `issue-in-review-current`, and
+`issue-blocked-current`.
 Run `./scripts/test-paperclip-api.sh` to smoke-test the helper against a local
 mock Paperclip API before changing request resolution or payload behavior.
 Run `./scripts/test-paperclip-runtime-check.sh` to smoke-test the runtime

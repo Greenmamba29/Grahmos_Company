@@ -291,6 +291,14 @@ assert_contains "$(last_request_field 'record["body"]')" "\"resume\":true" "issu
 
 write_state "success"
 clear_requests
+resume_response="$(run_api_with_key issue-resume-current "Resuming after the auth fix.")"
+assert_contains "$resume_response" "\"ok\": true" "issue-resume-current should succeed against the mock API"
+assert_eq "/api/issues/run-issue-id/comments" "$(last_request_field 'record["path"]')" "issue-resume-current should target the comments endpoint"
+assert_contains "$(last_request_field 'record["body"]')" "\"resume\": true" "issue-resume-current should generate a resume payload"
+assert_contains "$(last_request_field 'record["body"]')" "Resuming after the auth fix." "issue-resume-current should include the provided body"
+
+write_state "success"
+clear_requests
 interaction_response="$(printf '{"kind":"ask_user_questions","questions":[{"id":"q1","prompt":"Need input"}]}\n' | run_api_with_key issue-interaction-current -)"
 assert_contains "$interaction_response" "\"ok\": true" "issue-interaction-current should succeed against the mock API"
 assert_eq "/api/issues/run-issue-id/interactions" "$(last_request_field 'record["path"]')" "issue-interaction-current should target the interactions endpoint"
@@ -315,6 +323,22 @@ assert_contains "$update_response" "\"ok\": true" "issue-update-current should s
 assert_eq "PATCH" "$(last_request_field 'record["method"]')" "issue-update-current should use PATCH"
 assert_eq "/api/issues/run-issue-id" "$(last_request_field 'record["path"]')" "issue-update-current should target the resolved issue path"
 assert_contains "$(last_request_field 'record["body"]')" "\"status\":\"done\"" "issue-update-current should forward the raw JSON body"
+
+write_state "success"
+clear_requests
+done_response="$(run_api_with_key issue-done-current "Completed and verified.")"
+assert_contains "$done_response" "\"ok\": true" "issue-done-current should succeed against the mock API"
+assert_eq "/api/issues/run-issue-id" "$(last_request_field 'record["path"]')" "issue-done-current should patch the resolved issue"
+assert_contains "$(last_request_field 'record["body"]')" "\"status\": \"done\"" "issue-done-current should generate a done payload"
+assert_contains "$(last_request_field 'record["body"]')" "Completed and verified." "issue-done-current should include the provided comment"
+
+write_state "success"
+clear_requests
+review_response="$(run_api_with_key issue-in-review-current "Ready for a named reviewer.")"
+assert_contains "$review_response" "\"ok\": true" "issue-in-review-current should succeed against the mock API"
+assert_eq "/api/issues/run-issue-id" "$(last_request_field 'record["path"]')" "issue-in-review-current should patch the resolved issue"
+assert_contains "$(last_request_field 'record["body"]')" "\"status\": \"in_review\"" "issue-in-review-current should generate an in_review payload"
+assert_contains "$(last_request_field 'record["body"]')" "Ready for a named reviewer." "issue-in-review-current should include the provided comment"
 
 write_state "success"
 clear_requests

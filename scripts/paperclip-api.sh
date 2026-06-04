@@ -16,10 +16,16 @@ Usage:
   ./scripts/paperclip-api.sh issue-comments-current [AFTER_COMMENT_ID]
   ./scripts/paperclip-api.sh issue-comment ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-comment-current JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-resume ISSUE_ID BODY
+  ./scripts/paperclip-api.sh issue-resume-current BODY
   ./scripts/paperclip-api.sh issue-interaction ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-interaction-current JSON_FILE|-
   ./scripts/paperclip-api.sh issue-update ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-update-current JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-done ISSUE_ID COMMENT
+  ./scripts/paperclip-api.sh issue-done-current COMMENT
+  ./scripts/paperclip-api.sh issue-in-review ISSUE_ID COMMENT
+  ./scripts/paperclip-api.sh issue-in-review-current COMMENT
   ./scripts/paperclip-api.sh issue-blocked ISSUE_ID UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
   ./scripts/paperclip-api.sh issue-blocked-current UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
 
@@ -34,11 +40,14 @@ Examples:
   ./scripts/paperclip-api.sh issue-get-current
   ./scripts/paperclip-api.sh issue-comments 123e4567-e89b-12d3-a456-426614174000
   ./scripts/paperclip-api.sh issue-comments-current
+  ./scripts/paperclip-api.sh issue-resume-current "Resuming after the auth fix."
   printf '{"body":"Work started.","resume":true}\n' | \
     ./scripts/paperclip-api.sh issue-comment 123e4567-e89b-12d3-a456-426614174000 -
   ./scripts/paperclip-api.sh issue-interaction 123e4567-e89b-12d3-a456-426614174000 interaction.json
   ./scripts/paperclip-api.sh issue-update 123e4567-e89b-12d3-a456-426614174000 payload.json
   ./scripts/paperclip-api.sh issue-update-current payload.json
+  ./scripts/paperclip-api.sh issue-done-current "Completed and verified."
+  ./scripts/paperclip-api.sh issue-in-review-current "Ready for a named reviewer."
   ./scripts/paperclip-api.sh issue-blocked \
     123e4567-e89b-12d3-a456-426614174000 \
     "Paperclip operator" \
@@ -57,6 +66,7 @@ Notes:
   - `current-run-issues` uses `PAPERCLIP_RUN_ID` to query the run-bound issue list.
   - Issue and agent commands require PAPERCLIP_API_KEY.
   - Comment and interaction helpers accept the raw JSON body expected by the API.
+  - `issue-resume*`, `issue-done*`, and `issue-in-review*` generate the JSON payloads for common issue actions.
   - Mutating commands automatically send X-Paperclip-Run-Id when PAPERCLIP_RUN_ID is present.
 EOF
 }
@@ -220,6 +230,50 @@ PY
   printf '%s\n' "$tmp_body"
 }
 
+write_comment_payload() {
+  local body="$1"
+  local resume="${2:-false}"
+  local tmp_body
+  tmp_body="$(mktemp)"
+
+  python3 - "$body" "$resume" > "$tmp_body" <<'PY'
+import json
+import sys
+
+body = sys.argv[1]
+resume = sys.argv[2].strip().lower() == "true"
+
+payload = {"body": body}
+if resume:
+    payload["resume"] = True
+
+json.dump(payload, sys.stdout)
+sys.stdout.write("\n")
+PY
+
+  printf '%s\n' "$tmp_body"
+}
+
+write_status_payload() {
+  local status="$1"
+  local comment="$2"
+  local tmp_body
+  tmp_body="$(mktemp)"
+
+  python3 - "$status" "$comment" > "$tmp_body" <<'PY'
+import json
+import sys
+
+status = sys.argv[1]
+comment = sys.argv[2]
+
+json.dump({"status": status, "comment": comment}, sys.stdout)
+sys.stdout.write("\n")
+PY
+
+  printf '%s\n' "$tmp_body"
+}
+
 resolve_current_issue_id() {
   if [[ -n "${PAPERCLIP_TASK_ID:-}" ]]; then
     printf '%s\n' "$PAPERCLIP_TASK_ID"
@@ -354,6 +408,30 @@ case "$cmd" in
     request POST "/api/issues/$issue_id/comments" "$body_file"
     rm -f "$body_file"
     ;;
+  issue-resume)
+    require_auth
+    issue_id="${2:-}"
+    body="${3:-}"
+    if [[ -z "$issue_id" || -z "$body" ]]; then
+      echo "error: ISSUE_ID and BODY are required" >&2
+      exit 2
+    fi
+    body_file="$(write_comment_payload "$body" true)"
+    request POST "/api/issues/$issue_id/comments" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-resume-current)
+    require_auth
+    body="${2:-}"
+    if [[ -z "$body" ]]; then
+      echo "error: BODY is required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    body_file="$(write_comment_payload "$body" true)"
+    request POST "/api/issues/$issue_id/comments" "$body_file"
+    rm -f "$body_file"
+    ;;
   issue-interaction)
     require_auth
     issue_id="${2:-}"
@@ -399,6 +477,54 @@ case "$cmd" in
     fi
     issue_id="$(resolve_current_issue_id)"
     body_file="$(read_body_file "$source")"
+    request PATCH "/api/issues/$issue_id" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-done)
+    require_auth
+    issue_id="${2:-}"
+    comment="${3:-}"
+    if [[ -z "$issue_id" || -z "$comment" ]]; then
+      echo "error: ISSUE_ID and COMMENT are required" >&2
+      exit 2
+    fi
+    body_file="$(write_status_payload "done" "$comment")"
+    request PATCH "/api/issues/$issue_id" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-done-current)
+    require_auth
+    comment="${2:-}"
+    if [[ -z "$comment" ]]; then
+      echo "error: COMMENT is required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    body_file="$(write_status_payload "done" "$comment")"
+    request PATCH "/api/issues/$issue_id" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-in-review)
+    require_auth
+    issue_id="${2:-}"
+    comment="${3:-}"
+    if [[ -z "$issue_id" || -z "$comment" ]]; then
+      echo "error: ISSUE_ID and COMMENT are required" >&2
+      exit 2
+    fi
+    body_file="$(write_status_payload "in_review" "$comment")"
+    request PATCH "/api/issues/$issue_id" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-in-review-current)
+    require_auth
+    comment="${2:-}"
+    if [[ -z "$comment" ]]; then
+      echo "error: COMMENT is required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    body_file="$(write_status_payload "in_review" "$comment")"
     request PATCH "/api/issues/$issue_id" "$body_file"
     rm -f "$body_file"
     ;;

@@ -5,6 +5,14 @@ board-authenticated session or `PAPERCLIP_API_KEY`.
 
 ## Resume comment on the current issue
 
+Use the built-in helper for the most common resume flow:
+
+```bash
+./scripts/paperclip-api.sh issue-resume-current "Resuming the task after the runtime auth fix."
+```
+
+Or send the raw JSON payload directly:
+
 ```bash
 printf '%s\n' '{
   "body": "Resuming the task after the runtime auth fix.",
@@ -13,6 +21,14 @@ printf '%s\n' '{
 ```
 
 ## Mark the current issue done
+
+Use the built-in helper for the most common done flow:
+
+```bash
+./scripts/paperclip-api.sh issue-done-current "Completed and verified in the cloud workspace."
+```
+
+Or send the raw JSON payload directly:
 
 ```bash
 printf '%s\n' '{
@@ -101,6 +117,14 @@ printf '%s\n' "{
 ```
 
 ## Update the current issue without blocking
+
+Use the built-in helper for the most common in-review flow:
+
+```bash
+./scripts/paperclip-api.sh issue-in-review-current "Work is ready for a named reviewer."
+```
+
+Or send the raw JSON payload directly:
 
 ```bash
 printf '%s\n' '{
