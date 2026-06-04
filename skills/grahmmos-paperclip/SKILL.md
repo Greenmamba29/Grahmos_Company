@@ -99,6 +99,11 @@ Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 without rebuilding the curl commands each heartbeat.
 Use `./scripts/paperclip-api.sh adapter-env-template PAPERCLIP_SECRET_ID [CURSOR_SECRET_ID]`
 to print the Cursor Cloud adapter JSON needed to inject `PAPERCLIP_API_KEY`.
+Use `./scripts/paperclip-api.sh comment-template ...`,
+`./scripts/paperclip-api.sh update-template ...`, and
+`./scripts/paperclip-api.sh blocked-template ...` to print JSON payloads for the
+execution-contract comment and disposition updates before piping them into the
+matching issue mutation helpers.
 Use `./scripts/paperclip-api.sh issue-comment ...` when the execution contract
 requires a task comment, including structured fields like `resume`, `reopen`, or
 `interrupt`.

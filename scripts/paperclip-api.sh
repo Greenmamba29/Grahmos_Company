@@ -9,6 +9,9 @@ Usage:
   ./scripts/paperclip-api.sh me
   ./scripts/paperclip-api.sh inbox-lite
   ./scripts/paperclip-api.sh adapter-env-template PAPERCLIP_SECRET_ID [CURSOR_SECRET_ID]
+  ./scripts/paperclip-api.sh comment-template BODY [RESUME_TRUE_OR_FALSE]
+  ./scripts/paperclip-api.sh update-template STATUS COMMENT [RESUME_TRUE_OR_FALSE]
+  ./scripts/paperclip-api.sh blocked-template UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get ISSUE_ID
   ./scripts/paperclip-api.sh issue-get-current
@@ -31,6 +34,12 @@ Examples:
   ./scripts/paperclip-api.sh adapter-env-template \
     osiris-paperclip-agent-key-secret-id \
     cursor-api-key-secret-id
+  ./scripts/paperclip-api.sh comment-template "Resuming with auth fixed." true
+  ./scripts/paperclip-api.sh update-template done "Verified and complete."
+  ./scripts/paperclip-api.sh blocked-template \
+    "Paperclip operator" \
+    "Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env" \
+    "The runtime currently cannot mutate issue state."
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get 123e4567-e89b-12d3-a456-426614174000
   ./scripts/paperclip-api.sh issue-get-current
@@ -62,6 +71,8 @@ Notes:
   - Mutating commands automatically send X-Paperclip-Run-Id when PAPERCLIP_RUN_ID is present.
   - `adapter-env-template` prints the JSON shape needed to inject PAPERCLIP_API_KEY
     into the Cursor Cloud adapter environment.
+  - `comment-template`, `update-template`, and `blocked-template` print JSON payloads
+    that can be piped into the current-issue mutation helpers.
 EOF
 }
 
@@ -136,6 +147,77 @@ payload = {
 json.dump(payload, sys.stdout, indent=2, sort_keys=True)
 sys.stdout.write("\n")
 PY
+}
+
+print_comment_template() {
+  local body="${1:-}"
+  local resume_flag="${2:-}"
+
+  if [[ -z "$body" ]]; then
+    echo "error: BODY is required" >&2
+    exit 2
+  fi
+
+  python3 - "$body" "$resume_flag" <<'PY'
+import json
+import sys
+
+body = sys.argv[1]
+resume_flag = sys.argv[2].strip().lower()
+
+payload = {"body": body}
+if resume_flag:
+    payload["resume"] = resume_flag in {"1", "true", "yes"}
+
+json.dump(payload, sys.stdout, indent=2)
+sys.stdout.write("\n")
+PY
+}
+
+print_update_template() {
+  local status="${1:-}"
+  local comment="${2:-}"
+  local resume_flag="${3:-}"
+
+  if [[ -z "$status" || -z "$comment" ]]; then
+    echo "error: STATUS and COMMENT are required" >&2
+    exit 2
+  fi
+
+  python3 - "$status" "$comment" "$resume_flag" <<'PY'
+import json
+import sys
+
+status = sys.argv[1]
+comment = sys.argv[2]
+resume_flag = sys.argv[3].strip().lower()
+
+payload = {
+    "status": status,
+    "comment": comment,
+}
+if resume_flag:
+    payload["resume"] = resume_flag in {"1", "true", "yes"}
+
+json.dump(payload, sys.stdout, indent=2)
+sys.stdout.write("\n")
+PY
+}
+
+print_blocked_template() {
+  local unblock_owner="${1:-}"
+  local required_action="${2:-}"
+  local details="${3:-}"
+  local body_file
+
+  if [[ -z "$unblock_owner" || -z "$required_action" ]]; then
+    echo "error: UNBLOCK_OWNER and REQUIRED_ACTION are required" >&2
+    exit 2
+  fi
+
+  body_file="$(write_blocked_payload "$unblock_owner" "$required_action" "$details")"
+  print_json < "$body_file"
+  rm -f "$body_file"
 }
 
 request() {
@@ -297,6 +379,15 @@ case "$cmd" in
     ;;
   adapter-env-template)
     print_adapter_env_template "${2:-}" "${3:-}"
+    ;;
+  comment-template)
+    print_comment_template "${2:-}" "${3:-}"
+    ;;
+  update-template)
+    print_update_template "${2:-}" "${3:-}" "${4:-}"
+    ;;
+  blocked-template)
+    print_blocked_template "${2:-}" "${3:-}" "${4:-}"
     ;;
   current-issue-id)
     resolve_current_issue_id
