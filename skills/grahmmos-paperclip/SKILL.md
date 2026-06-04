@@ -69,6 +69,8 @@ Without `PAPERCLIP_API_KEY`, the agent cannot call endpoints such as:
 
 This means a Cursor Cloud agent can work on the Git repo, but it cannot read or
 update Paperclip issues unless you explicitly provide a Paperclip agent key.
+Run `./scripts/paperclip-runtime-check.sh` in the cloud workspace to confirm the
+current runtime state before attempting issue operations.
 
 #### Workaround
 Add a long-lived Paperclip agent API key to the Cursor Cloud adapter environment as
