@@ -83,6 +83,12 @@ and `PATCH /api/issues/{issueId}` without rebuilding the curl commands each hear
 Use `./scripts/paperclip-api.sh issue-comment ...` when the execution contract
 requires a task comment, including structured fields like `resume`, `reopen`, or
 `interrupt`.
+Use `./scripts/paperclip-api.sh issue-update-current ...` when the run needs to
+set the current issue disposition without first resolving the issue ID manually.
+Use `./scripts/paperclip-api.sh issue-interaction ...` /
+`./scripts/paperclip-api.sh issue-interaction-current ...` when the board or user
+must respond through `suggest_tasks`, `ask_user_questions`, or
+`request_confirmation`.
 Use `./scripts/paperclip-api.sh issue-blocked ...` when the correct disposition is
 `blocked` and the issue must name an unblock owner and required action.
 Use `./scripts/paperclip-api.sh current-issue-id` or
