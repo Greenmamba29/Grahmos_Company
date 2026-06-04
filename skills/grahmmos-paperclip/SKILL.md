@@ -99,6 +99,8 @@ the current task automatically. The helper prefers `PAPERCLIP_TASK_ID`; otherwis
 it tries `/api/heartbeat-runs/{runId}/issues` first and falls back to `inbox-lite`
 when bearer auth is available. Auto-selection still requires exactly one issue in
 the chosen source.
+Run `./scripts/test-paperclip-tools.sh` for the full Paperclip helper verification
+suite, including shell syntax checks and both smoke tests.
 Run `./scripts/test-paperclip-api.sh` to smoke-test the helper against a local
 mock Paperclip API before changing request resolution or payload behavior.
 Run `./scripts/test-paperclip-runtime-check.sh` to smoke-test the runtime
@@ -167,6 +169,7 @@ Grahmos_Company/
     paperclip-api.sh           # Paperclip API helper for issue operations
     paperclip-runtime-check.sh # Runtime auth diagnostic helper
     test-paperclip-api.sh      # Local smoke test for Paperclip helper flows
+    test-paperclip-tools.sh    # Aggregate verification runner for all helpers
     test-paperclip-runtime-check.sh # Local smoke test for runtime diagnostics
   skills/
     grahmmos-paperclip/
