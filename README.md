@@ -14,7 +14,9 @@ This is the Company run main repo for Grahmos.
   - `health`
   - `me`
   - `inbox-lite`
+  - `current-issue-id`
   - `issue-get ISSUE_ID`
   - `issue-comments ISSUE_ID [AFTER_COMMENT_ID]`
   - `issue-update ISSUE_ID JSON_FILE|-`
   - `issue-blocked ISSUE_ID UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]`
+  - `issue-blocked-current UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]`
