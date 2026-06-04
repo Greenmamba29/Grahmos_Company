@@ -15,6 +15,9 @@ This is the Company run main repo for Grahmos.
 - Run `./scripts/paperclip-blocked-payload.sh` to generate a ready-to-send
   `PATCH /api/issues/{issueId}` JSON body with `status: "blocked"` plus the
   current runtime evidence and named unblock owner/action.
+- Run `./scripts/paperclip-mark-blocked-current.sh` once control-plane auth is
+  available to resolve the current issue id, generate the blocked payload, and
+  submit the blocked disposition plus comment in one step.
 - Once auth is available, use `./scripts/paperclip-api.sh` for the common Paperclip
   operations needed during heartbeats:
   - `health`
@@ -45,4 +48,10 @@ Suggested unblock flow once control-plane auth is restored:
 ./scripts/paperclip-blocked-payload.sh > /tmp/paperclip-blocked.json
 issue_id="$(./scripts/paperclip-api.sh current-issue-id)"
 ./scripts/paperclip-api.sh issue-update "$issue_id" /tmp/paperclip-blocked.json
+```
+
+Or use the one-shot wrapper:
+
+```bash
+./scripts/paperclip-mark-blocked-current.sh
 ```

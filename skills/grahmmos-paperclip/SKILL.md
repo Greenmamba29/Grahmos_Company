@@ -81,6 +81,8 @@ distinguishes between:
 Use `./scripts/paperclip-blocked-payload.sh` to generate the exact blocked-issue
 JSON body for `PATCH /api/issues/{issueId}` with a named unblock owner, required
 action, and the current runtime evidence.
+Use `./scripts/paperclip-mark-blocked-current.sh` once auth is available to
+resolve the current issue id and submit that blocked disposition in one command.
 
 Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 `me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,
@@ -96,6 +98,9 @@ Use `./scripts/paperclip-blocked-payload.sh > /tmp/paperclip-blocked.json` when
 you want a ready-to-send blocked payload derived from the current runtime state,
 then submit it through `./scripts/paperclip-api.sh issue-update ...` once auth is
 available.
+Use `./scripts/paperclip-mark-blocked-current.sh` when you want the same blocked
+disposition applied immediately after auth is restored without managing the temp
+payload file yourself.
 Use `./scripts/paperclip-api.sh current-issue-id` or
 `./scripts/paperclip-api.sh issue-comment-current ...` /
 `./scripts/paperclip-api.sh issue-blocked-current ...` when the run should target
@@ -164,6 +169,7 @@ Grahmos_Company/
   .gitignore         # Git ignore
   scripts/
     paperclip-blocked-payload.sh # Ready-to-send blocked issue payload generator
+    paperclip-mark-blocked-current.sh # One-shot blocked disposition wrapper
     paperclip-api.sh           # Paperclip API helper for issue operations
     paperclip-runtime-check.sh # Runtime auth diagnostic helper
   skills/
@@ -216,6 +222,8 @@ have a board-authenticated session cookie. This is common in Cursor Cloud shells
 5. If the issue should be marked `blocked`, generate `/tmp/paperclip-blocked.json`
    with `./scripts/paperclip-blocked-payload.sh` and submit it through
    `./scripts/paperclip-api.sh issue-update ...` once auth is available.
+6. If you want the same blocked disposition in one command, run
+   `./scripts/paperclip-mark-blocked-current.sh` after auth is restored.
 
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
