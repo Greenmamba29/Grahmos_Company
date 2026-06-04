@@ -23,6 +23,7 @@ This is the Company run main repo for Grahmos.
   - `me`
   - `inbox-lite`
   - `adapter-env-template PAPERCLIP_SECRET_ID [CURSOR_SECRET_ID]`
+  - `current-issue-playbook`
   - `comment-template BODY [RESUME_TRUE_OR_FALSE]`
   - `update-template STATUS COMMENT [RESUME_TRUE_OR_FALSE]`
   - `blocked-template UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]`
@@ -55,6 +56,8 @@ is available.
 When the runtime check shows that `PAPERCLIP_API_KEY` was never injected, run
 `./scripts/paperclip-api.sh adapter-env-template YOUR_PAPERCLIP_SECRET_ID [YOUR_CURSOR_SECRET_ID]`
 to print the adapter JSON needed for the fix.
+After auth is fixed, run `./scripts/paperclip-api.sh current-issue-playbook` for the
+recommended inspection, comment, interaction, blocked, and done commands.
 When you need a structured comment or status payload for the execution contract, run
 `comment-template`, `update-template`, or `blocked-template` and pipe the result into
 the matching `*-current` helper once auth is available.

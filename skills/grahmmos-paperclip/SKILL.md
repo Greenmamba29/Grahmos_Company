@@ -99,6 +99,8 @@ Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 without rebuilding the curl commands each heartbeat.
 Use `./scripts/paperclip-api.sh adapter-env-template PAPERCLIP_SECRET_ID [CURSOR_SECRET_ID]`
 to print the Cursor Cloud adapter JSON needed to inject `PAPERCLIP_API_KEY`.
+Once auth is fixed, run `./scripts/paperclip-api.sh current-issue-playbook` for the
+recommended current-issue inspection and execution-contract mutation commands.
 Use `./scripts/paperclip-api.sh comment-template ...`,
 `./scripts/paperclip-api.sh update-template ...`, and
 `./scripts/paperclip-api.sh blocked-template ...` to print JSON payloads for the

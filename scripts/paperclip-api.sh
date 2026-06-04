@@ -9,6 +9,7 @@ Usage:
   ./scripts/paperclip-api.sh me
   ./scripts/paperclip-api.sh inbox-lite
   ./scripts/paperclip-api.sh adapter-env-template PAPERCLIP_SECRET_ID [CURSOR_SECRET_ID]
+  ./scripts/paperclip-api.sh current-issue-playbook
   ./scripts/paperclip-api.sh comment-template BODY [RESUME_TRUE_OR_FALSE]
   ./scripts/paperclip-api.sh update-template STATUS COMMENT [RESUME_TRUE_OR_FALSE]
   ./scripts/paperclip-api.sh blocked-template UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
@@ -39,6 +40,7 @@ Examples:
   ./scripts/paperclip-api.sh adapter-env-template \
     osiris-paperclip-agent-key-secret-id \
     cursor-api-key-secret-id
+  ./scripts/paperclip-api.sh current-issue-playbook
   ./scripts/paperclip-api.sh comment-template "Resuming with auth fixed." true
   ./scripts/paperclip-api.sh update-template done "Verified and complete."
   ./scripts/paperclip-api.sh blocked-template \
@@ -86,6 +88,8 @@ Notes:
   - Mutating commands automatically send X-Paperclip-Run-Id when PAPERCLIP_RUN_ID is present.
   - `adapter-env-template` prints the JSON shape needed to inject PAPERCLIP_API_KEY
     into the Cursor Cloud adapter environment.
+  - `current-issue-playbook` prints the recommended commands to inspect, comment on,
+    interact with, block, or complete the current issue once auth is available.
   - `comment-template`, `update-template`, and `blocked-template` print JSON payloads
     that can be piped into the current-issue mutation helpers.
   - `interaction-template` merges `kind` and `title` with optional extra JSON for
@@ -166,6 +170,34 @@ payload = {
 json.dump(payload, sys.stdout, indent=2, sort_keys=True)
 sys.stdout.write("\n")
 PY
+}
+
+print_current_issue_playbook() {
+  cat <<'EOF'
+Assumes:
+  - PAPERCLIP_API_KEY is injected into the cloud shell
+  - the current issue can be resolved via PAPERCLIP_TASK_ID or a single-item inbox-lite
+
+Inspect the current issue:
+  ./scripts/paperclip-api.sh issue-get-current
+  ./scripts/paperclip-api.sh issue-comments-current
+
+Leave a progress comment with resume=true:
+  ./scripts/paperclip-api.sh issue-comment-current-template "Resuming with auth fixed." true
+
+Ask the board/user a structured question:
+  printf '{"questions":[{"id":"auth","label":"Should I inject PAPERCLIP_API_KEY next?"}],"continuationPolicy":"wake_assignee"}\n' | \
+    ./scripts/paperclip-api.sh issue-interaction-current-template ask_user_questions "Need input" -
+
+Mark the current issue blocked with named unblock owner/action:
+  ./scripts/paperclip-api.sh issue-blocked-current-template \
+    "Paperclip operator" \
+    "Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env" \
+    "Current run is blocked."
+
+Mark the current issue done:
+  ./scripts/paperclip-api.sh issue-update-current-template done "Verified and complete."
+EOF
 }
 
 print_comment_template() {
@@ -439,6 +471,9 @@ case "$cmd" in
     ;;
   adapter-env-template)
     print_adapter_env_template "${2:-}" "${3:-}"
+    ;;
+  current-issue-playbook)
+    print_current_issue_playbook
     ;;
   comment-template)
     print_comment_template "${2:-}" "${3:-}"
