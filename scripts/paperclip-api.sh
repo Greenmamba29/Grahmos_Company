@@ -11,12 +11,15 @@ Usage:
   ./scripts/paperclip-api.sh inbox-lite
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get ISSUE_ID
+  ./scripts/paperclip-api.sh issue-get-current
   ./scripts/paperclip-api.sh issue-comments ISSUE_ID [AFTER_COMMENT_ID]
+  ./scripts/paperclip-api.sh issue-comments-current [AFTER_COMMENT_ID]
   ./scripts/paperclip-api.sh issue-comment ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-comment-current JSON_FILE|-
   ./scripts/paperclip-api.sh issue-interaction ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-interaction-current JSON_FILE|-
   ./scripts/paperclip-api.sh issue-update ISSUE_ID JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-update-current JSON_FILE|-
   ./scripts/paperclip-api.sh issue-blocked ISSUE_ID UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
   ./scripts/paperclip-api.sh issue-blocked-current UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
 
@@ -28,11 +31,14 @@ Examples:
   ./scripts/paperclip-api.sh inbox-lite
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get 123e4567-e89b-12d3-a456-426614174000
+  ./scripts/paperclip-api.sh issue-get-current
   ./scripts/paperclip-api.sh issue-comments 123e4567-e89b-12d3-a456-426614174000
+  ./scripts/paperclip-api.sh issue-comments-current
   printf '{"body":"Work started.","resume":true}\n' | \
     ./scripts/paperclip-api.sh issue-comment 123e4567-e89b-12d3-a456-426614174000 -
   ./scripts/paperclip-api.sh issue-interaction 123e4567-e89b-12d3-a456-426614174000 interaction.json
   ./scripts/paperclip-api.sh issue-update 123e4567-e89b-12d3-a456-426614174000 payload.json
+  ./scripts/paperclip-api.sh issue-update-current payload.json
   ./scripts/paperclip-api.sh issue-blocked \
     123e4567-e89b-12d3-a456-426614174000 \
     "Paperclip operator" \
@@ -295,6 +301,11 @@ case "$cmd" in
     fi
     request GET "/api/issues/$issue_id"
     ;;
+  issue-get-current)
+    require_auth
+    issue_id="$(resolve_current_issue_id)"
+    request GET "/api/issues/$issue_id"
+    ;;
   issue-comments)
     require_auth
     issue_id="${2:-}"
@@ -303,6 +314,16 @@ case "$cmd" in
       echo "error: ISSUE_ID is required" >&2
       exit 2
     fi
+    path="/api/issues/$issue_id/comments"
+    if [[ -n "$after_comment_id" ]]; then
+      path="$path?after=$after_comment_id&order=asc"
+    fi
+    request GET "$path"
+    ;;
+  issue-comments-current)
+    require_auth
+    after_comment_id="${2:-}"
+    issue_id="$(resolve_current_issue_id)"
     path="/api/issues/$issue_id/comments"
     if [[ -n "$after_comment_id" ]]; then
       path="$path?after=$after_comment_id&order=asc"
@@ -365,6 +386,18 @@ case "$cmd" in
       echo "error: ISSUE_ID and JSON_FILE|- are required" >&2
       exit 2
     fi
+    body_file="$(read_body_file "$source")"
+    request PATCH "/api/issues/$issue_id" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-update-current)
+    require_auth
+    source="${2:-}"
+    if [[ -z "$source" ]]; then
+      echo "error: JSON_FILE|- is required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
     body_file="$(read_body_file "$source")"
     request PATCH "/api/issues/$issue_id" "$body_file"
     rm -f "$body_file"

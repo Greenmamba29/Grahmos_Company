@@ -18,12 +18,15 @@ This is the Company run main repo for Grahmos.
   - `inbox-lite`
   - `current-issue-id`
   - `issue-get ISSUE_ID`
+  - `issue-get-current`
   - `issue-comments ISSUE_ID [AFTER_COMMENT_ID]`
+  - `issue-comments-current [AFTER_COMMENT_ID]`
   - `issue-comment ISSUE_ID JSON_FILE|-`
   - `issue-comment-current JSON_FILE|-`
   - `issue-interaction ISSUE_ID JSON_FILE|-`
   - `issue-interaction-current JSON_FILE|-`
   - `issue-update ISSUE_ID JSON_FILE|-`
+  - `issue-update-current JSON_FILE|-`
   - `issue-blocked ISSUE_ID UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]`
   - `issue-blocked-current UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]`
 
@@ -38,3 +41,6 @@ When `PAPERCLIP_TASK_ID` is missing, `current-issue-id` now prefers the
 `/api/heartbeat-runs/{runId}/issues` lookup before falling back to inbox-lite, so
 the helper aligns with the runtime diagnostic and can use the run-bound issue list
 whenever a board-authenticated session is available.
+The same resolution order now powers `issue-get-current`,
+`issue-comments-current`, and `issue-update-current`, so current-task reads and
+final disposition updates do not need an explicit issue ID once auth is available.

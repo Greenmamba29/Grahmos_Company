@@ -89,8 +89,11 @@ answer structured questions, choose suggested tasks, or approve a plan through
 Use `./scripts/paperclip-api.sh issue-blocked ...` when the correct disposition is
 `blocked` and the issue must name an unblock owner and required action.
 Use `./scripts/paperclip-api.sh current-issue-id` or
+`./scripts/paperclip-api.sh issue-get-current` /
+`./scripts/paperclip-api.sh issue-comments-current ...` /
 `./scripts/paperclip-api.sh issue-comment-current ...` /
 `./scripts/paperclip-api.sh issue-interaction-current ...` /
+`./scripts/paperclip-api.sh issue-update-current ...` /
 `./scripts/paperclip-api.sh issue-blocked-current ...` when the run should target
 the current task automatically. The helper prefers `PAPERCLIP_TASK_ID`; otherwise
 it tries `/api/heartbeat-runs/{runId}/issues` first and falls back to `inbox-lite`
