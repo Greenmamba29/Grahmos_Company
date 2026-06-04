@@ -9,6 +9,9 @@ This is the Company run main repo for Grahmos.
   session or a `PAPERCLIP_API_KEY` bearer token.
 - If the script exits with `2`, the agent can still work on the Git repository but
   cannot read or mutate Paperclip issues from the shell yet.
+- The checker also reports whether `PAPERCLIP_API_KEY` appears in
+  `CLOUD_AGENT_INJECTED_SECRET_NAMES`, which helps distinguish “bad key” from
+  “the adapter never injected the key.”
 - Once auth is available, use `./scripts/paperclip-api.sh` for the common Paperclip
   operations needed during heartbeats:
   - `health`

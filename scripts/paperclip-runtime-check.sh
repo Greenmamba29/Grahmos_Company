@@ -32,6 +32,16 @@ import urllib.request
 base = os.environ["PAPERCLIP_API_URL"].rstrip("/")
 run_id = os.environ["PAPERCLIP_RUN_ID"]
 api_key = os.environ.get("PAPERCLIP_API_KEY", "").strip()
+all_secret_names = [
+    item.strip()
+    for item in os.environ.get("CLOUD_AGENT_ALL_SECRET_NAMES", "").split(",")
+    if item.strip()
+]
+injected_secret_names = [
+    item.strip()
+    for item in os.environ.get("CLOUD_AGENT_INJECTED_SECRET_NAMES", "").split(",")
+    if item.strip()
+]
 
 
 def request(path: str, headers: dict[str, str] | None = None):
@@ -84,6 +94,8 @@ summary = {
     "run_issues_status": run_issues_status,
     "run_issues_accessible": run_issues_status == 200,
     "api_key_present": bool(api_key),
+    "api_key_listed_in_all_secrets": "PAPERCLIP_API_KEY" in all_secret_names,
+    "api_key_listed_in_injected_secrets": "PAPERCLIP_API_KEY" in injected_secret_names,
     "bearer_me_status": bearer_me_status,
     "bearer_inbox_status": bearer_inbox_status,
 }
@@ -125,6 +137,14 @@ if session_status == 401:
     print("Board authentication is not available in this shell session.")
     if error:
         print(f"Server response: {error}")
+    if not api_key and injected_secret_names:
+        if "PAPERCLIP_API_KEY" not in injected_secret_names:
+            print(
+                "The cloud runtime did not inject PAPERCLIP_API_KEY. "
+                "CLOUD_AGENT_INJECTED_SECRET_NAMES is missing that secret."
+            )
+    elif not api_key:
+        print("No PAPERCLIP_API_KEY is available in the current environment.")
     print(
         "Issue reads, comments, interactions, and disposition updates will fail "
         "until a board-authenticated session or PAPERCLIP_API_KEY is available."

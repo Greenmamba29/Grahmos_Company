@@ -76,6 +76,8 @@ current runtime state before attempting issue operations. The runtime check
 distinguishes between:
 - a board-authenticated shell session that can resolve `/api/heartbeat-runs/{runId}/issues`
 - bearer-token access through `PAPERCLIP_API_KEY`
+- a missing secret-injection path where `CLOUD_AGENT_INJECTED_SECRET_NAMES` does
+  not include `PAPERCLIP_API_KEY`
 
 Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 `me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,
@@ -198,7 +200,10 @@ have a board-authenticated session cookie. This is common in Cursor Cloud shells
 1. Run `./scripts/paperclip-runtime-check.sh` to confirm the failure mode.
 2. If issue operations must happen from the shell, inject `PAPERCLIP_API_KEY` into
    the Cursor Cloud adapter environment and retry.
-3. Use `./scripts/paperclip-api.sh issue-comment ...` once auth is available so the
+3. If the runtime check reports that `CLOUD_AGENT_INJECTED_SECRET_NAMES` omits
+   `PAPERCLIP_API_KEY`, treat that as the concrete unblock action for the adapter
+   configuration rather than a bad-key debugging problem.
+4. Use `./scripts/paperclip-api.sh issue-comment ...` once auth is available so the
    agent can satisfy the execution contract requirement to leave a task comment.
 
 ## Heartbeat Schedule
