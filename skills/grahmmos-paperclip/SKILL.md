@@ -99,6 +99,18 @@ Grahmos_Company/
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
 
+### Error: "Unauthorized" when calling `/api/companies/{companyId}/issues` or `/api/heartbeat-runs/{runId}` from the agent runtime
+**Cause:** The runtime has Paperclip IDs (`PAPERCLIP_AGENT_ID`, `PAPERCLIP_COMPANY_ID`, `PAPERCLIP_RUN_ID`) but not an agent bearer token. Paperclip issue and heartbeat APIs require agent auth via either a long-lived `PAPERCLIP_API_KEY` or a short-lived agent JWT in the `Authorization: Bearer ...` header.
+**Fix:** Inject a Paperclip agent token into the runtime environment, then call the API with:
+
+```bash
+curl -s "$PAPERCLIP_API_URL/api/agents/me" \
+  -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
+  -H "X-Paperclip-Run-Id: $PAPERCLIP_RUN_ID"
+```
+
+Use the same bearer token when listing assigned issues, checking out work, posting comments, or updating issue disposition. If the runtime only has `GH_TOKEN` plus Paperclip UUIDs, failed-run retries can wake the agent again without giving it enough auth to complete the issue lifecycle.
+
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
 - Interval: every 300 seconds (5 minutes)
