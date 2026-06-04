@@ -8,6 +8,7 @@ Usage:
   ./scripts/paperclip-api.sh session
   ./scripts/paperclip-api.sh me
   ./scripts/paperclip-api.sh inbox-lite
+  ./scripts/paperclip-api.sh adapter-env-template PAPERCLIP_SECRET_ID [CURSOR_SECRET_ID]
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get ISSUE_ID
   ./scripts/paperclip-api.sh issue-comments ISSUE_ID [AFTER_COMMENT_ID]
@@ -24,6 +25,9 @@ Examples:
   ./scripts/paperclip-api.sh session
   ./scripts/paperclip-api.sh me
   ./scripts/paperclip-api.sh inbox-lite
+  ./scripts/paperclip-api.sh adapter-env-template \
+    osiris-paperclip-agent-key-secret-id \
+    cursor-api-key-secret-id
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get 123e4567-e89b-12d3-a456-426614174000
   ./scripts/paperclip-api.sh issue-comments 123e4567-e89b-12d3-a456-426614174000
@@ -49,6 +53,8 @@ Notes:
   - `session` checks whether the current shell has a board-authenticated session.
   - Issue and agent commands require PAPERCLIP_API_KEY.
   - Mutating commands automatically send X-Paperclip-Run-Id when PAPERCLIP_RUN_ID is present.
+  - `adapter-env-template` prints the JSON shape needed to inject PAPERCLIP_API_KEY
+    into the Cursor Cloud adapter environment.
 EOF
 }
 
@@ -80,6 +86,49 @@ else:
   else
     cat
   fi
+}
+
+print_adapter_env_template() {
+  local paperclip_secret_id="${1:-}"
+  local cursor_secret_id="${2:-}"
+
+  if [[ -z "$paperclip_secret_id" ]]; then
+    echo "error: PAPERCLIP_SECRET_ID is required" >&2
+    exit 2
+  fi
+
+  python3 - "$paperclip_secret_id" "$cursor_secret_id" <<'PY'
+import json
+import sys
+
+paperclip_secret_id = sys.argv[1].strip()
+cursor_secret_id = sys.argv[2].strip()
+
+env = {
+    "PAPERCLIP_API_KEY": {
+        "type": "secret_ref",
+        "secretId": paperclip_secret_id,
+        "version": "latest",
+    }
+}
+
+if cursor_secret_id:
+    env["CURSOR_API_KEY"] = {
+        "type": "secret_ref",
+        "secretId": cursor_secret_id,
+        "version": "latest",
+    }
+
+payload = {
+    "adapterType": "cursor_cloud",
+    "adapterConfig": {
+        "env": env,
+    },
+}
+
+json.dump(payload, sys.stdout, indent=2, sort_keys=True)
+sys.stdout.write("\n")
+PY
 }
 
 request() {
@@ -238,6 +287,9 @@ case "$cmd" in
   inbox-lite)
     require_auth
     request GET /api/agents/me/inbox-lite
+    ;;
+  adapter-env-template)
+    print_adapter_env_template "${2:-}" "${3:-}"
     ;;
   current-issue-id)
     resolve_current_issue_id

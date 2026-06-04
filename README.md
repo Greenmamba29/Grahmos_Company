@@ -19,6 +19,7 @@ This is the Company run main repo for Grahmos.
   - `session`
   - `me`
   - `inbox-lite`
+  - `adapter-env-template PAPERCLIP_SECRET_ID [CURSOR_SECRET_ID]`
   - `current-issue-id`
   - `issue-get ISSUE_ID`
   - `issue-comments ISSUE_ID [AFTER_COMMENT_ID]`
@@ -37,3 +38,6 @@ The interaction helper accepts the raw JSON body expected by
 `POST /api/issues/{issueId}/interactions`, so the agent can create
 `ask_user_questions`, `suggest_tasks`, or `request_confirmation` records once auth
 is available.
+When the runtime check shows that `PAPERCLIP_API_KEY` was never injected, run
+`./scripts/paperclip-api.sh adapter-env-template YOUR_PAPERCLIP_SECRET_ID [YOUR_CURSOR_SECRET_ID]`
+to print the adapter JSON needed for the fix.

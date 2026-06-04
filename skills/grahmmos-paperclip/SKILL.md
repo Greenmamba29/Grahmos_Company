@@ -91,6 +91,8 @@ Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 `me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,
 `POST /api/issues/{issueId}/interactions`, and `PATCH /api/issues/{issueId}`
 without rebuilding the curl commands each heartbeat.
+Use `./scripts/paperclip-api.sh adapter-env-template PAPERCLIP_SECRET_ID [CURSOR_SECRET_ID]`
+to print the Cursor Cloud adapter JSON needed to inject `PAPERCLIP_API_KEY`.
 Use `./scripts/paperclip-api.sh issue-comment ...` when the execution contract
 requires a task comment, including structured fields like `resume`, `reopen`, or
 `interrupt`.
@@ -218,7 +220,9 @@ have a board-authenticated session cookie. This is common in Cursor Cloud shells
 **Cause:** The Cursor Cloud adapter environment never injected a Paperclip bearer
 token into the shell, even though other secret-backed env vars may be present.
 **Fix:** Update the adapter env config so `CLOUD_AGENT_INJECTED_SECRET_NAMES`
-includes `PAPERCLIP_API_KEY`, then rerun the heartbeat.
+includes `PAPERCLIP_API_KEY`, then rerun the heartbeat. Use
+`./scripts/paperclip-api.sh adapter-env-template PAPERCLIP_SECRET_ID [CURSOR_SECRET_ID]`
+to print the exact JSON shape for the adapter update.
 
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
