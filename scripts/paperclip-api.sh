@@ -8,6 +8,7 @@ Usage:
   ./scripts/paperclip-api.sh sample-payload TYPE
   ./scripts/paperclip-api.sh build-resume-comment [BODY]
   ./scripts/paperclip-api.sh build-done-update [COMMENT]
+  ./scripts/paperclip-api.sh build-markdown-document MARKDOWN_FILE|- [TITLE] [CHANGE_SUMMARY]
   ./scripts/paperclip-api.sh build-plan-confirmation REVISION_ID [ISSUE_ID]
   ./scripts/paperclip-api.sh session
   ./scripts/paperclip-api.sh me
@@ -29,6 +30,8 @@ Usage:
   ./scripts/paperclip-api.sh issue-document-get-current KEY
   ./scripts/paperclip-api.sh issue-document-put ISSUE_ID KEY JSON_FILE|-
   ./scripts/paperclip-api.sh issue-document-put-current KEY JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-document-put-markdown ISSUE_ID KEY MARKDOWN_FILE|- [TITLE] [CHANGE_SUMMARY]
+  ./scripts/paperclip-api.sh issue-document-put-markdown-current KEY MARKDOWN_FILE|- [TITLE] [CHANGE_SUMMARY]
   ./scripts/paperclip-api.sh issue-document-revisions ISSUE_ID KEY
   ./scripts/paperclip-api.sh issue-document-revisions-current KEY
   ./scripts/paperclip-api.sh issue-plan-confirmation ISSUE_ID [ISSUE_REF]
@@ -55,6 +58,7 @@ Examples:
   ./scripts/paperclip-api.sh sample-payload interaction-respond
   ./scripts/paperclip-api.sh build-resume-comment
   ./scripts/paperclip-api.sh build-done-update
+  ./scripts/paperclip-api.sh build-markdown-document plan.md "Implementation plan" "Initial plan draft"
   ./scripts/paperclip-api.sh build-plan-confirmation 123e4567-e89b-12d3-a456-426614174000 ISSUE-123
   ./scripts/paperclip-api.sh health
   ./scripts/paperclip-api.sh session
@@ -71,6 +75,7 @@ Examples:
   ./scripts/paperclip-api.sh issue-done-current "Verified and finished."
   ./scripts/paperclip-api.sh sample-payload plan-document | \
     ./scripts/paperclip-api.sh issue-document-put-current plan -
+  ./scripts/paperclip-api.sh issue-document-put-markdown-current plan plan.md "Implementation plan" "Initial plan draft"
   ./scripts/paperclip-api.sh issue-plan-confirmation-current ISSUE-123
   printf '{"kind":"ask_user_questions","title":"Need board input"}\n' | \
     ./scripts/paperclip-api.sh issue-interaction-current -
@@ -95,6 +100,7 @@ Notes:
   - The script expects PAPERCLIP_API_URL for all commands.
   - `sample-payload` prints valid JSON examples for common comment, update, and interaction requests.
   - `build-resume-comment` and `build-done-update` print the most common execution-contract payloads.
+  - `build-markdown-document` wraps plain markdown into the JSON shape expected by issue document updates.
   - `build-plan-confirmation` prints a request_confirmation payload targeting the `plan` document for a specific revision id.
   - `issue-plan-confirmation*` resolves the latest `plan` document revision and posts the matching request_confirmation interaction.
   - `session` checks whether the current shell has a board-authenticated session.
@@ -405,6 +411,44 @@ sys.stdout.write("\n")
 PY
 }
 
+build_markdown_document() {
+  local source="${1:-}"
+  local title="${2:-Document}"
+  local change_summary="${3:-}"
+
+  if [[ -z "$source" ]]; then
+    echo "error: MARKDOWN_FILE|- is required" >&2
+    exit 2
+  fi
+
+  local markdown_file
+  markdown_file="$(read_body_file "$source")"
+
+  python3 - "$markdown_file" "$title" "$change_summary" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+body = Path(sys.argv[1]).read_text()
+title = sys.argv[2]
+change_summary = sys.argv[3]
+
+payload = {
+    "title": title,
+    "format": "markdown",
+    "body": body,
+}
+
+if change_summary:
+    payload["changeSummary"] = change_summary
+
+json.dump(payload, sys.stdout, indent=2)
+sys.stdout.write("\n")
+PY
+
+  rm -f "$markdown_file"
+}
+
 resolve_latest_document_revision_id() {
   local issue_id="${1:-}"
   local key="${2:-}"
@@ -624,6 +668,9 @@ case "$cmd" in
   build-done-update)
     build_done_update "${2:-Completed and verified.}"
     ;;
+  build-markdown-document)
+    build_markdown_document "${2:-}" "${3:-Document}" "${4:-}"
+    ;;
   build-plan-confirmation)
     build_plan_confirmation "${2:-}" "${3:-ISSUE-123}"
     ;;
@@ -816,6 +863,54 @@ case "$cmd" in
     fi
     issue_id="$(resolve_current_issue_id)"
     body_file="$(read_body_file "$source")"
+    encoded_key="$(url_encode "$key")"
+    request PUT "/api/issues/$issue_id/documents/$encoded_key" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-document-put-markdown)
+    require_auth
+    issue_id="${2:-}"
+    key="${3:-}"
+    source="${4:-}"
+    title="${5:-}"
+    change_summary="${6:-}"
+    if [[ -z "$issue_id" || -z "$key" || -z "$source" ]]; then
+      echo "error: ISSUE_ID, KEY, and MARKDOWN_FILE|- are required" >&2
+      exit 2
+    fi
+    if [[ -z "$title" ]]; then
+      if [[ "$key" == "plan" ]]; then
+        title="Implementation plan"
+      else
+        title="Document"
+      fi
+    fi
+    body_file="$(mktemp)"
+    build_markdown_document "$source" "$title" "$change_summary" > "$body_file"
+    encoded_key="$(url_encode "$key")"
+    request PUT "/api/issues/$issue_id/documents/$encoded_key" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-document-put-markdown-current)
+    require_auth
+    key="${2:-}"
+    source="${3:-}"
+    title="${4:-}"
+    change_summary="${5:-}"
+    if [[ -z "$key" || -z "$source" ]]; then
+      echo "error: KEY and MARKDOWN_FILE|- are required" >&2
+      exit 2
+    fi
+    if [[ -z "$title" ]]; then
+      if [[ "$key" == "plan" ]]; then
+        title="Implementation plan"
+      else
+        title="Document"
+      fi
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    body_file="$(mktemp)"
+    build_markdown_document "$source" "$title" "$change_summary" > "$body_file"
     encoded_key="$(url_encode "$key")"
     request PUT "/api/issues/$issue_id/documents/$encoded_key" "$body_file"
     rm -f "$body_file"

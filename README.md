@@ -44,6 +44,8 @@ Useful examples:
 - `./scripts/paperclip-api.sh issue-done-current "Completed and verified."`
 - `./scripts/paperclip-api.sh sample-payload comment-resume | ./scripts/paperclip-api.sh issue-comment-current -`
 - `./scripts/paperclip-api.sh sample-payload update-done | ./scripts/paperclip-api.sh issue-update-current -`
+- `./scripts/paperclip-api.sh build-markdown-document plan.md "Implementation plan" "Initial plan draft"`
+- `./scripts/paperclip-api.sh issue-document-put-markdown-current plan plan.md "Implementation plan" "Initial plan draft"`
 - `./scripts/paperclip-api.sh sample-payload plan-document | ./scripts/paperclip-api.sh issue-document-put-current plan -`
 - `./scripts/paperclip-api.sh build-plan-confirmation REVISION_ID ISSUE-123 | ./scripts/paperclip-api.sh issue-interaction-current -`
 - `./scripts/paperclip-api.sh issue-plan-confirmation-current ISSUE-123`
@@ -58,6 +60,8 @@ contract requires updating the `plan` document before creating a
 for that flow, while `issue-plan-confirmation-current` performs the full
 "resolve latest plan revision -> create confirmation" flow in one command once
 auth is available.
+If you already have the plan in a markdown file, `issue-document-put-markdown-current`
+is the simplest way to save it without building the JSON envelope by hand.
 
 For the most common execution-contract actions, prefer the direct wrappers:
 - `issue-comment-resume-current`
