@@ -29,6 +29,8 @@ This is the Company run main repo for Grahmos.
   - `session`
   - `me`
   - `inbox-lite`
+  - `issues-list [QUERY_STRING]`
+  - `issues-count [QUERY_STRING]`
   - `run-issues`
   - `current-issue-id`
   - `issue-get ISSUE_ID`
@@ -53,6 +55,14 @@ Suggested unblock flow once control-plane auth is restored:
 ./scripts/paperclip-blocked-payload.sh > /tmp/paperclip-blocked.json
 issue_id="$(./scripts/paperclip-api.sh current-issue-id)"
 ./scripts/paperclip-api.sh issue-update "$issue_id" /tmp/paperclip-blocked.json
+```
+
+If current-issue discovery is still ambiguous after auth is restored, list issues
+directly through the company route first:
+
+```bash
+./scripts/paperclip-api.sh issues-list 'limit=20&sortField=updatedAt&sortDir=desc'
+./scripts/paperclip-api.sh issues-count 'status=blocked'
 ```
 
 Or use the one-shot wrapper:

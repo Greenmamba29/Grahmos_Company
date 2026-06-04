@@ -8,6 +8,8 @@ Usage:
   ./scripts/paperclip-api.sh session
   ./scripts/paperclip-api.sh me
   ./scripts/paperclip-api.sh inbox-lite
+  ./scripts/paperclip-api.sh issues-list [QUERY_STRING]
+  ./scripts/paperclip-api.sh issues-count [QUERY_STRING]
   ./scripts/paperclip-api.sh run-issues
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get ISSUE_ID
@@ -23,6 +25,8 @@ Examples:
   ./scripts/paperclip-api.sh session
   ./scripts/paperclip-api.sh me
   ./scripts/paperclip-api.sh inbox-lite
+  ./scripts/paperclip-api.sh issues-list 'limit=10&sortField=updatedAt&sortDir=desc'
+  ./scripts/paperclip-api.sh issues-count 'status=blocked'
   ./scripts/paperclip-api.sh run-issues
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get 123e4567-e89b-12d3-a456-426614174000
@@ -44,6 +48,7 @@ Examples:
 
 Notes:
   - The script expects PAPERCLIP_API_URL for all commands.
+  - `issues-list` and `issues-count` default to PAPERCLIP_COMPANY_ID.
   - `session` checks whether the current shell has a board-authenticated session.
   - `me` and `inbox-lite` require PAPERCLIP_API_KEY.
   - Issue commands can work through either PAPERCLIP_API_KEY or a board-authenticated session.
@@ -54,6 +59,13 @@ EOF
 require_api_url() {
   if [[ -z "${PAPERCLIP_API_URL:-}" ]]; then
     echo "error: PAPERCLIP_API_URL is required" >&2
+    exit 2
+  fi
+}
+
+require_company_id() {
+  if [[ -z "${PAPERCLIP_COMPANY_ID:-}" ]]; then
+    echo "error: PAPERCLIP_COMPANY_ID is required" >&2
     exit 2
   fi
 }
@@ -266,6 +278,24 @@ case "$cmd" in
   inbox-lite)
     require_auth
     request GET /api/agents/me/inbox-lite
+    ;;
+  issues-list)
+    require_company_id
+    query_string="${2:-}"
+    path="/api/companies/$PAPERCLIP_COMPANY_ID/issues"
+    if [[ -n "$query_string" ]]; then
+      path="$path?$query_string"
+    fi
+    request GET "$path"
+    ;;
+  issues-count)
+    require_company_id
+    query_string="${2:-}"
+    path="/api/companies/$PAPERCLIP_COMPANY_ID/issues/count"
+    if [[ -n "$query_string" ]]; then
+      path="$path?$query_string"
+    fi
+    request GET "$path"
     ;;
   run-issues)
     if [[ -z "${PAPERCLIP_RUN_ID:-}" ]]; then

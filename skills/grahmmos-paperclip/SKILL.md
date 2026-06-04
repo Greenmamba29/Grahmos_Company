@@ -92,6 +92,8 @@ skip current-issue auto-resolution.
 Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 `me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,
 and `PATCH /api/issues/{issueId}` without rebuilding the curl commands each heartbeat.
+Use `./scripts/paperclip-api.sh issues-list ...` and `issues-count ...` to query
+`/companies/{companyId}/issues` directly once auth is available.
 Use `./scripts/paperclip-api.sh run-issues` to inspect the current heartbeat-run
 issue list directly when the runtime has a board-authenticated path.
 Use `./scripts/paperclip-api.sh issue-comment ...` when the execution contract
@@ -113,6 +115,9 @@ restart case where the Paperclip execution contract requires a structured
 `resume: true` comment payload.
 Use `./scripts/paperclip-mark-blocked-current.sh --issue-id <uuid>` when auth is
 restored but current-issue discovery is ambiguous or intentionally bypassed.
+Use `./scripts/paperclip-api.sh issues-list 'limit=20&sortField=updatedAt&sortDir=desc'`
+when you need to enumerate candidate issues before selecting an explicit
+`--issue-id`.
 Use `./scripts/paperclip-api.sh current-issue-id` or
 `./scripts/paperclip-api.sh issue-comment-current ...` /
 `./scripts/paperclip-api.sh issue-blocked-current ...` when the run should target
