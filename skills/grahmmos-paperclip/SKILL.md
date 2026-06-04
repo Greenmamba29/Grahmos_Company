@@ -99,6 +99,8 @@ the current task automatically. The helper prefers `PAPERCLIP_TASK_ID`; otherwis
 it tries `/api/heartbeat-runs/{runId}/issues` first and falls back to `inbox-lite`
 when bearer auth is available. Auto-selection still requires exactly one issue in
 the chosen source.
+Run `./scripts/test-paperclip-api.sh` to smoke-test the helper against a local
+mock Paperclip API before changing request resolution or payload behavior.
 
 #### Workaround
 Add a long-lived Paperclip agent API key to the Cursor Cloud adapter environment as
@@ -162,6 +164,7 @@ Grahmos_Company/
   scripts/
     paperclip-api.sh           # Paperclip API helper for issue operations
     paperclip-runtime-check.sh # Runtime auth diagnostic helper
+    test-paperclip-api.sh      # Local smoke test for Paperclip helper flows
   skills/
     grahmmos-paperclip/
       SKILL.md       # This file - company setup documentation

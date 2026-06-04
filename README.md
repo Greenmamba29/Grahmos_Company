@@ -44,3 +44,10 @@ whenever a board-authenticated session is available.
 The same resolution order now powers `issue-get-current`,
 `issue-comments-current`, and `issue-update-current`, so current-task reads and
 final disposition updates do not need an explicit issue ID once auth is available.
+
+## Helper regression test
+
+- Run `./scripts/test-paperclip-api.sh` to exercise the helper against a local
+  mock Paperclip API. The smoke test covers current-issue resolution, run-bound
+  issue lookup, current-task read/update helpers, interaction/comment posting,
+  and blocked disposition payload generation.
