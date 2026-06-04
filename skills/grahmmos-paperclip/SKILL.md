@@ -150,6 +150,22 @@ With the current cloud-agent shell setup, the expected result is:
 - run and issue probes return `Unauthorized`
 - overall result is `BLOCKED`
 
+### Generate a blocked update once auth exists
+
+When an authenticated browser session, MCP surface, or other supported API auth
+path becomes available, generate the blocked-disposition payloads with:
+
+```bash
+python3 scripts/paperclip-blocked-update-helper.py ISSUE_ID --print-curl
+```
+
+That helper emits:
+
+- a task comment body that names the unblock owner and action
+- a PATCH payload that sets `status` to `blocked`
+- example authenticated `curl` commands for `/api/issues/{issueId}/comments`
+  and `/api/issues/{issueId}`
+
 ## GitHub Repo Structure
 
 ```

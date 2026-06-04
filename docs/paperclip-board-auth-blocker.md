@@ -57,4 +57,5 @@ from the shell alone.
 ## Supporting Artifacts
 
 - `scripts/paperclip-auth-probe.sh`
+- `scripts/paperclip-blocked-update-helper.py`
 - `skills/grahmmos-paperclip/SKILL.md`
