@@ -41,6 +41,7 @@ lifecycle through accept, reject, cancel, and respond commands once an
 interaction exists.
 Useful examples:
 - `./scripts/paperclip-api.sh issue-comment-resume-current`
+- `./scripts/paperclip-api.sh issue-status-current in_review "Waiting on reviewer feedback."`
 - `./scripts/paperclip-api.sh issue-done-current "Completed and verified."`
 - `./scripts/paperclip-api.sh sample-payload comment-resume | ./scripts/paperclip-api.sh issue-comment-current -`
 - `./scripts/paperclip-api.sh sample-payload update-done | ./scripts/paperclip-api.sh issue-update-current -`
@@ -69,6 +70,7 @@ once auth is available.
 
 For the most common execution-contract actions, prefer the direct wrappers:
 - `issue-comment-resume-current`
+- `issue-status-current`
 - `issue-done-current`
 
 Quick regression check:

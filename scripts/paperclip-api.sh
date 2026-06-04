@@ -7,6 +7,7 @@ Usage:
   ./scripts/paperclip-api.sh health
   ./scripts/paperclip-api.sh sample-payload TYPE
   ./scripts/paperclip-api.sh build-resume-comment [BODY]
+  ./scripts/paperclip-api.sh build-status-update STATUS [COMMENT]
   ./scripts/paperclip-api.sh build-done-update [COMMENT]
   ./scripts/paperclip-api.sh build-markdown-document MARKDOWN_FILE|- [TITLE] [CHANGE_SUMMARY]
   ./scripts/paperclip-api.sh build-plan-confirmation REVISION_ID [ISSUE_ID]
@@ -20,6 +21,8 @@ Usage:
   ./scripts/paperclip-api.sh issue-comment-current JSON_FILE|-
   ./scripts/paperclip-api.sh issue-comment-resume ISSUE_ID [BODY]
   ./scripts/paperclip-api.sh issue-comment-resume-current [BODY]
+  ./scripts/paperclip-api.sh issue-status ISSUE_ID STATUS [COMMENT]
+  ./scripts/paperclip-api.sh issue-status-current STATUS [COMMENT]
   ./scripts/paperclip-api.sh issue-update ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-update-current JSON_FILE|-
   ./scripts/paperclip-api.sh issue-done ISSUE_ID [COMMENT]
@@ -59,6 +62,7 @@ Examples:
   ./scripts/paperclip-api.sh sample-payload request-confirmation
   ./scripts/paperclip-api.sh sample-payload interaction-respond
   ./scripts/paperclip-api.sh build-resume-comment
+  ./scripts/paperclip-api.sh build-status-update in_review "Waiting on reviewer feedback."
   ./scripts/paperclip-api.sh build-done-update
   ./scripts/paperclip-api.sh build-markdown-document plan.md "Implementation plan" "Initial plan draft"
   ./scripts/paperclip-api.sh build-plan-confirmation 123e4567-e89b-12d3-a456-426614174000 ISSUE-123
@@ -72,6 +76,7 @@ Examples:
   printf '{"body":"Work started.","resume":true}\n' | \
     ./scripts/paperclip-api.sh issue-comment 123e4567-e89b-12d3-a456-426614174000 -
   ./scripts/paperclip-api.sh issue-comment-resume-current
+  ./scripts/paperclip-api.sh issue-status-current in_review "Waiting on reviewer feedback."
   printf '{"status":"done","comment":"Verified and finished."}\n' | \
     ./scripts/paperclip-api.sh issue-update-current -
   ./scripts/paperclip-api.sh issue-done-current "Verified and finished."
@@ -103,6 +108,7 @@ Notes:
   - The script expects PAPERCLIP_API_URL for all commands.
   - `sample-payload` prints valid JSON examples for common comment, update, and interaction requests.
   - `build-resume-comment` and `build-done-update` print the most common execution-contract payloads.
+  - `build-status-update` prints a generic status update payload for statuses like `in_review`, `done`, or `blocked`.
   - `build-markdown-document` wraps plain markdown into the JSON shape expected by issue document updates.
   - `build-plan-confirmation` prints a request_confirmation payload targeting the `plan` document for a specific revision id.
   - `issue-plan-confirmation*` resolves the latest `plan` document revision and posts the matching request_confirmation interaction.
@@ -396,23 +402,34 @@ sys.stdout.write("\n")
 PY
 }
 
-build_done_update() {
-  local comment="${1:-Completed and verified.}"
+build_status_update() {
+  local status="${1:-}"
+  local comment="${2:-}"
 
-  python3 - "$comment" <<'PY'
+  if [[ -z "$status" ]]; then
+    echo "error: STATUS is required" >&2
+    exit 2
+  fi
+
+  python3 - "$status" "$comment" <<'PY'
 import json
 import sys
 
-json.dump(
-    {
-        "status": "done",
-        "comment": sys.argv[1],
-    },
-    sys.stdout,
-    indent=2,
-)
+payload = {
+    "status": sys.argv[1],
+}
+
+if sys.argv[2]:
+    payload["comment"] = sys.argv[2]
+
+json.dump(payload, sys.stdout, indent=2)
 sys.stdout.write("\n")
 PY
+}
+
+build_done_update() {
+  local comment="${1:-Completed and verified.}"
+  build_status_update "done" "$comment"
 }
 
 build_markdown_document() {
@@ -716,6 +733,9 @@ case "$cmd" in
   build-resume-comment)
     build_resume_comment "${2:-Resuming work in this heartbeat.}"
     ;;
+  build-status-update)
+    build_status_update "${2:-}" "${3:-}"
+    ;;
   build-done-update)
     build_done_update "${2:-Completed and verified.}"
     ;;
@@ -806,6 +826,34 @@ case "$cmd" in
     body_file="$(mktemp)"
     build_resume_comment "$body" > "$body_file"
     request POST "/api/issues/$issue_id/comments" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-status)
+    require_auth
+    issue_id="${2:-}"
+    status="${3:-}"
+    comment="${4:-}"
+    if [[ -z "$issue_id" || -z "$status" ]]; then
+      echo "error: ISSUE_ID and STATUS are required" >&2
+      exit 2
+    fi
+    body_file="$(mktemp)"
+    build_status_update "$status" "$comment" > "$body_file"
+    request PATCH "/api/issues/$issue_id" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-status-current)
+    require_auth
+    status="${2:-}"
+    comment="${3:-}"
+    if [[ -z "$status" ]]; then
+      echo "error: STATUS is required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    body_file="$(mktemp)"
+    build_status_update "$status" "$comment" > "$body_file"
+    request PATCH "/api/issues/$issue_id" "$body_file"
     rm -f "$body_file"
     ;;
   issue-update)

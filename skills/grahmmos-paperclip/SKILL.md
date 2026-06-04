@@ -86,6 +86,9 @@ for common execution-contract actions before piping them into the live commands.
 Use `./scripts/paperclip-api.sh issue-comment-resume-current` and
 `./scripts/paperclip-api.sh issue-done-current ...` for the simplest path to the
 two most common execution-contract updates once auth is available.
+Use `./scripts/paperclip-api.sh issue-status-current STATUS ...` when you need a
+different final disposition such as `in_review` but still want the helper to
+build the JSON update payload for you.
 Use `./scripts/paperclip-api.sh issue-comment ...` when the execution contract
 requires a task comment, including structured fields like `resume`, `reopen`, or
 `interrupt`.
@@ -125,6 +128,9 @@ Example authenticated flows:
 
 ```bash
 ./scripts/paperclip-api.sh issue-comment-resume-current
+
+./scripts/paperclip-api.sh issue-status-current in_review \
+  "Waiting on reviewer feedback."
 
 ./scripts/paperclip-api.sh issue-done-current "Completed and verified."
 
