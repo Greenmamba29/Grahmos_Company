@@ -40,3 +40,6 @@ Useful examples:
 - `./scripts/paperclip-api.sh sample-payload comment-resume | ./scripts/paperclip-api.sh issue-comment-current -`
 - `./scripts/paperclip-api.sh sample-payload update-done | ./scripts/paperclip-api.sh issue-update-current -`
 - `./scripts/paperclip-api.sh sample-payload request-confirmation | ./scripts/paperclip-api.sh issue-interaction-current -`
+
+Quick regression check:
+- `./scripts/test-paperclip-helpers.sh`

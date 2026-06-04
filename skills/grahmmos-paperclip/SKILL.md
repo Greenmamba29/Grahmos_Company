@@ -113,6 +113,12 @@ Example authenticated flows:
   ./scripts/paperclip-api.sh issue-interaction-current -
 ```
 
+Quick regression check for the helper toolkit:
+
+```bash
+./scripts/test-paperclip-helpers.sh
+```
+
 #### Workaround
 Add a long-lived Paperclip agent API key to the Cursor Cloud adapter environment as
 `PAPERCLIP_API_KEY` using a Paperclip secret reference. This gives the shell a
