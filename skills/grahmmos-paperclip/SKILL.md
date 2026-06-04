@@ -61,6 +61,14 @@ cloud runtime may expose:
 - PAPERCLIP_TASK_ID
 - PAPERCLIP_WAKE_COMMENT_ID
 
+The shell may still include:
+- GH_TOKEN
+- CLOUD_AGENT_INJECTED_SECRET_NAMES
+
+`GH_TOKEN` is sufficient for GitHub operations, but it does not authenticate
+Paperclip issue endpoints. `CLOUD_AGENT_INJECTED_SECRET_NAMES` is useful for
+verifying whether `PAPERCLIP_API_KEY` was actually injected into the cloud shell.
+
 Without a board-authenticated session or `PAPERCLIP_API_KEY`, the agent cannot call
 endpoints such as:
 - `GET /api/heartbeat-runs/{runId}/issues`
@@ -76,6 +84,8 @@ current runtime state before attempting issue operations. The runtime check
 distinguishes between:
 - a board-authenticated shell session that can resolve `/api/heartbeat-runs/{runId}/issues`
 - bearer-token access through `PAPERCLIP_API_KEY`
+- a misconfigured adapter where `CLOUD_AGENT_INJECTED_SECRET_NAMES` does not
+  include `PAPERCLIP_API_KEY` at all
 
 Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 `me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,
@@ -203,6 +213,12 @@ have a board-authenticated session cookie. This is common in Cursor Cloud shells
    `./scripts/paperclip-api.sh issue-interaction ...` once auth is available so the
    agent can satisfy the execution contract requirement to leave a task comment and
    create structured board interactions.
+
+### Runtime check says `PAPERCLIP_API_KEY was not injected`
+**Cause:** The Cursor Cloud adapter environment never injected a Paperclip bearer
+token into the shell, even though other secret-backed env vars may be present.
+**Fix:** Update the adapter env config so `CLOUD_AGENT_INJECTED_SECRET_NAMES`
+includes `PAPERCLIP_API_KEY`, then rerun the heartbeat.
 
 ## Heartbeat Schedule
 - Heartbeat on interval: ON

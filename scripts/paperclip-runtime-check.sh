@@ -32,6 +32,12 @@ import urllib.request
 base = os.environ["PAPERCLIP_API_URL"].rstrip("/")
 run_id = os.environ["PAPERCLIP_RUN_ID"]
 api_key = os.environ.get("PAPERCLIP_API_KEY", "").strip()
+gh_token = os.environ.get("GH_TOKEN", "").strip()
+injected_secret_names = {
+    item.strip()
+    for item in os.environ.get("CLOUD_AGENT_INJECTED_SECRET_NAMES", "").split(",")
+    if item.strip()
+}
 
 
 def request(path: str, headers: dict[str, str] | None = None):
@@ -84,6 +90,8 @@ summary = {
     "run_issues_status": run_issues_status,
     "run_issues_accessible": run_issues_status == 200,
     "api_key_present": bool(api_key),
+    "paperclip_api_key_injected": "PAPERCLIP_API_KEY" in injected_secret_names,
+    "gh_token_present": bool(gh_token),
     "bearer_me_status": bearer_me_status,
     "bearer_inbox_status": bearer_inbox_status,
 }
@@ -125,6 +133,16 @@ if session_status == 401:
     print("Board authentication is not available in this shell session.")
     if error:
         print(f"Server response: {error}")
+    if gh_token:
+        print("GH_TOKEN is present for GitHub operations, but it cannot authenticate Paperclip issue endpoints.")
+    if "PAPERCLIP_API_KEY" not in injected_secret_names:
+        print(
+            "The runtime metadata shows that PAPERCLIP_API_KEY was not injected into this cloud shell."
+        )
+        print(
+            "Unblock owner: Paperclip operator\n"
+            "Required action: inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env."
+        )
     print(
         "Issue reads, comments, interactions, and disposition updates will fail "
         "until a board-authenticated session or PAPERCLIP_API_KEY is available."
