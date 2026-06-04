@@ -7,6 +7,9 @@ This is the Company run main repo for Grahmos.
 - Run `./scripts/paperclip-runtime-check.sh` inside a Paperclip-managed runtime to
   verify whether the shell can access issue state through a board-authenticated
   session or a `PAPERCLIP_API_KEY` bearer token.
+- Run `./scripts/paperclip-api.sh sample-payload TYPE` to print valid JSON examples
+  for the most common execution-contract actions before piping them into the live
+  comment/update/interaction commands.
 - If the script exits with `2`, the agent can still work on the Git repository but
   cannot read or mutate Paperclip issues from the shell yet.
 - Once auth is available, use `./scripts/paperclip-api.sh` for the common Paperclip
@@ -33,3 +36,7 @@ the execution contract requires them.
 The interaction helpers accept the raw JSON body expected by
 `POST /api/issues/{issueId}/interactions`, which is useful for
 `suggest_tasks`, `ask_user_questions`, and `request_confirmation`.
+Useful examples:
+- `./scripts/paperclip-api.sh sample-payload comment-resume | ./scripts/paperclip-api.sh issue-comment-current -`
+- `./scripts/paperclip-api.sh sample-payload update-done | ./scripts/paperclip-api.sh issue-update-current -`
+- `./scripts/paperclip-api.sh sample-payload request-confirmation | ./scripts/paperclip-api.sh issue-interaction-current -`

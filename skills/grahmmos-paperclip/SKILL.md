@@ -81,6 +81,8 @@ Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 `me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,
 `PATCH /api/issues/{issueId}`, and `POST /api/issues/{issueId}/interactions`
 without rebuilding the curl commands each heartbeat.
+Use `./scripts/paperclip-api.sh sample-payload ...` to print valid JSON envelopes
+for common execution-contract actions before piping them into the live commands.
 Use `./scripts/paperclip-api.sh issue-comment ...` when the execution contract
 requires a task comment, including structured fields like `resume`, `reopen`, or
 `interrupt`.
@@ -97,6 +99,19 @@ Use `./scripts/paperclip-api.sh current-issue-id` or
 `./scripts/paperclip-api.sh issue-blocked-current ...` when the run should target
 the current task automatically. The helper prefers `PAPERCLIP_TASK_ID`; otherwise
 it only auto-selects when `inbox-lite` returns exactly one issue.
+
+Example authenticated flows:
+
+```bash
+./scripts/paperclip-api.sh sample-payload comment-resume | \
+  ./scripts/paperclip-api.sh issue-comment-current -
+
+./scripts/paperclip-api.sh sample-payload update-done | \
+  ./scripts/paperclip-api.sh issue-update-current -
+
+./scripts/paperclip-api.sh sample-payload request-confirmation | \
+  ./scripts/paperclip-api.sh issue-interaction-current -
+```
 
 #### Workaround
 Add a long-lived Paperclip agent API key to the Cursor Cloud adapter environment as

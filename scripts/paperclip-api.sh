@@ -5,6 +5,7 @@ usage() {
   cat <<'EOF'
 Usage:
   ./scripts/paperclip-api.sh health
+  ./scripts/paperclip-api.sh sample-payload TYPE
   ./scripts/paperclip-api.sh session
   ./scripts/paperclip-api.sh me
   ./scripts/paperclip-api.sh inbox-lite
@@ -21,6 +22,8 @@ Usage:
   ./scripts/paperclip-api.sh issue-blocked-current UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
 
 Examples:
+  ./scripts/paperclip-api.sh sample-payload comment-resume
+  ./scripts/paperclip-api.sh sample-payload request-confirmation
   ./scripts/paperclip-api.sh health
   ./scripts/paperclip-api.sh session
   ./scripts/paperclip-api.sh me
@@ -49,6 +52,7 @@ Examples:
 
 Notes:
   - The script expects PAPERCLIP_API_URL for all commands.
+  - `sample-payload` prints valid JSON examples for common comment, update, and interaction requests.
   - `session` checks whether the current shell has a board-authenticated session.
   - Issue and agent commands require PAPERCLIP_API_KEY.
   - Mutating commands automatically send X-Paperclip-Run-Id when PAPERCLIP_RUN_ID is present.
@@ -83,6 +87,134 @@ else:
   else
     cat
   fi
+}
+
+sample_payload() {
+  local kind="${1:-}"
+
+  case "$kind" in
+    comment-resume)
+      cat <<'EOF'
+{
+  "body": "Resuming work in this heartbeat.",
+  "resume": true
+}
+EOF
+      ;;
+    update-done)
+      cat <<'EOF'
+{
+  "status": "done",
+  "comment": "Completed and verified."
+}
+EOF
+      ;;
+    update-blocked)
+      cat <<'EOF'
+{
+  "status": "blocked",
+  "comment": "Blocked.\n\nUnblock owner: Paperclip operator\nRequired action: Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter environment."
+}
+EOF
+      ;;
+    suggest-tasks)
+      cat <<'EOF'
+{
+  "kind": "suggest_tasks",
+  "title": "Suggested follow-up tasks",
+  "summary": "Choose the tasks that should be created from this issue.",
+  "continuationPolicy": "wake_assignee",
+  "payload": {
+    "version": 1,
+    "tasks": [
+      {
+        "clientKey": "task-1",
+        "title": "First follow-up task"
+      },
+      {
+        "clientKey": "task-2",
+        "title": "Second follow-up task"
+      }
+    ]
+  }
+}
+EOF
+      ;;
+    ask-user-questions)
+      cat <<'EOF'
+{
+  "kind": "ask_user_questions",
+  "title": "Need user input",
+  "summary": "Choose one of the following options so work can continue.",
+  "continuationPolicy": "wake_assignee",
+  "payload": {
+    "version": 1,
+    "title": "Question for the board/user",
+    "submitLabel": "Submit answers",
+    "questions": [
+      {
+        "id": "next-step",
+        "prompt": "Which path should we take next?",
+        "selectionMode": "single",
+        "required": true,
+        "options": [
+          {
+            "id": "option-a",
+            "label": "Option A"
+          },
+          {
+            "id": "option-b",
+            "label": "Option B"
+          }
+        ]
+      }
+    ]
+  }
+}
+EOF
+      ;;
+    request-confirmation)
+      cat <<'EOF'
+{
+  "kind": "request_confirmation",
+  "idempotencyKey": "confirmation:issue-id:plan:revision-id",
+  "title": "Plan approval required",
+  "summary": "Review the attached plan revision and approve or reject it.",
+  "continuationPolicy": "wake_assignee_on_accept",
+  "payload": {
+    "version": 1,
+    "prompt": "Approve the latest plan revision so implementation can begin?",
+    "acceptLabel": "Approve plan",
+    "rejectLabel": "Request changes",
+    "rejectRequiresReason": true,
+    "rejectReasonLabel": "What should change?",
+    "detailsMarkdown": "This confirmation should target the latest plan revision.",
+    "supersedeOnUserComment": true,
+    "target": {
+      "type": "custom",
+      "key": "plan",
+      "revisionId": "revision-id"
+    }
+  }
+}
+EOF
+      ;;
+    ""|-h|--help|help)
+      cat <<'EOF'
+Supported sample payload types:
+  comment-resume
+  update-done
+  update-blocked
+  suggest-tasks
+  ask-user-questions
+  request-confirmation
+EOF
+      ;;
+    *)
+      echo "error: unknown sample payload type: $kind" >&2
+      exit 2
+      ;;
+  esac
 }
 
 request() {
@@ -230,6 +362,9 @@ cmd="${1:-}"
 case "$cmd" in
   health)
     request GET /api/health
+    ;;
+  sample-payload)
+    sample_payload "${2:-}"
     ;;
   session)
     request GET /api/auth/get-session
