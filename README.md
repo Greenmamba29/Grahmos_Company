@@ -36,10 +36,15 @@ the execution contract requires them.
 The interaction helpers accept the raw JSON body expected by
 `POST /api/issues/{issueId}/interactions`, which is useful for
 `suggest_tasks`, `ask_user_questions`, and `request_confirmation`.
+The same helper also supports listing interactions and driving the follow-up
+lifecycle through accept, reject, cancel, and respond commands once an
+interaction exists.
 Useful examples:
 - `./scripts/paperclip-api.sh sample-payload comment-resume | ./scripts/paperclip-api.sh issue-comment-current -`
 - `./scripts/paperclip-api.sh sample-payload update-done | ./scripts/paperclip-api.sh issue-update-current -`
 - `./scripts/paperclip-api.sh sample-payload request-confirmation | ./scripts/paperclip-api.sh issue-interaction-current -`
+- `./scripts/paperclip-api.sh issue-interactions-current`
+- `./scripts/paperclip-api.sh sample-payload interaction-respond | ./scripts/paperclip-api.sh issue-interaction-respond-current INTERACTION_ID -`
 
 Quick regression check:
 - `./scripts/test-paperclip-helpers.sh`

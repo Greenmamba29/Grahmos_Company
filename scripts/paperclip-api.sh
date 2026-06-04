@@ -18,12 +18,23 @@ Usage:
   ./scripts/paperclip-api.sh issue-update-current JSON_FILE|-
   ./scripts/paperclip-api.sh issue-interaction ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-interaction-current JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-interactions ISSUE_ID
+  ./scripts/paperclip-api.sh issue-interactions-current
+  ./scripts/paperclip-api.sh issue-interaction-accept ISSUE_ID INTERACTION_ID [JSON_FILE|-]
+  ./scripts/paperclip-api.sh issue-interaction-accept-current INTERACTION_ID [JSON_FILE|-]
+  ./scripts/paperclip-api.sh issue-interaction-reject ISSUE_ID INTERACTION_ID [REASON]
+  ./scripts/paperclip-api.sh issue-interaction-reject-current INTERACTION_ID [REASON]
+  ./scripts/paperclip-api.sh issue-interaction-cancel ISSUE_ID INTERACTION_ID [REASON]
+  ./scripts/paperclip-api.sh issue-interaction-cancel-current INTERACTION_ID [REASON]
+  ./scripts/paperclip-api.sh issue-interaction-respond ISSUE_ID INTERACTION_ID JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-interaction-respond-current INTERACTION_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-blocked ISSUE_ID UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
   ./scripts/paperclip-api.sh issue-blocked-current UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
 
 Examples:
   ./scripts/paperclip-api.sh sample-payload comment-resume
   ./scripts/paperclip-api.sh sample-payload request-confirmation
+  ./scripts/paperclip-api.sh sample-payload interaction-respond
   ./scripts/paperclip-api.sh health
   ./scripts/paperclip-api.sh session
   ./scripts/paperclip-api.sh me
@@ -37,6 +48,10 @@ Examples:
     ./scripts/paperclip-api.sh issue-update-current -
   printf '{"kind":"ask_user_questions","title":"Need board input"}\n' | \
     ./scripts/paperclip-api.sh issue-interaction-current -
+  ./scripts/paperclip-api.sh issue-interactions-current
+  ./scripts/paperclip-api.sh issue-interaction-accept-current 123e4567-e89b-12d3-a456-426614174000
+  printf '{"answers":[{"questionId":"next-step","optionIds":["option-a"]}]}\n' | \
+    ./scripts/paperclip-api.sh issue-interaction-respond-current 123e4567-e89b-12d3-a456-426614174000 -
   ./scripts/paperclip-api.sh issue-update 123e4567-e89b-12d3-a456-426614174000 payload.json
   ./scripts/paperclip-api.sh issue-blocked \
     123e4567-e89b-12d3-a456-426614174000 \
@@ -199,6 +214,37 @@ EOF
 }
 EOF
       ;;
+    interaction-accept)
+      cat <<'EOF'
+{
+  "selectedClientKeys": [
+    "task-1"
+  ]
+}
+EOF
+      ;;
+    interaction-reason)
+      cat <<'EOF'
+{
+  "reason": "This path is no longer the correct next step."
+}
+EOF
+      ;;
+    interaction-respond)
+      cat <<'EOF'
+{
+  "answers": [
+    {
+      "questionId": "next-step",
+      "optionIds": [
+        "option-a"
+      ]
+    }
+  ],
+  "summaryMarkdown": "Selected Option A so execution can continue."
+}
+EOF
+      ;;
     ""|-h|--help|help)
       cat <<'EOF'
 Supported sample payload types:
@@ -208,6 +254,9 @@ Supported sample payload types:
   suggest-tasks
   ask-user-questions
   request-confirmation
+  interaction-accept
+  interaction-reason
+  interaction-respond
 EOF
       ;;
     *)
@@ -473,6 +522,172 @@ case "$cmd" in
     issue_id="$(resolve_current_issue_id)"
     body_file="$(read_body_file "$source")"
     request POST "/api/issues/$issue_id/interactions" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-interactions)
+    require_auth
+    issue_id="${2:-}"
+    if [[ -z "$issue_id" ]]; then
+      echo "error: ISSUE_ID is required" >&2
+      exit 2
+    fi
+    request GET "/api/issues/$issue_id/interactions"
+    ;;
+  issue-interactions-current)
+    require_auth
+    issue_id="$(resolve_current_issue_id)"
+    request GET "/api/issues/$issue_id/interactions"
+    ;;
+  issue-interaction-accept)
+    require_auth
+    issue_id="${2:-}"
+    interaction_id="${3:-}"
+    source="${4:-}"
+    if [[ -z "$issue_id" || -z "$interaction_id" ]]; then
+      echo "error: ISSUE_ID and INTERACTION_ID are required" >&2
+      exit 2
+    fi
+    if [[ -n "$source" ]]; then
+      body_file="$(read_body_file "$source")"
+      request POST "/api/issues/$issue_id/interactions/$interaction_id/accept" "$body_file"
+      rm -f "$body_file"
+    else
+      request POST "/api/issues/$issue_id/interactions/$interaction_id/accept"
+    fi
+    ;;
+  issue-interaction-accept-current)
+    require_auth
+    interaction_id="${2:-}"
+    source="${3:-}"
+    if [[ -z "$interaction_id" ]]; then
+      echo "error: INTERACTION_ID is required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    if [[ -n "$source" ]]; then
+      body_file="$(read_body_file "$source")"
+      request POST "/api/issues/$issue_id/interactions/$interaction_id/accept" "$body_file"
+      rm -f "$body_file"
+    else
+      request POST "/api/issues/$issue_id/interactions/$interaction_id/accept"
+    fi
+    ;;
+  issue-interaction-reject)
+    require_auth
+    issue_id="${2:-}"
+    interaction_id="${3:-}"
+    reason="${4:-}"
+    if [[ -z "$issue_id" || -z "$interaction_id" ]]; then
+      echo "error: ISSUE_ID and INTERACTION_ID are required" >&2
+      exit 2
+    fi
+    if [[ -n "$reason" ]]; then
+      tmp_body="$(mktemp)"
+      python3 - "$reason" > "$tmp_body" <<'PY'
+import json
+import sys
+json.dump({"reason": sys.argv[1]}, sys.stdout)
+sys.stdout.write("\n")
+PY
+      request POST "/api/issues/$issue_id/interactions/$interaction_id/reject" "$tmp_body"
+      rm -f "$tmp_body"
+    else
+      request POST "/api/issues/$issue_id/interactions/$interaction_id/reject"
+    fi
+    ;;
+  issue-interaction-reject-current)
+    require_auth
+    interaction_id="${2:-}"
+    reason="${3:-}"
+    if [[ -z "$interaction_id" ]]; then
+      echo "error: INTERACTION_ID is required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    if [[ -n "$reason" ]]; then
+      tmp_body="$(mktemp)"
+      python3 - "$reason" > "$tmp_body" <<'PY'
+import json
+import sys
+json.dump({"reason": sys.argv[1]}, sys.stdout)
+sys.stdout.write("\n")
+PY
+      request POST "/api/issues/$issue_id/interactions/$interaction_id/reject" "$tmp_body"
+      rm -f "$tmp_body"
+    else
+      request POST "/api/issues/$issue_id/interactions/$interaction_id/reject"
+    fi
+    ;;
+  issue-interaction-cancel)
+    require_auth
+    issue_id="${2:-}"
+    interaction_id="${3:-}"
+    reason="${4:-}"
+    if [[ -z "$issue_id" || -z "$interaction_id" ]]; then
+      echo "error: ISSUE_ID and INTERACTION_ID are required" >&2
+      exit 2
+    fi
+    if [[ -n "$reason" ]]; then
+      tmp_body="$(mktemp)"
+      python3 - "$reason" > "$tmp_body" <<'PY'
+import json
+import sys
+json.dump({"reason": sys.argv[1]}, sys.stdout)
+sys.stdout.write("\n")
+PY
+      request POST "/api/issues/$issue_id/interactions/$interaction_id/cancel" "$tmp_body"
+      rm -f "$tmp_body"
+    else
+      request POST "/api/issues/$issue_id/interactions/$interaction_id/cancel"
+    fi
+    ;;
+  issue-interaction-cancel-current)
+    require_auth
+    interaction_id="${2:-}"
+    reason="${3:-}"
+    if [[ -z "$interaction_id" ]]; then
+      echo "error: INTERACTION_ID is required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    if [[ -n "$reason" ]]; then
+      tmp_body="$(mktemp)"
+      python3 - "$reason" > "$tmp_body" <<'PY'
+import json
+import sys
+json.dump({"reason": sys.argv[1]}, sys.stdout)
+sys.stdout.write("\n")
+PY
+      request POST "/api/issues/$issue_id/interactions/$interaction_id/cancel" "$tmp_body"
+      rm -f "$tmp_body"
+    else
+      request POST "/api/issues/$issue_id/interactions/$interaction_id/cancel"
+    fi
+    ;;
+  issue-interaction-respond)
+    require_auth
+    issue_id="${2:-}"
+    interaction_id="${3:-}"
+    source="${4:-}"
+    if [[ -z "$issue_id" || -z "$interaction_id" || -z "$source" ]]; then
+      echo "error: ISSUE_ID, INTERACTION_ID, and JSON_FILE|- are required" >&2
+      exit 2
+    fi
+    body_file="$(read_body_file "$source")"
+    request POST "/api/issues/$issue_id/interactions/$interaction_id/respond" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-interaction-respond-current)
+    require_auth
+    interaction_id="${2:-}"
+    source="${3:-}"
+    if [[ -z "$interaction_id" || -z "$source" ]]; then
+      echo "error: INTERACTION_ID and JSON_FILE|- are required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    body_file="$(read_body_file "$source")"
+    request POST "/api/issues/$issue_id/interactions/$interaction_id/respond" "$body_file"
     rm -f "$body_file"
     ;;
   issue-blocked)

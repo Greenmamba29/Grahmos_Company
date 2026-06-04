@@ -91,6 +91,9 @@ task disposition without manually resolving the issue ID first.
 Use `./scripts/paperclip-api.sh issue-interaction ...` or
 `./scripts/paperclip-api.sh issue-interaction-current ...` when the board/user
 must choose suggested tasks, answer structured questions, or confirm a proposal.
+Use `./scripts/paperclip-api.sh issue-interactions-current` to inspect pending
+interactions on the current task, then use the accept/reject/cancel/respond
+commands to complete the interaction lifecycle from shell.
 Use `./scripts/paperclip-api.sh issue-blocked ...` when the correct disposition is
 `blocked` and the issue must name an unblock owner and required action.
 Use `./scripts/paperclip-api.sh current-issue-id` or
@@ -111,6 +114,11 @@ Example authenticated flows:
 
 ./scripts/paperclip-api.sh sample-payload request-confirmation | \
   ./scripts/paperclip-api.sh issue-interaction-current -
+
+./scripts/paperclip-api.sh issue-interactions-current
+
+./scripts/paperclip-api.sh sample-payload interaction-respond | \
+  ./scripts/paperclip-api.sh issue-interaction-respond-current INTERACTION_ID -
 ```
 
 Quick regression check for the helper toolkit:
