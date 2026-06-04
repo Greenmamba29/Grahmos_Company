@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ./scripts/paperclip-api.sh health
+  ./scripts/paperclip-api.sh me
+  ./scripts/paperclip-api.sh inbox-lite
+  ./scripts/paperclip-api.sh issue-get ISSUE_ID
+  ./scripts/paperclip-api.sh issue-comments ISSUE_ID [AFTER_COMMENT_ID]
+  ./scripts/paperclip-api.sh issue-update ISSUE_ID JSON_FILE|-
+
+Examples:
+  ./scripts/paperclip-api.sh health
+  ./scripts/paperclip-api.sh me
+  ./scripts/paperclip-api.sh inbox-lite
+  ./scripts/paperclip-api.sh issue-get 123e4567-e89b-12d3-a456-426614174000
+  ./scripts/paperclip-api.sh issue-comments 123e4567-e89b-12d3-a456-426614174000
+  ./scripts/paperclip-api.sh issue-update 123e4567-e89b-12d3-a456-426614174000 payload.json
+  printf '{"comment":"Resuming with runtime auth fixed.","resume":true}\n' | \
+    ./scripts/paperclip-api.sh issue-update 123e4567-e89b-12d3-a456-426614174000 -
+
+Notes:
+  - The script expects PAPERCLIP_API_URL for all commands.
+  - Authenticated commands require PAPERCLIP_API_KEY.
+  - Mutating commands automatically send X-Paperclip-Run-Id when PAPERCLIP_RUN_ID is present.
+EOF
+}
+
+require_api_url() {
+  if [[ -z "${PAPERCLIP_API_URL:-}" ]]; then
+    echo "error: PAPERCLIP_API_URL is required" >&2
+    exit 2
+  fi
+}
+
+require_auth() {
+  if [[ -z "${PAPERCLIP_API_KEY:-}" ]]; then
+    echo "error: PAPERCLIP_API_KEY is required for this command" >&2
+    exit 3
+  fi
+}
+
+print_json() {
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -c 'import json, sys
+data = sys.stdin.read()
+try:
+    parsed = json.loads(data)
+except Exception:
+    sys.stdout.write(data)
+else:
+    json.dump(parsed, sys.stdout, indent=2)
+    sys.stdout.write("\n")'
+  else
+    cat
+  fi
+}
+
+request() {
+  local method="$1"
+  local path="$2"
+  local body_file="${3:-}"
+
+  require_api_url
+
+  local -a args
+  args=(-sSL -X "$method" -H "Accept: application/json")
+
+  if [[ -n "${PAPERCLIP_API_KEY:-}" ]]; then
+    args+=(-H "Authorization: Bearer $PAPERCLIP_API_KEY")
+  fi
+
+  if [[ "$method" != "GET" && -n "${PAPERCLIP_RUN_ID:-}" ]]; then
+    args+=(-H "X-Paperclip-Run-Id: $PAPERCLIP_RUN_ID")
+  fi
+
+  if [[ -n "$body_file" ]]; then
+    args+=(-H "Content-Type: application/json" --data-binary "@$body_file")
+  fi
+
+  local tmp_body
+  tmp_body="$(mktemp)"
+  local code
+  code="$(curl "${args[@]}" -o "$tmp_body" -w '%{http_code}' "$PAPERCLIP_API_URL$path")"
+
+  if [[ "$code" -lt 200 || "$code" -ge 300 ]]; then
+    echo "HTTP $code" >&2
+    cat "$tmp_body" >&2
+    rm -f "$tmp_body"
+    exit 1
+  fi
+
+  cat "$tmp_body" | print_json
+  rm -f "$tmp_body"
+}
+
+read_body_file() {
+  local source="$1"
+  local tmp_body
+  tmp_body="$(mktemp)"
+
+  if [[ "$source" == "-" ]]; then
+    cat > "$tmp_body"
+  else
+    cp "$source" "$tmp_body"
+  fi
+
+  printf '%s\n' "$tmp_body"
+}
+
+cmd="${1:-}"
+case "$cmd" in
+  health)
+    request GET /api/health
+    ;;
+  me)
+    require_auth
+    request GET /api/agents/me
+    ;;
+  inbox-lite)
+    require_auth
+    request GET /api/agents/me/inbox-lite
+    ;;
+  issue-get)
+    require_auth
+    issue_id="${2:-}"
+    if [[ -z "$issue_id" ]]; then
+      echo "error: ISSUE_ID is required" >&2
+      exit 2
+    fi
+    request GET "/api/issues/$issue_id"
+    ;;
+  issue-comments)
+    require_auth
+    issue_id="${2:-}"
+    after_comment_id="${3:-}"
+    if [[ -z "$issue_id" ]]; then
+      echo "error: ISSUE_ID is required" >&2
+      exit 2
+    fi
+    path="/api/issues/$issue_id/comments"
+    if [[ -n "$after_comment_id" ]]; then
+      path="$path?after=$after_comment_id&order=asc"
+    fi
+    request GET "$path"
+    ;;
+  issue-update)
+    require_auth
+    issue_id="${2:-}"
+    source="${3:-}"
+    if [[ -z "$issue_id" || -z "$source" ]]; then
+      echo "error: ISSUE_ID and JSON_FILE|- are required" >&2
+      exit 2
+    fi
+    body_file="$(read_body_file "$source")"
+    request PATCH "/api/issues/$issue_id" "$body_file"
+    rm -f "$body_file"
+    ;;
+  ""|-h|--help|help)
+    usage
+    ;;
+  *)
+    echo "error: unknown command: $cmd" >&2
+    echo >&2
+    usage >&2
+    exit 2
+    ;;
+esac
