@@ -54,8 +54,17 @@ from the shell alone.
   - an official MCP server for Paperclip issue operations
   - another documented API auth mechanism suitable for non-interactive shells
 
+After auth becomes available, the blocked update can be sent with:
+
+```bash
+scripts/paperclip-send-blocked-update.sh \
+  --issue-id ISSUE_ID \
+  --cookie-jar /path/to/cookies.txt
+```
+
 ## Supporting Artifacts
 
 - `scripts/paperclip-auth-probe.sh`
 - `scripts/paperclip-blocked-update-helper.py`
+- `scripts/paperclip-send-blocked-update.sh`
 - `skills/grahmmos-paperclip/SKILL.md`

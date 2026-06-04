@@ -166,6 +166,14 @@ That helper emits:
 - example authenticated `curl` commands for `/api/issues/{issueId}/comments`
   and `/api/issues/{issueId}`
 
+Once you have an authenticated cookie jar, send both updates with:
+
+```bash
+scripts/paperclip-send-blocked-update.sh \
+  --issue-id ISSUE_ID \
+  --cookie-jar /path/to/cookies.txt
+```
+
 ## GitHub Repo Structure
 
 ```

@@ -13,6 +13,8 @@ name used in docs and agent instructions is `GrahmOS`.
 - `scripts/paperclip-auth-probe.sh` - quick auth probe for Paperclip shell access
 - `scripts/paperclip-blocked-update-helper.py` - generates blocked comment and
   status payloads for authenticated Paperclip clients
+- `scripts/paperclip-send-blocked-update.sh` - sends the blocked comment and
+  status update when an authenticated cookie jar is available
 - Additional lightweight documentation needed to keep the company run working
 
 ## Purpose
