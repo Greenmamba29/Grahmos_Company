@@ -6,6 +6,7 @@ usage() {
 Usage:
   ./scripts/paperclip-api.sh health
   ./scripts/paperclip-api.sh sample-payload TYPE
+  ./scripts/paperclip-api.sh build-plan-confirmation REVISION_ID [ISSUE_ID]
   ./scripts/paperclip-api.sh session
   ./scripts/paperclip-api.sh me
   ./scripts/paperclip-api.sh inbox-lite
@@ -44,6 +45,7 @@ Examples:
   ./scripts/paperclip-api.sh sample-payload plan-document
   ./scripts/paperclip-api.sh sample-payload request-confirmation
   ./scripts/paperclip-api.sh sample-payload interaction-respond
+  ./scripts/paperclip-api.sh build-plan-confirmation 123e4567-e89b-12d3-a456-426614174000 ISSUE-123
   ./scripts/paperclip-api.sh health
   ./scripts/paperclip-api.sh session
   ./scripts/paperclip-api.sh me
@@ -79,6 +81,7 @@ Examples:
 Notes:
   - The script expects PAPERCLIP_API_URL for all commands.
   - `sample-payload` prints valid JSON examples for common comment, update, and interaction requests.
+  - `build-plan-confirmation` prints a request_confirmation payload targeting the `plan` document for a specific revision id.
   - `session` checks whether the current shell has a board-authenticated session.
   - Issue and agent commands require PAPERCLIP_API_KEY.
   - Mutating commands automatically send X-Paperclip-Run-Id when PAPERCLIP_RUN_ID is present.
@@ -113,6 +116,20 @@ else:
   else
     cat
   fi
+}
+
+url_encode() {
+  if [[ $# -ne 1 ]]; then
+    echo "error: url_encode expects exactly one argument" >&2
+    exit 2
+  fi
+
+  python3 - "$1" <<'PY'
+import sys
+from urllib.parse import quote
+
+print(quote(sys.argv[1], safe=""))
+PY
 }
 
 sample_payload() {
@@ -152,6 +169,9 @@ EOF
   "changeSummary": "Initial plan draft"
 }
 EOF
+      ;;
+    plan-confirmation)
+      build_plan_confirmation "revision-id" "ISSUE-123"
       ;;
     suggest-tasks)
       cat <<'EOF'
@@ -273,6 +293,7 @@ Supported sample payload types:
   update-done
   update-blocked
   plan-document
+  plan-confirmation
   suggest-tasks
   ask-user-questions
   request-confirmation
@@ -286,6 +307,50 @@ EOF
       exit 2
       ;;
   esac
+}
+
+build_plan_confirmation() {
+  local revision_id="${1:-}"
+  local issue_ref="${2:-ISSUE-123}"
+
+  if [[ -z "$revision_id" ]]; then
+    echo "error: REVISION_ID is required" >&2
+    exit 2
+  fi
+
+  python3 - "$revision_id" "$issue_ref" <<'PY'
+import json
+import sys
+
+revision_id = sys.argv[1]
+issue_ref = sys.argv[2]
+
+payload = {
+    "kind": "request_confirmation",
+    "idempotencyKey": f"confirmation:{issue_ref}:plan:{revision_id}",
+    "title": "Plan approval required",
+    "summary": "Review the latest plan revision and approve or reject it.",
+    "continuationPolicy": "wake_assignee_on_accept",
+    "payload": {
+        "version": 1,
+        "prompt": "Approve the latest plan revision so implementation can begin?",
+        "acceptLabel": "Approve plan",
+        "rejectLabel": "Request changes",
+        "rejectRequiresReason": True,
+        "rejectReasonLabel": "What should change?",
+        "detailsMarkdown": "This confirmation targets the latest revision of the `plan` document.",
+        "supersedeOnUserComment": True,
+        "target": {
+            "type": "custom",
+            "key": "plan",
+            "revisionId": revision_id,
+        },
+    },
+}
+
+json.dump(payload, sys.stdout, indent=2)
+sys.stdout.write("\n")
+PY
 }
 
 request() {
@@ -437,6 +502,9 @@ case "$cmd" in
   sample-payload)
     sample_payload "${2:-}"
     ;;
+  build-plan-confirmation)
+    build_plan_confirmation "${2:-}" "${3:-ISSUE-123}"
+    ;;
   session)
     request GET /api/auth/get-session
     ;;
@@ -544,7 +612,8 @@ case "$cmd" in
       echo "error: ISSUE_ID and KEY are required" >&2
       exit 2
     fi
-    request GET "/api/issues/$issue_id/documents/$key"
+    encoded_key="$(url_encode "$key")"
+    request GET "/api/issues/$issue_id/documents/$encoded_key"
     ;;
   issue-document-get-current)
     require_auth
@@ -554,7 +623,8 @@ case "$cmd" in
       exit 2
     fi
     issue_id="$(resolve_current_issue_id)"
-    request GET "/api/issues/$issue_id/documents/$key"
+    encoded_key="$(url_encode "$key")"
+    request GET "/api/issues/$issue_id/documents/$encoded_key"
     ;;
   issue-document-put)
     require_auth
@@ -566,7 +636,8 @@ case "$cmd" in
       exit 2
     fi
     body_file="$(read_body_file "$source")"
-    request PUT "/api/issues/$issue_id/documents/$key" "$body_file"
+    encoded_key="$(url_encode "$key")"
+    request PUT "/api/issues/$issue_id/documents/$encoded_key" "$body_file"
     rm -f "$body_file"
     ;;
   issue-document-put-current)
@@ -579,7 +650,8 @@ case "$cmd" in
     fi
     issue_id="$(resolve_current_issue_id)"
     body_file="$(read_body_file "$source")"
-    request PUT "/api/issues/$issue_id/documents/$key" "$body_file"
+    encoded_key="$(url_encode "$key")"
+    request PUT "/api/issues/$issue_id/documents/$encoded_key" "$body_file"
     rm -f "$body_file"
     ;;
   issue-document-revisions)
@@ -590,7 +662,8 @@ case "$cmd" in
       echo "error: ISSUE_ID and KEY are required" >&2
       exit 2
     fi
-    request GET "/api/issues/$issue_id/documents/$key/revisions"
+    encoded_key="$(url_encode "$key")"
+    request GET "/api/issues/$issue_id/documents/$encoded_key/revisions"
     ;;
   issue-document-revisions-current)
     require_auth
@@ -600,7 +673,8 @@ case "$cmd" in
       exit 2
     fi
     issue_id="$(resolve_current_issue_id)"
-    request GET "/api/issues/$issue_id/documents/$key/revisions"
+    encoded_key="$(url_encode "$key")"
+    request GET "/api/issues/$issue_id/documents/$encoded_key/revisions"
     ;;
   issue-interaction)
     require_auth

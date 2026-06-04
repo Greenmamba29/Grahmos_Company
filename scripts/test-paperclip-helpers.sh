@@ -20,20 +20,20 @@ echo "Paperclip helper smoke test"
 echo "==========================="
 
 echo
-echo "[1/10] bash syntax checks"
+echo "[1/11] bash syntax checks"
 bash -n "$API_SCRIPT"
 bash -n "$RUNTIME_CHECK_SCRIPT"
 
 echo
-echo "[2/10] help surface includes current-issue helpers"
-"$API_SCRIPT" --help | rg 'issue-update-current|issue-document-put-current|issue-document-revisions-current|issue-interaction-current|issue-interactions-current|issue-interaction-accept-current|issue-interaction-respond-current' >/dev/null
+echo "[2/11] help surface includes current-issue helpers"
+"$API_SCRIPT" --help | rg 'build-plan-confirmation|issue-update-current|issue-document-put-current|issue-document-revisions-current|issue-interaction-current|issue-interactions-current|issue-interaction-accept-current|issue-interaction-respond-current' >/dev/null
 
 echo
-echo "[3/10] sample payload catalog is available"
-"$API_SCRIPT" sample-payload help | rg 'comment-resume|plan-document|update-done|request-confirmation|interaction-accept|interaction-respond' >/dev/null
+echo "[3/11] sample payload catalog is available"
+"$API_SCRIPT" sample-payload help | rg 'comment-resume|plan-document|plan-confirmation|update-done|request-confirmation|interaction-accept|interaction-respond' >/dev/null
 
 echo
-echo "[4/10] request_confirmation sample matches expected schema"
+echo "[4/11] request_confirmation sample matches expected schema"
 "$API_SCRIPT" sample-payload request-confirmation | jq -e '
   .kind == "request_confirmation" and
   .continuationPolicy == "wake_assignee_on_accept" and
@@ -43,7 +43,16 @@ echo "[4/10] request_confirmation sample matches expected schema"
 ' >/dev/null
 
 echo
-echo "[5/10] plan document sample matches expected schema"
+echo "[5/11] build-plan-confirmation emits the expected envelope"
+"$API_SCRIPT" build-plan-confirmation revision-123 ISSUE-123 | jq -e '
+  .kind == "request_confirmation" and
+  .idempotencyKey == "confirmation:ISSUE-123:plan:revision-123" and
+  .payload.target.key == "plan" and
+  .payload.target.revisionId == "revision-123"
+' >/dev/null
+
+echo
+echo "[6/11] plan document sample matches expected schema"
 "$API_SCRIPT" sample-payload plan-document | jq -e '
   .title == "Implementation plan" and
   .format == "markdown" and
@@ -52,7 +61,7 @@ echo "[5/10] plan document sample matches expected schema"
 ' >/dev/null
 
 echo
-echo "[6/10] ask_user_questions sample matches expected schema"
+echo "[7/11] ask_user_questions sample matches expected schema"
 "$API_SCRIPT" sample-payload ask-user-questions | jq -e '
   .kind == "ask_user_questions" and
   .continuationPolicy == "wake_assignee" and
@@ -62,7 +71,7 @@ echo "[6/10] ask_user_questions sample matches expected schema"
 ' >/dev/null
 
 echo
-echo "[7/10] suggest_tasks sample matches expected schema"
+echo "[8/11] suggest_tasks sample matches expected schema"
 "$API_SCRIPT" sample-payload suggest-tasks | jq -e '
   .kind == "suggest_tasks" and
   .continuationPolicy == "wake_assignee" and
@@ -72,14 +81,14 @@ echo "[7/10] suggest_tasks sample matches expected schema"
 ' >/dev/null
 
 echo
-echo "[8/10] interaction accept sample matches expected schema"
+echo "[9/11] interaction accept sample matches expected schema"
 "$API_SCRIPT" sample-payload interaction-accept | jq -e '
   (.selectedClientKeys | length) == 1 and
   .selectedClientKeys[0] == "task-1"
 ' >/dev/null
 
 echo
-echo "[9/10] interaction respond sample matches expected schema"
+echo "[10/11] interaction respond sample matches expected schema"
 "$API_SCRIPT" sample-payload interaction-respond | jq -e '
   (.answers | length) == 1 and
   .answers[0].questionId == "next-step" and
@@ -87,7 +96,7 @@ echo "[9/10] interaction respond sample matches expected schema"
 ' >/dev/null
 
 echo
-echo "[10/10] unauthenticated current-issue commands fail with the expected auth gate"
+echo "[11/11] unauthenticated current-issue commands fail with the expected auth gate"
 set +e
 printf '{"status":"done"}\n' | "$API_SCRIPT" issue-update-current - >/tmp/paperclip-update-current.out 2>/tmp/paperclip-update-current.err
 update_code=$?
