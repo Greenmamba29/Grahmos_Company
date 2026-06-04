@@ -77,6 +77,7 @@ Grahmos_Company/
     paperclip-api            # Authenticated Paperclip API helper
     paperclip-issue-update   # Comment + disposition helper for assigned issues
     paperclip-issue-interaction  # Interaction helper for issue-thread requests
+    paperclip-blocked-update     # Compliant blocked-status helper
   skills/
     grahmmos-paperclip/
       SKILL.md       # This file - company setup documentation
@@ -91,6 +92,7 @@ agent shell, use the repo helper:
 ./scripts/paperclip-api
 ./scripts/paperclip-issue-update
 ./scripts/paperclip-issue-interaction
+./scripts/paperclip-blocked-update
 ```
 
 The full workflow and auth requirements are documented in:

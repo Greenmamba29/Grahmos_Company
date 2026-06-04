@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from paperclip_common import resolve_issue_id, run_api
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Post a compliant blocked update and set a Paperclip issue to blocked."
+    )
+    parser.add_argument("--issue-id", help="Explicit Paperclip issue UUID.")
+    parser.add_argument(
+        "--reason",
+        required=True,
+        help="Short explanation of what is blocked right now.",
+    )
+    parser.add_argument(
+        "--owner",
+        required=True,
+        help="Named unblock owner responsible for the next action.",
+    )
+    parser.add_argument(
+        "--action",
+        required=True,
+        help="Concrete unblock action the named owner needs to take.",
+    )
+    parser.add_argument(
+        "--evidence",
+        help="Optional verification or evidence note to include in the blocked comment.",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Include resume=true in the comment and status payloads when restarting follow-up work.",
+    )
+    parser.add_argument(
+        "--reopen",
+        action="store_true",
+        help="Pass reopen=true to the issue comment endpoint.",
+    )
+    parser.add_argument(
+        "--interrupt",
+        action="store_true",
+        help="Pass interrupt=true to the issue comment endpoint.",
+    )
+    args = parser.parse_args()
+
+    issue_id = resolve_issue_id(args.issue_id)
+
+    lines = [
+        f"Blocked: {args.reason}",
+        "",
+        f"Unblock owner: {args.owner}",
+        f"Unblock action: {args.action}",
+    ]
+    if args.evidence:
+        lines.extend(["", f"Evidence: {args.evidence}"])
+    comment_payload = {"body": "\n".join(lines)}
+    if args.resume:
+        comment_payload["resume"] = True
+    if args.reopen:
+        comment_payload["reopen"] = True
+    if args.interrupt:
+        comment_payload["interrupt"] = True
+    run_api("POST", f"/issues/{issue_id}/comments", comment_payload)
+
+    patch_payload = {"status": "blocked"}
+    if args.resume:
+        patch_payload["resume"] = True
+    run_api("PATCH", f"/issues/{issue_id}", patch_payload)
+    print(issue_id)
+
+
+if __name__ == "__main__":
+    main()

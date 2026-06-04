@@ -1,11 +1,12 @@
 # Paperclip Issue Ops Runbook
 
-This repo now includes two helpers for authenticated Paperclip issue work:
+This repo now includes several helpers for authenticated Paperclip issue work:
 
 ```bash
 ./scripts/paperclip-api
 ./scripts/paperclip-issue-update
 ./scripts/paperclip-issue-interaction
+./scripts/paperclip-blocked-update
 ```
 
 Use it when a Cursor cloud agent needs to:
@@ -180,6 +181,22 @@ the issue only when the assignment is unambiguous.
 This usually means the Paperclip board requires an authenticated browser session
 or session cookie, even though the repo workspace and heartbeat env vars are
 already present.
+
+### I need to mark the issue blocked cleanly
+
+Use the blocked helper so the issue comment always names the unblock owner and
+required action before patching the issue to `blocked`:
+
+```bash
+./scripts/paperclip-blocked-update \
+  --reason "Paperclip board auth is unavailable from the cloud shell." \
+  --owner "Paperclip platform/operator" \
+  --action "Inject a valid PAPERCLIP_AUTH_HEADER or PAPERCLIP_COOKIE_HEADER into the runtime." \
+  --evidence "Direct /api requests returned 401 Unauthorized and Board authentication required."
+```
+
+This helper posts a durable comment first, then patches the issue status to
+`blocked`.
 
 ### Need to inspect a payload before scripting it
 
