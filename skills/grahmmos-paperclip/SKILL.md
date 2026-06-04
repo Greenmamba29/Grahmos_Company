@@ -78,6 +78,9 @@ distinguishes between:
 - bearer-token access through `PAPERCLIP_API_KEY`
 - a missing secret-injection path where `CLOUD_AGENT_INJECTED_SECRET_NAMES` does
   not include `PAPERCLIP_API_KEY`
+Use `./scripts/paperclip-blocked-payload.sh` to generate the exact blocked-issue
+JSON body for `PATCH /api/issues/{issueId}` with a named unblock owner, required
+action, and the current runtime evidence.
 
 Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 `me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,
@@ -89,6 +92,10 @@ requires a task comment, including structured fields like `resume`, `reopen`, or
 `interrupt`.
 Use `./scripts/paperclip-api.sh issue-blocked ...` when the correct disposition is
 `blocked` and the issue must name an unblock owner and required action.
+Use `./scripts/paperclip-blocked-payload.sh > /tmp/paperclip-blocked.json` when
+you want a ready-to-send blocked payload derived from the current runtime state,
+then submit it through `./scripts/paperclip-api.sh issue-update ...` once auth is
+available.
 Use `./scripts/paperclip-api.sh current-issue-id` or
 `./scripts/paperclip-api.sh issue-comment-current ...` /
 `./scripts/paperclip-api.sh issue-blocked-current ...` when the run should target
@@ -156,6 +163,7 @@ Grahmos_Company/
   LICENSE            # MIT License
   .gitignore         # Git ignore
   scripts/
+    paperclip-blocked-payload.sh # Ready-to-send blocked issue payload generator
     paperclip-api.sh           # Paperclip API helper for issue operations
     paperclip-runtime-check.sh # Runtime auth diagnostic helper
   skills/
@@ -205,6 +213,9 @@ have a board-authenticated session cookie. This is common in Cursor Cloud shells
    configuration rather than a bad-key debugging problem.
 4. Use `./scripts/paperclip-api.sh issue-comment ...` once auth is available so the
    agent can satisfy the execution contract requirement to leave a task comment.
+5. If the issue should be marked `blocked`, generate `/tmp/paperclip-blocked.json`
+   with `./scripts/paperclip-blocked-payload.sh` and submit it through
+   `./scripts/paperclip-api.sh issue-update ...` once auth is available.
 
 ## Heartbeat Schedule
 - Heartbeat on interval: ON

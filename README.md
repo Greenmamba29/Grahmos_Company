@@ -12,6 +12,9 @@ This is the Company run main repo for Grahmos.
 - The checker also reports whether `PAPERCLIP_API_KEY` appears in
   `CLOUD_AGENT_INJECTED_SECRET_NAMES`, which helps distinguish “bad key” from
   “the adapter never injected the key.”
+- Run `./scripts/paperclip-blocked-payload.sh` to generate a ready-to-send
+  `PATCH /api/issues/{issueId}` JSON body with `status: "blocked"` plus the
+  current runtime evidence and named unblock owner/action.
 - Once auth is available, use `./scripts/paperclip-api.sh` for the common Paperclip
   operations needed during heartbeats:
   - `health`
@@ -35,3 +38,11 @@ the execution contract requires them.
 `current-issue-id` now prefers `PAPERCLIP_TASK_ID`, then falls back to
 `/api/heartbeat-runs/{runId}/issues`, and finally to `/api/agents/me/inbox-lite`
 when `PAPERCLIP_API_KEY` is available.
+
+Suggested unblock flow once control-plane auth is restored:
+
+```bash
+./scripts/paperclip-blocked-payload.sh > /tmp/paperclip-blocked.json
+issue_id="$(./scripts/paperclip-api.sh current-issue-id)"
+./scripts/paperclip-api.sh issue-update "$issue_id" /tmp/paperclip-blocked.json
+```
