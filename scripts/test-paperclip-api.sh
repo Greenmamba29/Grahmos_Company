@@ -299,6 +299,23 @@ assert_contains "$(last_request_field 'record["body"]')" "Resuming after the aut
 
 write_state "success"
 clear_requests
+reopen_response="$(run_api_with_key issue-reopen-current "Reopening this issue for follow-up work.")"
+assert_contains "$reopen_response" "\"ok\": true" "issue-reopen-current should succeed against the mock API"
+assert_eq "/api/issues/run-issue-id/comments" "$(last_request_field 'record["path"]')" "issue-reopen-current should target the comments endpoint"
+assert_contains "$(last_request_field 'record["body"]')" "\"resume\": true" "issue-reopen-current should also carry resume=true"
+assert_contains "$(last_request_field 'record["body"]')" "\"reopen\": true" "issue-reopen-current should generate a reopen payload"
+assert_contains "$(last_request_field 'record["body"]')" "Reopening this issue for follow-up work." "issue-reopen-current should include the provided body"
+
+write_state "success"
+clear_requests
+interrupt_response="$(run_api_with_key issue-interrupt-current "Interrupting current execution pending external input.")"
+assert_contains "$interrupt_response" "\"ok\": true" "issue-interrupt-current should succeed against the mock API"
+assert_eq "/api/issues/run-issue-id/comments" "$(last_request_field 'record["path"]')" "issue-interrupt-current should target the comments endpoint"
+assert_contains "$(last_request_field 'record["body"]')" "\"interrupt\": true" "issue-interrupt-current should generate an interrupt payload"
+assert_contains "$(last_request_field 'record["body"]')" "Interrupting current execution pending external input." "issue-interrupt-current should include the provided body"
+
+write_state "success"
+clear_requests
 interaction_response="$(printf '{"kind":"ask_user_questions","questions":[{"id":"q1","prompt":"Need input"}]}\n' | run_api_with_key issue-interaction-current -)"
 assert_contains "$interaction_response" "\"ok\": true" "issue-interaction-current should succeed against the mock API"
 assert_eq "/api/issues/run-issue-id/interactions" "$(last_request_field 'record["path"]')" "issue-interaction-current should target the interactions endpoint"

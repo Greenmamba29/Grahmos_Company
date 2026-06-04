@@ -53,8 +53,8 @@ final disposition updates do not need an explicit issue ID once auth is availabl
   resume comments, current-issue updates, blocked dispositions, and the supported
   interaction kinds.
 - For the common execution-contract actions, prefer the built-in shortcuts:
-  `issue-resume-current`, `issue-done-current`, `issue-in-review-current`, and
-  `issue-blocked-current`.
+  `issue-resume-current`, `issue-reopen-current`, `issue-interrupt-current`,
+  `issue-done-current`, `issue-in-review-current`, and `issue-blocked-current`.
 - For common interaction flows, prefer the built-in shortcuts:
   `issue-ask-user-question-current`, `issue-suggest-task-current`, and
   `issue-confirm-plan-current`.

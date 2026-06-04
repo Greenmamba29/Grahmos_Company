@@ -105,8 +105,8 @@ See `./scripts/paperclip-payload-examples.md` for ready-to-send payloads coverin
 resume comments, current-issue updates, blocked disposition, and the supported
 interaction kinds.
 For the most common execution-contract actions, prefer the built-in shortcuts
-`issue-resume-current`, `issue-done-current`, `issue-in-review-current`, and
-`issue-blocked-current`.
+`issue-resume-current`, `issue-reopen-current`, `issue-interrupt-current`,
+`issue-done-current`, `issue-in-review-current`, and `issue-blocked-current`.
 For common interaction flows, prefer `issue-ask-user-question-current`,
 `issue-suggest-task-current`, and `issue-confirm-plan-current`.
 Run `./scripts/test-paperclip-api.sh` to smoke-test the helper against a local

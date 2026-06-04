@@ -20,6 +20,41 @@ printf '%s\n' '{
 }' | ./scripts/paperclip-api.sh issue-comment-current -
 ```
 
+## Reopen the current issue for follow-up work
+
+Use the built-in helper when the issue needs a reopen signal and a resume signal:
+
+```bash
+./scripts/paperclip-api.sh issue-reopen-current "Reopening this issue for follow-up work."
+```
+
+Or send the raw JSON payload directly:
+
+```bash
+printf '%s\n' '{
+  "body": "Reopening this issue for follow-up work.",
+  "resume": true,
+  "reopen": true
+}' | ./scripts/paperclip-api.sh issue-comment-current -
+```
+
+## Interrupt the current issue
+
+Use the built-in helper when the issue should record an interrupt:
+
+```bash
+./scripts/paperclip-api.sh issue-interrupt-current "Interrupting current execution pending external input."
+```
+
+Or send the raw JSON payload directly:
+
+```bash
+printf '%s\n' '{
+  "body": "Interrupting current execution pending external input.",
+  "interrupt": true
+}' | ./scripts/paperclip-api.sh issue-comment-current -
+```
+
 ## Mark the current issue done
 
 Use the built-in helper for the most common done flow:

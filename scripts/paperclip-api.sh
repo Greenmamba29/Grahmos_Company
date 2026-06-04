@@ -18,6 +18,10 @@ Usage:
   ./scripts/paperclip-api.sh issue-comment-current JSON_FILE|-
   ./scripts/paperclip-api.sh issue-resume ISSUE_ID BODY
   ./scripts/paperclip-api.sh issue-resume-current BODY
+  ./scripts/paperclip-api.sh issue-reopen ISSUE_ID BODY
+  ./scripts/paperclip-api.sh issue-reopen-current BODY
+  ./scripts/paperclip-api.sh issue-interrupt ISSUE_ID BODY
+  ./scripts/paperclip-api.sh issue-interrupt-current BODY
   ./scripts/paperclip-api.sh issue-interaction ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-interaction-current JSON_FILE|-
   ./scripts/paperclip-api.sh issue-ask-user-question ISSUE_ID QUESTION_ID PROMPT
@@ -47,6 +51,8 @@ Examples:
   ./scripts/paperclip-api.sh issue-comments 123e4567-e89b-12d3-a456-426614174000
   ./scripts/paperclip-api.sh issue-comments-current
   ./scripts/paperclip-api.sh issue-resume-current "Resuming after the auth fix."
+  ./scripts/paperclip-api.sh issue-reopen-current "Reopening this issue for follow-up work."
+  ./scripts/paperclip-api.sh issue-interrupt-current "Interrupting current execution pending external input."
   printf '{"body":"Work started.","resume":true}\n' | \
     ./scripts/paperclip-api.sh issue-comment 123e4567-e89b-12d3-a456-426614174000 -
   ./scripts/paperclip-api.sh issue-ask-user-question-current runtime-auth "Which Paperclip secret should back PAPERCLIP_API_KEY?"
@@ -75,7 +81,7 @@ Notes:
   - `current-run-issues` uses `PAPERCLIP_RUN_ID` to query the run-bound issue list.
   - Issue and agent commands require PAPERCLIP_API_KEY.
   - Comment and interaction helpers accept the raw JSON body expected by the API.
-  - `issue-resume*`, `issue-done*`, and `issue-in-review*` generate the JSON payloads for common issue actions.
+  - `issue-resume*`, `issue-reopen*`, `issue-interrupt*`, `issue-done*`, and `issue-in-review*` generate JSON payloads for common issue actions.
   - `issue-ask-user-question*`, `issue-suggest-task*`, and `issue-confirm-plan*` generate JSON payloads for common interaction flows.
   - Mutating commands automatically send X-Paperclip-Run-Id when PAPERCLIP_RUN_ID is present.
 EOF
@@ -243,19 +249,27 @@ PY
 write_comment_payload() {
   local body="$1"
   local resume="${2:-false}"
+  local reopen="${3:-false}"
+  local interrupt="${4:-false}"
   local tmp_body
   tmp_body="$(mktemp)"
 
-  python3 - "$body" "$resume" > "$tmp_body" <<'PY'
+  python3 - "$body" "$resume" "$reopen" "$interrupt" > "$tmp_body" <<'PY'
 import json
 import sys
 
 body = sys.argv[1]
 resume = sys.argv[2].strip().lower() == "true"
+reopen = sys.argv[3].strip().lower() == "true"
+interrupt = sys.argv[4].strip().lower() == "true"
 
 payload = {"body": body}
 if resume:
     payload["resume"] = True
+if reopen:
+    payload["reopen"] = True
+if interrupt:
+    payload["interrupt"] = True
 
 json.dump(payload, sys.stdout)
 sys.stdout.write("\n")
@@ -462,16 +476,20 @@ request_issue_generated_comment() {
   local issue_id="$1"
   local body="$2"
   local resume="${3:-false}"
+  local reopen="${4:-false}"
+  local interrupt="${5:-false}"
   local body_file
-  body_file="$(write_comment_payload "$body" "$resume")"
+  body_file="$(write_comment_payload "$body" "$resume" "$reopen" "$interrupt")"
   request_issue_with_generated_body POST "$issue_id" "/comments" "$body_file"
 }
 
 request_current_issue_generated_comment() {
   local body="$1"
   local resume="${2:-false}"
+  local reopen="${3:-false}"
+  local interrupt="${4:-false}"
   local body_file
-  body_file="$(write_comment_payload "$body" "$resume")"
+  body_file="$(write_comment_payload "$body" "$resume" "$reopen" "$interrupt")"
   request_current_issue_with_generated_body POST "/comments" "$body_file"
 }
 
@@ -625,6 +643,34 @@ case "$cmd" in
     body="${2:-}"
     require_value "$body" "BODY is required"
     request_current_issue_generated_comment "$body" true
+    ;;
+  issue-reopen)
+    require_auth
+    issue_id="${2:-}"
+    body="${3:-}"
+    require_value "$issue_id" "ISSUE_ID and BODY are required"
+    require_value "$body" "ISSUE_ID and BODY are required"
+    request_issue_generated_comment "$issue_id" "$body" true true
+    ;;
+  issue-reopen-current)
+    require_auth
+    body="${2:-}"
+    require_value "$body" "BODY is required"
+    request_current_issue_generated_comment "$body" true true
+    ;;
+  issue-interrupt)
+    require_auth
+    issue_id="${2:-}"
+    body="${3:-}"
+    require_value "$issue_id" "ISSUE_ID and BODY are required"
+    require_value "$body" "ISSUE_ID and BODY are required"
+    request_issue_generated_comment "$issue_id" "$body" false false true
+    ;;
+  issue-interrupt-current)
+    require_auth
+    body="${2:-}"
+    require_value "$body" "BODY is required"
+    request_current_issue_generated_comment "$body" false false true
     ;;
   issue-interaction)
     require_auth
