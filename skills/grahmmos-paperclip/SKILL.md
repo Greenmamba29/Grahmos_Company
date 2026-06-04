@@ -104,6 +104,8 @@ Useful observations:
   the normal UI authenticates with a browser session cookie.
 - Plain shell `curl` requests to issue and heartbeat-run endpoints return `401
   Unauthorized` unless you also provide a valid authenticated session.
+- Anonymous session checks against `/api/auth/get-session` return
+  `{"error":"Board authentication required"}` on this instance.
 
 Examples of verified API routes:
 
@@ -113,6 +115,23 @@ Examples of verified API routes:
 - `/api/heartbeat-runs/{runId}`
 - `/api/heartbeat-runs/{runId}/events`
 - `/api/heartbeat-runs/{runId}/log`
+- `/api/auth/get-session`
+- `/api/auth/sign-in/email`
+- `/api/auth/profile`
+
+### Board-auth blocker runbook
+
+If a cloud agent must comment on or update a Paperclip issue from the shell, the
+current blocker is usually missing board authentication rather than a bad route.
+
+- Symptom: `/api/auth/get-session` returns `401` with
+  `{"error":"Board authentication required"}`.
+- Impact: issue comments, issue status updates, interactions, and heartbeat-run
+  lookups all fail from shell `curl` requests.
+- Unblock owner: the Paperclip board admin/operator for this instance.
+- Unblock action: provide a supported authenticated automation path for cloud
+  agents, such as a browser session made available to automation, an official
+  MCP server, or another documented API auth mechanism.
 
 ## GitHub Repo Structure
 
