@@ -74,6 +74,8 @@ current runtime state before attempting issue operations.
 Once auth is available, use `./scripts/paperclip-api.sh` to query `me`,
 `inbox-lite`, issue details, issue comments, and `PATCH /api/issues/{issueId}`
 without rebuilding the curl commands each heartbeat.
+Use `./scripts/paperclip-api.sh issue-blocked ...` when the correct disposition is
+`blocked` and the issue must name an unblock owner and required action.
 
 #### Workaround
 Add a long-lived Paperclip agent API key to the Cursor Cloud adapter environment as

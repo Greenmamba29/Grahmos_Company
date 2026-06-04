@@ -10,6 +10,7 @@ Usage:
   ./scripts/paperclip-api.sh issue-get ISSUE_ID
   ./scripts/paperclip-api.sh issue-comments ISSUE_ID [AFTER_COMMENT_ID]
   ./scripts/paperclip-api.sh issue-update ISSUE_ID JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-blocked ISSUE_ID UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
 
 Examples:
   ./scripts/paperclip-api.sh health
@@ -18,6 +19,11 @@ Examples:
   ./scripts/paperclip-api.sh issue-get 123e4567-e89b-12d3-a456-426614174000
   ./scripts/paperclip-api.sh issue-comments 123e4567-e89b-12d3-a456-426614174000
   ./scripts/paperclip-api.sh issue-update 123e4567-e89b-12d3-a456-426614174000 payload.json
+  ./scripts/paperclip-api.sh issue-blocked \
+    123e4567-e89b-12d3-a456-426614174000 \
+    "Paperclip operator" \
+    "Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env" \
+    "The runtime currently cannot mutate issue state."
   printf '{"comment":"Resuming with runtime auth fixed.","resume":true}\n' | \
     ./scripts/paperclip-api.sh issue-update 123e4567-e89b-12d3-a456-426614174000 -
 
@@ -110,6 +116,38 @@ read_body_file() {
   printf '%s\n' "$tmp_body"
 }
 
+write_blocked_payload() {
+  local unblock_owner="$1"
+  local required_action="$2"
+  local details="${3:-}"
+  local tmp_body
+  tmp_body="$(mktemp)"
+
+  python3 - "$unblock_owner" "$required_action" "$details" > "$tmp_body" <<'PY'
+import json
+import sys
+
+owner = sys.argv[1].strip()
+action = sys.argv[2].strip()
+details = sys.argv[3].strip()
+
+comment = f"Blocked.\n\nUnblock owner: {owner}\nRequired action: {action}"
+if details:
+    comment += f"\n\nDetails: {details}"
+
+json.dump(
+    {
+        "status": "blocked",
+        "comment": comment,
+    },
+    sys.stdout,
+)
+sys.stdout.write("\n")
+PY
+
+  printf '%s\n' "$tmp_body"
+}
+
 cmd="${1:-}"
 case "$cmd" in
   health)
@@ -155,6 +193,20 @@ case "$cmd" in
       exit 2
     fi
     body_file="$(read_body_file "$source")"
+    request PATCH "/api/issues/$issue_id" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-blocked)
+    require_auth
+    issue_id="${2:-}"
+    unblock_owner="${3:-}"
+    required_action="${4:-}"
+    details="${5:-}"
+    if [[ -z "$issue_id" || -z "$unblock_owner" || -z "$required_action" ]]; then
+      echo "error: ISSUE_ID, UNBLOCK_OWNER, and REQUIRED_ACTION are required" >&2
+      exit 2
+    fi
+    body_file="$(write_blocked_payload "$unblock_owner" "$required_action" "$details")"
     request PATCH "/api/issues/$issue_id" "$body_file"
     rm -f "$body_file"
     ;;
