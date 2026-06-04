@@ -379,6 +379,130 @@ PY
   printf '%s\n' "$tmp_body"
 }
 
+require_value() {
+  local value="$1"
+  local message="$2"
+  if [[ -z "$value" ]]; then
+    echo "error: $message" >&2
+    exit 2
+  fi
+}
+
+issue_path() {
+  local issue_id="$1"
+  local suffix="${2:-}"
+  printf '/api/issues/%s%s\n' "$issue_id" "$suffix"
+}
+
+request_issue_path() {
+  local method="$1"
+  local issue_id="$2"
+  local suffix="${3:-}"
+  local body_file="${4:-}"
+  request "$method" "$(issue_path "$issue_id" "$suffix")" "$body_file"
+}
+
+request_issue_with_source() {
+  local method="$1"
+  local issue_id="$2"
+  local suffix="$3"
+  local source="$4"
+  local body_file
+  body_file="$(read_body_file "$source")"
+  request_issue_path "$method" "$issue_id" "$suffix" "$body_file"
+  rm -f "$body_file"
+}
+
+request_current_issue_with_source() {
+  local method="$1"
+  local suffix="$2"
+  local source="$3"
+  local issue_id
+  issue_id="$(resolve_current_issue_id)"
+  request_issue_with_source "$method" "$issue_id" "$suffix" "$source"
+}
+
+request_issue_with_generated_body() {
+  local method="$1"
+  local issue_id="$2"
+  local suffix="$3"
+  local body_file="$4"
+  request_issue_path "$method" "$issue_id" "$suffix" "$body_file"
+  rm -f "$body_file"
+}
+
+request_current_issue_with_generated_body() {
+  local method="$1"
+  local suffix="$2"
+  local body_file="$3"
+  local issue_id
+  issue_id="$(resolve_current_issue_id)"
+  request_issue_with_generated_body "$method" "$issue_id" "$suffix" "$body_file"
+}
+
+request_issue_comments() {
+  local issue_id="$1"
+  local after_comment_id="${2:-}"
+  local path
+  path="$(issue_path "$issue_id" "/comments")"
+  if [[ -n "$after_comment_id" ]]; then
+    path="$path?after=$after_comment_id&order=asc"
+  fi
+  request GET "$path"
+}
+
+request_current_issue_comments() {
+  local after_comment_id="${1:-}"
+  local issue_id
+  issue_id="$(resolve_current_issue_id)"
+  request_issue_comments "$issue_id" "$after_comment_id"
+}
+
+request_issue_generated_comment() {
+  local issue_id="$1"
+  local body="$2"
+  local resume="${3:-false}"
+  local body_file
+  body_file="$(write_comment_payload "$body" "$resume")"
+  request_issue_with_generated_body POST "$issue_id" "/comments" "$body_file"
+}
+
+request_current_issue_generated_comment() {
+  local body="$1"
+  local resume="${2:-false}"
+  local body_file
+  body_file="$(write_comment_payload "$body" "$resume")"
+  request_current_issue_with_generated_body POST "/comments" "$body_file"
+}
+
+request_issue_generated_status() {
+  local issue_id="$1"
+  local status="$2"
+  local comment="$3"
+  local body_file
+  body_file="$(write_status_payload "$status" "$comment")"
+  request_issue_with_generated_body PATCH "$issue_id" "" "$body_file"
+}
+
+request_current_issue_generated_status() {
+  local status="$1"
+  local comment="$2"
+  local body_file
+  body_file="$(write_status_payload "$status" "$comment")"
+  request_current_issue_with_generated_body PATCH "" "$body_file"
+}
+
+request_issue_generated_interaction() {
+  local issue_id="$1"
+  local body_file="$2"
+  request_issue_with_generated_body POST "$issue_id" "/interactions" "$body_file"
+}
+
+request_current_issue_generated_interaction() {
+  local body_file="$1"
+  request_current_issue_with_generated_body POST "/interactions" "$body_file"
+}
+
 resolve_current_issue_id() {
   if [[ -n "${PAPERCLIP_TASK_ID:-}" ]]; then
     printf '%s\n' "$PAPERCLIP_TASK_ID"
@@ -454,138 +578,87 @@ case "$cmd" in
   issue-get)
     require_auth
     issue_id="${2:-}"
-    if [[ -z "$issue_id" ]]; then
-      echo "error: ISSUE_ID is required" >&2
-      exit 2
-    fi
-    request GET "/api/issues/$issue_id"
+    require_value "$issue_id" "ISSUE_ID is required"
+    request GET "$(issue_path "$issue_id")"
     ;;
   issue-get-current)
     require_auth
     issue_id="$(resolve_current_issue_id)"
-    request GET "/api/issues/$issue_id"
+    request GET "$(issue_path "$issue_id")"
     ;;
   issue-comments)
     require_auth
     issue_id="${2:-}"
     after_comment_id="${3:-}"
-    if [[ -z "$issue_id" ]]; then
-      echo "error: ISSUE_ID is required" >&2
-      exit 2
-    fi
-    path="/api/issues/$issue_id/comments"
-    if [[ -n "$after_comment_id" ]]; then
-      path="$path?after=$after_comment_id&order=asc"
-    fi
-    request GET "$path"
+    require_value "$issue_id" "ISSUE_ID is required"
+    request_issue_comments "$issue_id" "$after_comment_id"
     ;;
   issue-comments-current)
     require_auth
     after_comment_id="${2:-}"
-    issue_id="$(resolve_current_issue_id)"
-    path="/api/issues/$issue_id/comments"
-    if [[ -n "$after_comment_id" ]]; then
-      path="$path?after=$after_comment_id&order=asc"
-    fi
-    request GET "$path"
+    request_current_issue_comments "$after_comment_id"
     ;;
   issue-comment)
     require_auth
     issue_id="${2:-}"
     source="${3:-}"
-    if [[ -z "$issue_id" || -z "$source" ]]; then
-      echo "error: ISSUE_ID and JSON_FILE|- are required" >&2
-      exit 2
-    fi
-    body_file="$(read_body_file "$source")"
-    request POST "/api/issues/$issue_id/comments" "$body_file"
-    rm -f "$body_file"
+    require_value "$issue_id" "ISSUE_ID and JSON_FILE|- are required"
+    require_value "$source" "ISSUE_ID and JSON_FILE|- are required"
+    request_issue_with_source POST "$issue_id" "/comments" "$source"
     ;;
   issue-comment-current)
     require_auth
     source="${2:-}"
-    if [[ -z "$source" ]]; then
-      echo "error: JSON_FILE|- is required" >&2
-      exit 2
-    fi
-    issue_id="$(resolve_current_issue_id)"
-    body_file="$(read_body_file "$source")"
-    request POST "/api/issues/$issue_id/comments" "$body_file"
-    rm -f "$body_file"
+    require_value "$source" "JSON_FILE|- is required"
+    request_current_issue_with_source POST "/comments" "$source"
     ;;
   issue-resume)
     require_auth
     issue_id="${2:-}"
     body="${3:-}"
-    if [[ -z "$issue_id" || -z "$body" ]]; then
-      echo "error: ISSUE_ID and BODY are required" >&2
-      exit 2
-    fi
-    body_file="$(write_comment_payload "$body" true)"
-    request POST "/api/issues/$issue_id/comments" "$body_file"
-    rm -f "$body_file"
+    require_value "$issue_id" "ISSUE_ID and BODY are required"
+    require_value "$body" "ISSUE_ID and BODY are required"
+    request_issue_generated_comment "$issue_id" "$body" true
     ;;
   issue-resume-current)
     require_auth
     body="${2:-}"
-    if [[ -z "$body" ]]; then
-      echo "error: BODY is required" >&2
-      exit 2
-    fi
-    issue_id="$(resolve_current_issue_id)"
-    body_file="$(write_comment_payload "$body" true)"
-    request POST "/api/issues/$issue_id/comments" "$body_file"
-    rm -f "$body_file"
+    require_value "$body" "BODY is required"
+    request_current_issue_generated_comment "$body" true
     ;;
   issue-interaction)
     require_auth
     issue_id="${2:-}"
     source="${3:-}"
-    if [[ -z "$issue_id" || -z "$source" ]]; then
-      echo "error: ISSUE_ID and JSON_FILE|- are required" >&2
-      exit 2
-    fi
-    body_file="$(read_body_file "$source")"
-    request POST "/api/issues/$issue_id/interactions" "$body_file"
-    rm -f "$body_file"
+    require_value "$issue_id" "ISSUE_ID and JSON_FILE|- are required"
+    require_value "$source" "ISSUE_ID and JSON_FILE|- are required"
+    request_issue_with_source POST "$issue_id" "/interactions" "$source"
     ;;
   issue-interaction-current)
     require_auth
     source="${2:-}"
-    if [[ -z "$source" ]]; then
-      echo "error: JSON_FILE|- is required" >&2
-      exit 2
-    fi
-    issue_id="$(resolve_current_issue_id)"
-    body_file="$(read_body_file "$source")"
-    request POST "/api/issues/$issue_id/interactions" "$body_file"
-    rm -f "$body_file"
+    require_value "$source" "JSON_FILE|- is required"
+    request_current_issue_with_source POST "/interactions" "$source"
     ;;
   issue-ask-user-question)
     require_auth
     issue_id="${2:-}"
     question_id="${3:-}"
     prompt="${4:-}"
-    if [[ -z "$issue_id" || -z "$question_id" || -z "$prompt" ]]; then
-      echo "error: ISSUE_ID, QUESTION_ID, and PROMPT are required" >&2
-      exit 2
-    fi
+    require_value "$issue_id" "ISSUE_ID, QUESTION_ID, and PROMPT are required"
+    require_value "$question_id" "ISSUE_ID, QUESTION_ID, and PROMPT are required"
+    require_value "$prompt" "ISSUE_ID, QUESTION_ID, and PROMPT are required"
     body_file="$(write_ask_user_question_payload "$question_id" "$prompt")"
-    request POST "/api/issues/$issue_id/interactions" "$body_file"
-    rm -f "$body_file"
+    request_issue_generated_interaction "$issue_id" "$body_file"
     ;;
   issue-ask-user-question-current)
     require_auth
     question_id="${2:-}"
     prompt="${3:-}"
-    if [[ -z "$question_id" || -z "$prompt" ]]; then
-      echo "error: QUESTION_ID and PROMPT are required" >&2
-      exit 2
-    fi
-    issue_id="$(resolve_current_issue_id)"
+    require_value "$question_id" "QUESTION_ID and PROMPT are required"
+    require_value "$prompt" "QUESTION_ID and PROMPT are required"
     body_file="$(write_ask_user_question_payload "$question_id" "$prompt")"
-    request POST "/api/issues/$issue_id/interactions" "$body_file"
-    rm -f "$body_file"
+    request_current_issue_generated_interaction "$body_file"
     ;;
   issue-suggest-task)
     require_auth
@@ -594,13 +667,12 @@ case "$cmd" in
     task_title="${4:-}"
     task_body="${5:-}"
     body="${6:-Choose the suggested follow-up task.}"
-    if [[ -z "$issue_id" || -z "$title" || -z "$task_title" || -z "$task_body" ]]; then
-      echo "error: ISSUE_ID, TITLE, TASK_TITLE, and TASK_BODY are required" >&2
-      exit 2
-    fi
+    require_value "$issue_id" "ISSUE_ID, TITLE, TASK_TITLE, and TASK_BODY are required"
+    require_value "$title" "ISSUE_ID, TITLE, TASK_TITLE, and TASK_BODY are required"
+    require_value "$task_title" "ISSUE_ID, TITLE, TASK_TITLE, and TASK_BODY are required"
+    require_value "$task_body" "ISSUE_ID, TITLE, TASK_TITLE, and TASK_BODY are required"
     body_file="$(write_suggest_task_payload "$title" "$task_title" "$task_body" "$body")"
-    request POST "/api/issues/$issue_id/interactions" "$body_file"
-    rm -f "$body_file"
+    request_issue_generated_interaction "$issue_id" "$body_file"
     ;;
   issue-suggest-task-current)
     require_auth
@@ -608,14 +680,11 @@ case "$cmd" in
     task_title="${3:-}"
     task_body="${4:-}"
     body="${5:-Choose the suggested follow-up task.}"
-    if [[ -z "$title" || -z "$task_title" || -z "$task_body" ]]; then
-      echo "error: TITLE, TASK_TITLE, and TASK_BODY are required" >&2
-      exit 2
-    fi
-    issue_id="$(resolve_current_issue_id)"
+    require_value "$title" "TITLE, TASK_TITLE, and TASK_BODY are required"
+    require_value "$task_title" "TITLE, TASK_TITLE, and TASK_BODY are required"
+    require_value "$task_body" "TITLE, TASK_TITLE, and TASK_BODY are required"
     body_file="$(write_suggest_task_payload "$title" "$task_title" "$task_body" "$body")"
-    request POST "/api/issues/$issue_id/interactions" "$body_file"
-    rm -f "$body_file"
+    request_current_issue_generated_interaction "$body_file"
     ;;
   issue-confirm-plan)
     require_auth
@@ -623,99 +692,66 @@ case "$cmd" in
     title="${3:-}"
     body="${4:-}"
     revision_id="${5:-}"
-    if [[ -z "$issue_id" || -z "$title" || -z "$body" || -z "$revision_id" ]]; then
-      echo "error: ISSUE_ID, TITLE, BODY, and REVISION_ID are required" >&2
-      exit 2
-    fi
+    require_value "$issue_id" "ISSUE_ID, TITLE, BODY, and REVISION_ID are required"
+    require_value "$title" "ISSUE_ID, TITLE, BODY, and REVISION_ID are required"
+    require_value "$body" "ISSUE_ID, TITLE, BODY, and REVISION_ID are required"
+    require_value "$revision_id" "ISSUE_ID, TITLE, BODY, and REVISION_ID are required"
     body_file="$(write_confirm_plan_payload "$issue_id" "$title" "$body" "$revision_id")"
-    request POST "/api/issues/$issue_id/interactions" "$body_file"
-    rm -f "$body_file"
+    request_issue_generated_interaction "$issue_id" "$body_file"
     ;;
   issue-confirm-plan-current)
     require_auth
     title="${2:-}"
     body="${3:-}"
     revision_id="${4:-}"
-    if [[ -z "$title" || -z "$body" || -z "$revision_id" ]]; then
-      echo "error: TITLE, BODY, and REVISION_ID are required" >&2
-      exit 2
-    fi
+    require_value "$title" "TITLE, BODY, and REVISION_ID are required"
+    require_value "$body" "TITLE, BODY, and REVISION_ID are required"
+    require_value "$revision_id" "TITLE, BODY, and REVISION_ID are required"
     issue_id="$(resolve_current_issue_id)"
     body_file="$(write_confirm_plan_payload "$issue_id" "$title" "$body" "$revision_id")"
-    request POST "/api/issues/$issue_id/interactions" "$body_file"
-    rm -f "$body_file"
+    request_issue_generated_interaction "$issue_id" "$body_file"
     ;;
   issue-update)
     require_auth
     issue_id="${2:-}"
     source="${3:-}"
-    if [[ -z "$issue_id" || -z "$source" ]]; then
-      echo "error: ISSUE_ID and JSON_FILE|- are required" >&2
-      exit 2
-    fi
-    body_file="$(read_body_file "$source")"
-    request PATCH "/api/issues/$issue_id" "$body_file"
-    rm -f "$body_file"
+    require_value "$issue_id" "ISSUE_ID and JSON_FILE|- are required"
+    require_value "$source" "ISSUE_ID and JSON_FILE|- are required"
+    request_issue_with_source PATCH "$issue_id" "" "$source"
     ;;
   issue-update-current)
     require_auth
     source="${2:-}"
-    if [[ -z "$source" ]]; then
-      echo "error: JSON_FILE|- is required" >&2
-      exit 2
-    fi
-    issue_id="$(resolve_current_issue_id)"
-    body_file="$(read_body_file "$source")"
-    request PATCH "/api/issues/$issue_id" "$body_file"
-    rm -f "$body_file"
+    require_value "$source" "JSON_FILE|- is required"
+    request_current_issue_with_source PATCH "" "$source"
     ;;
   issue-done)
     require_auth
     issue_id="${2:-}"
     comment="${3:-}"
-    if [[ -z "$issue_id" || -z "$comment" ]]; then
-      echo "error: ISSUE_ID and COMMENT are required" >&2
-      exit 2
-    fi
-    body_file="$(write_status_payload "done" "$comment")"
-    request PATCH "/api/issues/$issue_id" "$body_file"
-    rm -f "$body_file"
+    require_value "$issue_id" "ISSUE_ID and COMMENT are required"
+    require_value "$comment" "ISSUE_ID and COMMENT are required"
+    request_issue_generated_status "$issue_id" "done" "$comment"
     ;;
   issue-done-current)
     require_auth
     comment="${2:-}"
-    if [[ -z "$comment" ]]; then
-      echo "error: COMMENT is required" >&2
-      exit 2
-    fi
-    issue_id="$(resolve_current_issue_id)"
-    body_file="$(write_status_payload "done" "$comment")"
-    request PATCH "/api/issues/$issue_id" "$body_file"
-    rm -f "$body_file"
+    require_value "$comment" "COMMENT is required"
+    request_current_issue_generated_status "done" "$comment"
     ;;
   issue-in-review)
     require_auth
     issue_id="${2:-}"
     comment="${3:-}"
-    if [[ -z "$issue_id" || -z "$comment" ]]; then
-      echo "error: ISSUE_ID and COMMENT are required" >&2
-      exit 2
-    fi
-    body_file="$(write_status_payload "in_review" "$comment")"
-    request PATCH "/api/issues/$issue_id" "$body_file"
-    rm -f "$body_file"
+    require_value "$issue_id" "ISSUE_ID and COMMENT are required"
+    require_value "$comment" "ISSUE_ID and COMMENT are required"
+    request_issue_generated_status "$issue_id" "in_review" "$comment"
     ;;
   issue-in-review-current)
     require_auth
     comment="${2:-}"
-    if [[ -z "$comment" ]]; then
-      echo "error: COMMENT is required" >&2
-      exit 2
-    fi
-    issue_id="$(resolve_current_issue_id)"
-    body_file="$(write_status_payload "in_review" "$comment")"
-    request PATCH "/api/issues/$issue_id" "$body_file"
-    rm -f "$body_file"
+    require_value "$comment" "COMMENT is required"
+    request_current_issue_generated_status "in_review" "$comment"
     ;;
   issue-blocked)
     require_auth
@@ -723,27 +759,21 @@ case "$cmd" in
     unblock_owner="${3:-}"
     required_action="${4:-}"
     details="${5:-}"
-    if [[ -z "$issue_id" || -z "$unblock_owner" || -z "$required_action" ]]; then
-      echo "error: ISSUE_ID, UNBLOCK_OWNER, and REQUIRED_ACTION are required" >&2
-      exit 2
-    fi
+    require_value "$issue_id" "ISSUE_ID, UNBLOCK_OWNER, and REQUIRED_ACTION are required"
+    require_value "$unblock_owner" "ISSUE_ID, UNBLOCK_OWNER, and REQUIRED_ACTION are required"
+    require_value "$required_action" "ISSUE_ID, UNBLOCK_OWNER, and REQUIRED_ACTION are required"
     body_file="$(write_blocked_payload "$unblock_owner" "$required_action" "$details")"
-    request PATCH "/api/issues/$issue_id" "$body_file"
-    rm -f "$body_file"
+    request_issue_with_generated_body PATCH "$issue_id" "" "$body_file"
     ;;
   issue-blocked-current)
     require_auth
     unblock_owner="${2:-}"
     required_action="${3:-}"
     details="${4:-}"
-    if [[ -z "$unblock_owner" || -z "$required_action" ]]; then
-      echo "error: UNBLOCK_OWNER and REQUIRED_ACTION are required" >&2
-      exit 2
-    fi
-    issue_id="$(resolve_current_issue_id)"
+    require_value "$unblock_owner" "UNBLOCK_OWNER and REQUIRED_ACTION are required"
+    require_value "$required_action" "UNBLOCK_OWNER and REQUIRED_ACTION are required"
     body_file="$(write_blocked_payload "$unblock_owner" "$required_action" "$details")"
-    request PATCH "/api/issues/$issue_id" "$body_file"
-    rm -f "$body_file"
+    request_current_issue_with_generated_body PATCH "" "$body_file"
     ;;
   ""|-h|--help|help)
     usage
