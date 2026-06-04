@@ -50,6 +50,28 @@ def main():
             summary = {"ok": False, "exit_code": exc.code}
         results["checks"][name] = summary
 
+    results["auth_ready"] = all(
+        (
+            results["paperclip_api_url_present"],
+            results["paperclip_company_id_present"],
+            results["paperclip_agent_id_present"],
+            results["checks"].get("session", {}).get("ok", False),
+            results["checks"].get("assigned_issues", {}).get("ok", False),
+        )
+    )
+    if results["auth_ready"]:
+        results["recommended_next_steps"] = [
+            "./scripts/paperclip-issue-update --comment \"Heartbeat: resumed work from an authenticated shell.\" --status in_progress",
+            "./scripts/paperclip-issue-interaction --print-example request_confirmation",
+            "./scripts/paperclip-blocked-update --reason \"<reason>\" --owner \"<owner>\" --action \"<action>\"",
+        ]
+    else:
+        results["recommended_next_steps"] = [
+            "Inject PAPERCLIP_AUTH_HEADER or PAPERCLIP_COOKIE_HEADER into the runtime.",
+            "Re-run ./scripts/paperclip-auth-diagnose until auth_ready is true.",
+            "Then use the issue helpers to post the required comment, interaction, or final status update.",
+        ]
+
     print(json.dumps(results, indent=2))
 
 

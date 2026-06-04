@@ -61,6 +61,8 @@ This checks:
 - whether `PAPERCLIP_AUTH_HEADER` or `PAPERCLIP_COOKIE_HEADER` is set
 - whether `/api/auth/get-session` succeeds
 - whether a simple assigned-issues query succeeds
+- whether the runtime is actually `auth_ready`
+- which next commands an operator should run based on the result
 
 ## Common operations
 
