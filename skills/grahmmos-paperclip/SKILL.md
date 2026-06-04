@@ -46,6 +46,62 @@ The CEO agent uses the Cursor Cloud adapter which runs in Cursor's hosted cloud 
 - CURSOR_API_KEY: Cursor background agent API key (crsr_...)
 - GH_TOKEN: GitHub fine-grained PAT (github_pat_...) with all-repos access
 
+### Control-Plane Auth Caveat
+Cursor Cloud runs get Cursor/GitHub credentials for repository work, but they do not
+automatically get a Paperclip control-plane bearer token in the shell. In practice,
+the cloud runtime may expose:
+- PAPERCLIP_AGENT_ID
+- PAPERCLIP_COMPANY_ID
+- PAPERCLIP_API_URL
+- PAPERCLIP_RUN_ID
+- PAPERCLIP_WAKE_REASON
+
+...while still omitting:
+- PAPERCLIP_API_KEY
+- PAPERCLIP_TASK_ID
+- PAPERCLIP_WAKE_COMMENT_ID
+
+Without `PAPERCLIP_API_KEY`, the agent cannot call endpoints such as:
+- `GET /api/agents/me/inbox-lite`
+- `PATCH /api/issues/{issueId}`
+- `POST /api/issues/{issueId}/comments`
+- `POST /api/issues/{issueId}/interactions`
+
+This means a Cursor Cloud agent can work on the Git repo, but it cannot read or
+update Paperclip issues unless you explicitly provide a Paperclip agent key.
+
+#### Workaround
+Add a long-lived Paperclip agent API key to the Cursor Cloud adapter environment as
+`PAPERCLIP_API_KEY` using a Paperclip secret reference. The request shape is:
+
+```json
+{
+  "adapterType": "cursor_cloud",
+  "adapterConfig": {
+    "env": {
+      "CURSOR_API_KEY": {
+        "type": "secret_ref",
+        "secretId": "cursor-api-key-secret-id",
+        "version": "latest"
+      },
+      "PAPERCLIP_API_KEY": {
+        "type": "secret_ref",
+        "secretId": "osiris-paperclip-agent-key-secret-id",
+        "version": "latest"
+      }
+    }
+  }
+}
+```
+
+Once this is set, agent code should authenticate with:
+- `Authorization: Bearer $PAPERCLIP_API_KEY`
+- `X-Paperclip-Run-Id: $PAPERCLIP_RUN_ID` on mutating requests
+
+Next action for Osiris Hermes: update the Cursor Cloud agent configuration to inject
+`PAPERCLIP_API_KEY`, then rerun the heartbeat so the CEO agent can check inbox items
+and update the assigned issue disposition directly.
+
 ### Critical Setup Requirement
 The Cursor Cloud adapter uses Cursor's GitHub App (NOT the GH_TOKEN) to clone repos.
 You MUST connect your GitHub account to Cursor in:
@@ -98,6 +154,13 @@ Grahmos_Company/
 **Cause:** Hermes Agent (local) workspace not initialized
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
+
+### Error: `{"error":"Unauthorized"}` from `/api/agents/me` or `/api/issues/...`
+**Cause:** Cursor Cloud runtime is missing `PAPERCLIP_API_KEY`, so the agent has
+metadata about its run but no Paperclip bearer token for control-plane calls.
+**Fix:** Add `PAPERCLIP_API_KEY` to the Cursor Cloud adapter `env` as a Paperclip
+agent key secret, then retry the heartbeat. Include `X-Paperclip-Run-Id` on
+mutating requests for issue updates, comments, and interactions.
 
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
