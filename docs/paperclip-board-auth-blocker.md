@@ -76,10 +76,17 @@ scripts/paperclip-finalize-blocked.sh \
   --cookie-jar /path/to/cookies.txt
 ```
 
+To verify the automation path without touching the live instance:
+
+```bash
+python3 scripts/test-paperclip-workflow.py
+```
+
 ## Supporting Artifacts
 
 - `scripts/paperclip-auth-probe.sh`
 - `scripts/paperclip-blocked-update-helper.py`
 - `scripts/paperclip-send-blocked-update.sh`
 - `scripts/paperclip-finalize-blocked.sh`
+- `scripts/test-paperclip-workflow.py`
 - `skills/grahmmos-paperclip/SKILL.md`

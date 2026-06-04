@@ -188,6 +188,12 @@ scripts/paperclip-finalize-blocked.sh \
   --cookie-jar /path/to/cookies.txt
 ```
 
+To regression-test the whole scripted workflow locally, run:
+
+```bash
+python3 scripts/test-paperclip-workflow.py
+```
+
 ## GitHub Repo Structure
 
 ```
