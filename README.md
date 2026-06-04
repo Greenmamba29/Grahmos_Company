@@ -52,6 +52,9 @@ final disposition updates do not need an explicit issue ID once auth is availabl
 - See `./scripts/paperclip-payload-examples.md` for copy/paste payloads covering
   resume comments, current-issue updates, blocked dispositions, and the supported
   interaction kinds.
+- See `./scripts/paperclip-auth-unblock-runbook.md` for the operator-facing
+  workflow to inject `PAPERCLIP_API_KEY`, rerun the heartbeat, verify auth, and
+  leave the first authenticated Paperclip issue updates.
 - For the common execution-contract actions, prefer the built-in shortcuts:
   `issue-resume-current`, `issue-reopen-current`, `issue-interrupt-current`,
   `issue-done-current`, `issue-in-review-current`, and `issue-blocked-current`.

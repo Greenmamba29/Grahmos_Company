@@ -104,6 +104,9 @@ suite, including shell syntax checks and both smoke tests.
 See `./scripts/paperclip-payload-examples.md` for ready-to-send payloads covering
 resume comments, current-issue updates, blocked disposition, and the supported
 interaction kinds.
+See `./scripts/paperclip-auth-unblock-runbook.md` for the operator-facing steps
+to inject `PAPERCLIP_API_KEY`, rerun the heartbeat, verify auth, and send the
+first authenticated issue updates.
 For the most common execution-contract actions, prefer the built-in shortcuts
 `issue-resume-current`, `issue-reopen-current`, `issue-interrupt-current`,
 `issue-done-current`, `issue-in-review-current`, and `issue-blocked-current`.
@@ -175,6 +178,7 @@ Grahmos_Company/
   .gitignore         # Git ignore
   scripts/
     paperclip-api.sh           # Paperclip API helper for issue operations
+    paperclip-auth-unblock-runbook.md # Operator runbook for restoring Paperclip auth
     paperclip-payload-examples.md # Copy/paste Paperclip payloads and invocations
     paperclip-runtime-check.sh # Runtime auth diagnostic helper
     test-paperclip-api.sh      # Local smoke test for Paperclip helper flows
