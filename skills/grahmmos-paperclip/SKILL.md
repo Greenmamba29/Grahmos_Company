@@ -104,6 +104,10 @@ Use `./scripts/paperclip-api.sh comment-template ...`,
 `./scripts/paperclip-api.sh blocked-template ...` to print JSON payloads for the
 execution-contract comment and disposition updates before piping them into the
 matching issue mutation helpers.
+Use `./scripts/paperclip-api.sh interaction-template KIND TITLE [JSON_FILE|-]`
+to merge the interaction `kind` and `title` with extra JSON fields such as
+`questions`, `continuationPolicy`, `idempotencyKey`, or
+`supersedeOnUserComment`.
 Use `./scripts/paperclip-api.sh issue-comment ...` when the execution contract
 requires a task comment, including structured fields like `resume`, `reopen`, or
 `interrupt`.

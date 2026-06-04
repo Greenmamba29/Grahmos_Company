@@ -26,6 +26,7 @@ This is the Company run main repo for Grahmos.
   - `comment-template BODY [RESUME_TRUE_OR_FALSE]`
   - `update-template STATUS COMMENT [RESUME_TRUE_OR_FALSE]`
   - `blocked-template UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]`
+  - `interaction-template KIND TITLE [JSON_FILE|-]`
   - `current-issue-id`
   - `issue-get ISSUE_ID`
   - `issue-get-current`
@@ -53,3 +54,6 @@ to print the adapter JSON needed for the fix.
 When you need a structured comment or status payload for the execution contract, run
 `comment-template`, `update-template`, or `blocked-template` and pipe the result into
 the matching `*-current` helper once auth is available.
+When you need an interaction payload, run `interaction-template` with a kind/title
+plus extra JSON for fields like `questions`, `continuationPolicy`,
+`idempotencyKey`, or `supersedeOnUserComment`.

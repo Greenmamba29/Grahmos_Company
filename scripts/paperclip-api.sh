@@ -12,6 +12,7 @@ Usage:
   ./scripts/paperclip-api.sh comment-template BODY [RESUME_TRUE_OR_FALSE]
   ./scripts/paperclip-api.sh update-template STATUS COMMENT [RESUME_TRUE_OR_FALSE]
   ./scripts/paperclip-api.sh blocked-template UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
+  ./scripts/paperclip-api.sh interaction-template KIND TITLE [JSON_FILE|-]
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get ISSUE_ID
   ./scripts/paperclip-api.sh issue-get-current
@@ -40,6 +41,8 @@ Examples:
     "Paperclip operator" \
     "Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env" \
     "The runtime currently cannot mutate issue state."
+  printf '{"questions":[{"id":"auth","label":"Should I inject PAPERCLIP_API_KEY next?"}],"continuationPolicy":"wake_assignee"}\n' | \
+    ./scripts/paperclip-api.sh interaction-template ask_user_questions "Need input" -
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get 123e4567-e89b-12d3-a456-426614174000
   ./scripts/paperclip-api.sh issue-get-current
@@ -73,6 +76,8 @@ Notes:
     into the Cursor Cloud adapter environment.
   - `comment-template`, `update-template`, and `blocked-template` print JSON payloads
     that can be piped into the current-issue mutation helpers.
+  - `interaction-template` merges `kind` and `title` with optional extra JSON for
+    ask_user_questions, suggest_tasks, or request_confirmation payloads.
 EOF
 }
 
@@ -217,6 +222,47 @@ print_blocked_template() {
 
   body_file="$(write_blocked_payload "$unblock_owner" "$required_action" "$details")"
   print_json < "$body_file"
+  rm -f "$body_file"
+}
+
+print_interaction_template() {
+  local kind="${1:-}"
+  local title="${2:-}"
+  local source="${3:-}"
+  local body_file
+
+  if [[ -z "$kind" || -z "$title" ]]; then
+    echo "error: KIND and TITLE are required" >&2
+    exit 2
+  fi
+
+  if [[ -n "$source" ]]; then
+    body_file="$(read_body_file "$source")"
+  else
+    body_file="$(mktemp)"
+    printf '{}\n' > "$body_file"
+  fi
+
+  python3 - "$kind" "$title" "$body_file" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+kind = sys.argv[1]
+title = sys.argv[2]
+extra = json.loads(Path(sys.argv[3]).read_text())
+
+if not isinstance(extra, dict):
+    print("error: interaction extra payload must be a JSON object", file=sys.stderr)
+    raise SystemExit(2)
+
+payload = {"kind": kind, "title": title}
+payload.update(extra)
+
+json.dump(payload, sys.stdout, indent=2)
+sys.stdout.write("\n")
+PY
+
   rm -f "$body_file"
 }
 
@@ -388,6 +434,9 @@ case "$cmd" in
     ;;
   blocked-template)
     print_blocked_template "${2:-}" "${3:-}" "${4:-}"
+    ;;
+  interaction-template)
+    print_interaction_template "${2:-}" "${3:-}" "${4:-}"
     ;;
   current-issue-id)
     resolve_current_issue_id
