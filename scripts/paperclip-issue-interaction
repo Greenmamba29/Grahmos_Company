@@ -1,0 +1,160 @@
+#!/usr/bin/env python3
+
+import argparse
+import json
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from paperclip_common import resolve_issue_id, run_api
+
+
+DEFAULT_CONTINUATION_POLICY = {
+    "suggest_tasks": "wake_assignee",
+    "ask_user_questions": "wake_assignee",
+    "request_confirmation": "none",
+}
+
+
+EXAMPLE_PAYLOADS = {
+    "suggest_tasks": {
+        "version": 1,
+        "tasks": [
+            {
+                "clientKey": "task-1",
+                "title": "Example delegated task",
+                "description": "Create a focused follow-up issue for the next unit of work.",
+                "priority": "medium",
+                "workMode": "standard",
+            }
+        ],
+    },
+    "ask_user_questions": {
+        "version": 1,
+        "title": "Need operator input",
+        "submitLabel": "Send answers",
+        "questions": [
+            {
+                "id": "delivery",
+                "prompt": "Which path should I take next?",
+                "helpText": "Choose the preferred next action so the issue can continue cleanly.",
+                "selectionMode": "single",
+                "required": True,
+                "options": [
+                    {
+                        "id": "ship-now",
+                        "label": "Ship now",
+                        "description": "Proceed with the current implementation immediately.",
+                    },
+                    {
+                        "id": "revise-first",
+                        "label": "Revise first",
+                        "description": "Make another pass before shipping.",
+                    },
+                ],
+            }
+        ],
+    },
+    "request_confirmation": {
+        "version": 1,
+        "prompt": "Approve the latest plan revision?",
+        "acceptLabel": "Approve",
+        "rejectLabel": "Request changes",
+        "allowDeclineReason": True,
+        "supersedeOnUserComment": True,
+    },
+}
+
+
+def parse_payload(args) -> dict:
+    if args.payload_file:
+        with open(args.payload_file, "r", encoding="utf-8") as handle:
+            return json.load(handle)
+    if args.payload_json:
+        return json.loads(args.payload_json)
+    raise SystemExit("error: provide --payload-file or --payload-json")
+
+
+def build_body(args) -> dict:
+    body = {
+        "kind": args.kind,
+        "payload": parse_payload(args),
+        "continuationPolicy": args.continuation_policy
+        or DEFAULT_CONTINUATION_POLICY[args.kind],
+    }
+    if args.idempotency_key:
+        body["idempotencyKey"] = args.idempotency_key
+    if args.source_comment_id:
+        body["sourceCommentId"] = args.source_comment_id
+    if args.source_run_id:
+        body["sourceRunId"] = args.source_run_id
+    elif os.environ.get("PAPERCLIP_RUN_ID"):
+        body["sourceRunId"] = os.environ["PAPERCLIP_RUN_ID"]
+    if args.title:
+        body["title"] = args.title
+    if args.summary:
+        body["summary"] = args.summary
+    return body
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Create a Paperclip interaction on an issue."
+    )
+    parser.add_argument(
+        "--print-example",
+        choices=sorted(EXAMPLE_PAYLOADS),
+        help="Print an example payload for one interaction kind and exit.",
+    )
+    parser.add_argument("--issue-id", help="Explicit Paperclip issue UUID.")
+    parser.add_argument(
+        "--kind",
+        choices=sorted(EXAMPLE_PAYLOADS),
+        help="Interaction kind to create.",
+    )
+    parser.add_argument("--title", help="Optional interaction title.")
+    parser.add_argument("--summary", help="Optional interaction summary.")
+    parser.add_argument(
+        "--continuation-policy",
+        choices=["none", "wake_assignee", "wake_assignee_on_accept"],
+        help="Override the default continuation policy for the interaction kind.",
+    )
+    parser.add_argument(
+        "--idempotency-key",
+        help="Optional idempotency key for safe retries.",
+    )
+    parser.add_argument(
+        "--source-comment-id",
+        help="Optional source comment UUID for traceability.",
+    )
+    parser.add_argument(
+        "--source-run-id",
+        help="Optional source run UUID. Defaults to PAPERCLIP_RUN_ID when available.",
+    )
+    parser.add_argument(
+        "--payload-file",
+        help="Path to a JSON payload file matching the interaction kind schema.",
+    )
+    parser.add_argument(
+        "--payload-json",
+        help="Inline JSON payload matching the interaction kind schema.",
+    )
+    args = parser.parse_args()
+
+    if args.print_example:
+        print(json.dumps(EXAMPLE_PAYLOADS[args.print_example], indent=2))
+        return
+
+    if not args.kind:
+        raise SystemExit("error: --kind is required unless --print-example is used")
+
+    issue_id = resolve_issue_id(args.issue_id)
+    body = build_body(args)
+    response = run_api("POST", f"/issues/{issue_id}/interactions", body)
+    if response is not None:
+        print(json.dumps(response, indent=2))
+
+
+if __name__ == "__main__":
+    main()

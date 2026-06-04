@@ -76,6 +76,7 @@ Grahmos_Company/
   scripts/
     paperclip-api            # Authenticated Paperclip API helper
     paperclip-issue-update   # Comment + disposition helper for assigned issues
+    paperclip-issue-interaction  # Interaction helper for issue-thread requests
   skills/
     grahmmos-paperclip/
       SKILL.md       # This file - company setup documentation
@@ -89,6 +90,7 @@ agent shell, use the repo helper:
 ```bash
 ./scripts/paperclip-api
 ./scripts/paperclip-issue-update
+./scripts/paperclip-issue-interaction
 ```
 
 The full workflow and auth requirements are documented in:

@@ -5,6 +5,7 @@ This repo now includes two helpers for authenticated Paperclip issue work:
 ```bash
 ./scripts/paperclip-api
 ./scripts/paperclip-issue-update
+./scripts/paperclip-issue-interaction
 ```
 
 Use it when a Cursor cloud agent needs to:
@@ -96,12 +97,19 @@ resolve it automatically from `PAPERCLIP_COMPANY_ID` and `PAPERCLIP_AGENT_ID`:
 If multiple active issues are assigned, the helper exits with a short list and
 asks for an explicit `--issue-id`.
 
+If you are intentionally restarting follow-up work on a completed issue, pass
+`--resume` so the helper includes structured `resume: true` on the comment and
+status update payloads.
+
 ### 4. Create a follow-up interaction instead of freeform markdown questions
 
 ```bash
-./scripts/paperclip-api POST \
-  "/issues/$ISSUE_ID/interactions" \
-  @interaction.json
+./scripts/paperclip-issue-interaction \
+  --issue-id "$ISSUE_ID" \
+  --kind ask_user_questions \
+  --title "Need operator input" \
+  --summary "Two valid next steps need board selection." \
+  --payload-file interaction.json
 ```
 
 The JSON payload should match the interaction kind you need:
@@ -112,6 +120,38 @@ The JSON payload should match the interaction kind you need:
 
 For plan approval, update the plan document first, then create
 `request_confirmation` against the latest plan revision.
+
+You can print schema-correct starter payloads for each interaction kind:
+
+```bash
+./scripts/paperclip-issue-interaction --print-example suggest_tasks
+./scripts/paperclip-issue-interaction --print-example ask_user_questions
+./scripts/paperclip-issue-interaction --print-example request_confirmation
+```
+
+Key schema details recovered from the Paperclip frontend bundle:
+
+- `suggest_tasks`
+  - `payload.version = 1`
+  - `payload.tasks` is required, 1-50 items
+  - each task requires a unique `clientKey` and a `title`
+  - optional task fields include `parentClientKey`, `parentId`, `description`,
+    `priority`, `workMode`, `assigneeAgentId`, `assigneeUserId`, `projectId`,
+    `goalId`, `billingCode`, `labels`, and `hiddenInPreview`
+- `ask_user_questions`
+  - `payload.version = 1`
+  - `payload.questions` is required, 1-10 items
+  - each question requires unique `id`, `prompt`, `selectionMode`, and `options`
+  - options require unique `id` and `label`
+- `request_confirmation`
+  - `payload.version = 1`
+  - `payload.prompt` is required
+  - optional fields include `acceptLabel`, `rejectLabel`,
+    `rejectRequiresReason`, `rejectReasonLabel`, `allowDeclineReason`,
+    `declineReasonPlaceholder`, `detailsMarkdown`, `supersedeOnUserComment`,
+    and `target`
+  - default `continuationPolicy` is `none` for confirmations, while
+    `suggest_tasks` and `ask_user_questions` default to `wake_assignee`
 
 ## Recommended heartbeat flow
 
