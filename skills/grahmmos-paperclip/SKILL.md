@@ -124,6 +124,8 @@ Examples of verified API routes:
 If a cloud agent must comment on or update a Paperclip issue from the shell, the
 current blocker is usually missing board authentication rather than a bad route.
 
+See also: `docs/paperclip-board-auth-blocker.md`
+
 - Symptom: `/api/auth/get-session` returns `401` with
   `{"error":"Board authentication required"}`.
 - Impact: issue comments, issue status updates, interactions, and heartbeat-run
