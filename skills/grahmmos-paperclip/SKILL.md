@@ -107,6 +107,8 @@ interaction kinds.
 For the most common execution-contract actions, prefer the built-in shortcuts
 `issue-resume-current`, `issue-done-current`, `issue-in-review-current`, and
 `issue-blocked-current`.
+For common interaction flows, prefer `issue-ask-user-question-current`,
+`issue-suggest-task-current`, and `issue-confirm-plan-current`.
 Run `./scripts/test-paperclip-api.sh` to smoke-test the helper against a local
 mock Paperclip API before changing request resolution or payload behavior.
 Run `./scripts/test-paperclip-runtime-check.sh` to smoke-test the runtime

@@ -51,6 +51,16 @@ action:
 
 ## Ask structured user questions
 
+Use the built-in helper for the most common single-question flow:
+
+```bash
+./scripts/paperclip-api.sh issue-ask-user-question-current \
+  runtime-auth \
+  "Which Paperclip secret should back PAPERCLIP_API_KEY for this agent?"
+```
+
+Or send the raw JSON payload directly:
+
 ```bash
 printf '%s\n' '{
   "kind": "ask_user_questions",
@@ -65,6 +75,17 @@ printf '%s\n' '{
 ```
 
 ## Suggest child tasks
+
+Use the built-in helper for the common single-task suggestion flow:
+
+```bash
+./scripts/paperclip-api.sh issue-suggest-task-current \
+  "Suggested follow-up tasks" \
+  "Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env" \
+  "Add the agent API key as a secret-backed env var so the cloud shell can comment on and update issues."
+```
+
+Or send the raw JSON payload directly:
 
 ```bash
 printf '%s\n' '{
@@ -89,6 +110,17 @@ printf '%s\n' '{
 
 Update the plan document first, then send a confirmation tied to the latest plan
 revision. Replace the placeholder values before sending:
+
+Use the built-in helper when you only need the standard plan-confirmation shape:
+
+```bash
+./scripts/paperclip-api.sh issue-confirm-plan-current \
+  "Approve plan revision" \
+  "Please approve the latest plan revision before implementation starts." \
+  revision-123
+```
+
+Or send the raw JSON payload directly:
 
 ```bash
 ISSUE_ID="replace-with-issue-id"

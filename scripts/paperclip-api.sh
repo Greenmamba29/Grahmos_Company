@@ -20,6 +20,12 @@ Usage:
   ./scripts/paperclip-api.sh issue-resume-current BODY
   ./scripts/paperclip-api.sh issue-interaction ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-interaction-current JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-ask-user-question ISSUE_ID QUESTION_ID PROMPT
+  ./scripts/paperclip-api.sh issue-ask-user-question-current QUESTION_ID PROMPT
+  ./scripts/paperclip-api.sh issue-suggest-task ISSUE_ID TITLE TASK_TITLE TASK_BODY [BODY]
+  ./scripts/paperclip-api.sh issue-suggest-task-current TITLE TASK_TITLE TASK_BODY [BODY]
+  ./scripts/paperclip-api.sh issue-confirm-plan ISSUE_ID TITLE BODY REVISION_ID
+  ./scripts/paperclip-api.sh issue-confirm-plan-current TITLE BODY REVISION_ID
   ./scripts/paperclip-api.sh issue-update ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-update-current JSON_FILE|-
   ./scripts/paperclip-api.sh issue-done ISSUE_ID COMMENT
@@ -43,6 +49,9 @@ Examples:
   ./scripts/paperclip-api.sh issue-resume-current "Resuming after the auth fix."
   printf '{"body":"Work started.","resume":true}\n' | \
     ./scripts/paperclip-api.sh issue-comment 123e4567-e89b-12d3-a456-426614174000 -
+  ./scripts/paperclip-api.sh issue-ask-user-question-current runtime-auth "Which Paperclip secret should back PAPERCLIP_API_KEY?"
+  ./scripts/paperclip-api.sh issue-suggest-task-current "Suggested follow-up" "Inject PAPERCLIP_API_KEY" "Add the agent key as a secret-backed env var."
+  ./scripts/paperclip-api.sh issue-confirm-plan-current "Approve plan revision" "Please approve the latest plan revision." revision-123
   ./scripts/paperclip-api.sh issue-interaction 123e4567-e89b-12d3-a456-426614174000 interaction.json
   ./scripts/paperclip-api.sh issue-update 123e4567-e89b-12d3-a456-426614174000 payload.json
   ./scripts/paperclip-api.sh issue-update-current payload.json
@@ -67,6 +76,7 @@ Notes:
   - Issue and agent commands require PAPERCLIP_API_KEY.
   - Comment and interaction helpers accept the raw JSON body expected by the API.
   - `issue-resume*`, `issue-done*`, and `issue-in-review*` generate the JSON payloads for common issue actions.
+  - `issue-ask-user-question*`, `issue-suggest-task*`, and `issue-confirm-plan*` generate JSON payloads for common interaction flows.
   - Mutating commands automatically send X-Paperclip-Run-Id when PAPERCLIP_RUN_ID is present.
 EOF
 }
@@ -274,6 +284,101 @@ PY
   printf '%s\n' "$tmp_body"
 }
 
+write_ask_user_question_payload() {
+  local question_id="$1"
+  local prompt="$2"
+  local tmp_body
+  tmp_body="$(mktemp)"
+
+  python3 - "$question_id" "$prompt" > "$tmp_body" <<'PY'
+import json
+import sys
+
+question_id = sys.argv[1]
+prompt = sys.argv[2]
+
+json.dump(
+    {
+        "kind": "ask_user_questions",
+        "questions": [{"id": question_id, "prompt": prompt}],
+        "continuationPolicy": "wake_assignee",
+    },
+    sys.stdout,
+)
+sys.stdout.write("\n")
+PY
+
+  printf '%s\n' "$tmp_body"
+}
+
+write_suggest_task_payload() {
+  local title="$1"
+  local task_title="$2"
+  local task_body="$3"
+  local body="${4:-Choose the suggested follow-up task.}"
+  local tmp_body
+  tmp_body="$(mktemp)"
+
+  python3 - "$title" "$task_title" "$task_body" "$body" > "$tmp_body" <<'PY'
+import json
+import sys
+
+title = sys.argv[1]
+task_title = sys.argv[2]
+task_body = sys.argv[3]
+body = sys.argv[4]
+
+json.dump(
+    {
+        "kind": "suggest_tasks",
+        "title": title,
+        "body": body,
+        "tasks": [{"title": task_title, "body": task_body}],
+        "continuationPolicy": "wake_assignee",
+    },
+    sys.stdout,
+)
+sys.stdout.write("\n")
+PY
+
+  printf '%s\n' "$tmp_body"
+}
+
+write_confirm_plan_payload() {
+  local issue_id="$1"
+  local title="$2"
+  local body="$3"
+  local revision_id="$4"
+  local tmp_body
+  tmp_body="$(mktemp)"
+
+  python3 - "$issue_id" "$title" "$body" "$revision_id" > "$tmp_body" <<'PY'
+import json
+import sys
+
+issue_id = sys.argv[1]
+title = sys.argv[2]
+body = sys.argv[3]
+revision_id = sys.argv[4]
+
+json.dump(
+    {
+        "kind": "request_confirmation",
+        "title": title,
+        "body": body,
+        "idempotencyKey": f"confirmation:{issue_id}:plan:{revision_id}",
+        "supersedeOnUserComment": True,
+        "continuationPolicy": "wake_assignee",
+        "documentTarget": {"type": "plan_revision", "revisionId": revision_id},
+    },
+    sys.stdout,
+)
+sys.stdout.write("\n")
+PY
+
+  printf '%s\n' "$tmp_body"
+}
+
 resolve_current_issue_id() {
   if [[ -n "${PAPERCLIP_TASK_ID:-}" ]]; then
     printf '%s\n' "$PAPERCLIP_TASK_ID"
@@ -453,6 +558,90 @@ case "$cmd" in
     fi
     issue_id="$(resolve_current_issue_id)"
     body_file="$(read_body_file "$source")"
+    request POST "/api/issues/$issue_id/interactions" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-ask-user-question)
+    require_auth
+    issue_id="${2:-}"
+    question_id="${3:-}"
+    prompt="${4:-}"
+    if [[ -z "$issue_id" || -z "$question_id" || -z "$prompt" ]]; then
+      echo "error: ISSUE_ID, QUESTION_ID, and PROMPT are required" >&2
+      exit 2
+    fi
+    body_file="$(write_ask_user_question_payload "$question_id" "$prompt")"
+    request POST "/api/issues/$issue_id/interactions" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-ask-user-question-current)
+    require_auth
+    question_id="${2:-}"
+    prompt="${3:-}"
+    if [[ -z "$question_id" || -z "$prompt" ]]; then
+      echo "error: QUESTION_ID and PROMPT are required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    body_file="$(write_ask_user_question_payload "$question_id" "$prompt")"
+    request POST "/api/issues/$issue_id/interactions" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-suggest-task)
+    require_auth
+    issue_id="${2:-}"
+    title="${3:-}"
+    task_title="${4:-}"
+    task_body="${5:-}"
+    body="${6:-Choose the suggested follow-up task.}"
+    if [[ -z "$issue_id" || -z "$title" || -z "$task_title" || -z "$task_body" ]]; then
+      echo "error: ISSUE_ID, TITLE, TASK_TITLE, and TASK_BODY are required" >&2
+      exit 2
+    fi
+    body_file="$(write_suggest_task_payload "$title" "$task_title" "$task_body" "$body")"
+    request POST "/api/issues/$issue_id/interactions" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-suggest-task-current)
+    require_auth
+    title="${2:-}"
+    task_title="${3:-}"
+    task_body="${4:-}"
+    body="${5:-Choose the suggested follow-up task.}"
+    if [[ -z "$title" || -z "$task_title" || -z "$task_body" ]]; then
+      echo "error: TITLE, TASK_TITLE, and TASK_BODY are required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    body_file="$(write_suggest_task_payload "$title" "$task_title" "$task_body" "$body")"
+    request POST "/api/issues/$issue_id/interactions" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-confirm-plan)
+    require_auth
+    issue_id="${2:-}"
+    title="${3:-}"
+    body="${4:-}"
+    revision_id="${5:-}"
+    if [[ -z "$issue_id" || -z "$title" || -z "$body" || -z "$revision_id" ]]; then
+      echo "error: ISSUE_ID, TITLE, BODY, and REVISION_ID are required" >&2
+      exit 2
+    fi
+    body_file="$(write_confirm_plan_payload "$issue_id" "$title" "$body" "$revision_id")"
+    request POST "/api/issues/$issue_id/interactions" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-confirm-plan-current)
+    require_auth
+    title="${2:-}"
+    body="${3:-}"
+    revision_id="${4:-}"
+    if [[ -z "$title" || -z "$body" || -z "$revision_id" ]]; then
+      echo "error: TITLE, BODY, and REVISION_ID are required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    body_file="$(write_confirm_plan_payload "$issue_id" "$title" "$body" "$revision_id")"
     request POST "/api/issues/$issue_id/interactions" "$body_file"
     rm -f "$body_file"
     ;;

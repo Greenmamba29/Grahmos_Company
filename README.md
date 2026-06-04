@@ -55,6 +55,9 @@ final disposition updates do not need an explicit issue ID once auth is availabl
 - For the common execution-contract actions, prefer the built-in shortcuts:
   `issue-resume-current`, `issue-done-current`, `issue-in-review-current`, and
   `issue-blocked-current`.
+- For common interaction flows, prefer the built-in shortcuts:
+  `issue-ask-user-question-current`, `issue-suggest-task-current`, and
+  `issue-confirm-plan-current`.
 - Run `./scripts/test-paperclip-api.sh` to exercise the helper against a local
   mock Paperclip API. The smoke test covers current-issue resolution, run-bound
   issue lookup, current-task read/update helpers, interaction/comment posting,

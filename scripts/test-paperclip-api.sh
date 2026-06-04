@@ -306,6 +306,31 @@ assert_contains "$(last_request_field 'record["body"]')" "\"kind\":\"ask_user_qu
 
 write_state "success"
 clear_requests
+ask_response="$(run_api_with_key issue-ask-user-question-current runtime-auth "Which secret should back PAPERCLIP_API_KEY?")"
+assert_contains "$ask_response" "\"ok\": true" "issue-ask-user-question-current should succeed against the mock API"
+assert_eq "/api/issues/run-issue-id/interactions" "$(last_request_field 'record["path"]')" "issue-ask-user-question-current should target the interactions endpoint"
+assert_contains "$(last_request_field 'record["body"]')" "\"kind\": \"ask_user_questions\"" "issue-ask-user-question-current should generate an ask_user_questions payload"
+assert_contains "$(last_request_field 'record["body"]')" "\"continuationPolicy\": \"wake_assignee\"" "issue-ask-user-question-current should request assignee wake-up"
+
+write_state "success"
+clear_requests
+suggest_response="$(run_api_with_key issue-suggest-task-current "Suggested follow-up" "Inject PAPERCLIP_API_KEY" "Add the agent key as a secret-backed env var.")"
+assert_contains "$suggest_response" "\"ok\": true" "issue-suggest-task-current should succeed against the mock API"
+assert_eq "/api/issues/run-issue-id/interactions" "$(last_request_field 'record["path"]')" "issue-suggest-task-current should target the interactions endpoint"
+assert_contains "$(last_request_field 'record["body"]')" "\"kind\": \"suggest_tasks\"" "issue-suggest-task-current should generate a suggest_tasks payload"
+assert_contains "$(last_request_field 'record["body"]')" "Inject PAPERCLIP_API_KEY" "issue-suggest-task-current should include the task title"
+
+write_state "success"
+clear_requests
+confirm_response="$(run_api_with_key issue-confirm-plan-current "Approve plan revision" "Please approve the latest plan revision." revision-123)"
+assert_contains "$confirm_response" "\"ok\": true" "issue-confirm-plan-current should succeed against the mock API"
+assert_eq "/api/issues/run-issue-id/interactions" "$(last_request_field 'record["path"]')" "issue-confirm-plan-current should target the interactions endpoint"
+assert_contains "$(last_request_field 'record["body"]')" "\"kind\": \"request_confirmation\"" "issue-confirm-plan-current should generate a request_confirmation payload"
+assert_contains "$(last_request_field 'record["body"]')" "\"idempotencyKey\": \"confirmation:run-issue-id:plan:revision-123\"" "issue-confirm-plan-current should generate the plan confirmation idempotency key"
+assert_contains "$(last_request_field 'record["body"]')" "\"supersedeOnUserComment\": true" "issue-confirm-plan-current should supersede on user comment"
+
+write_state "success"
+clear_requests
 get_response="$(run_api_with_key issue-get-current)"
 assert_contains "$get_response" "\"id\": \"run-issue-id\"" "issue-get-current should fetch the resolved issue"
 assert_eq "/api/issues/run-issue-id" "$(last_request_field 'record["path"]')" "issue-get-current should target the resolved issue path"
