@@ -18,6 +18,9 @@ This is the Company run main repo for Grahmos.
 - Run `./scripts/paperclip-mark-blocked-current.sh` once control-plane auth is
   available to resolve the current issue id, post a real task comment, and then
   submit the blocked disposition in one step.
+- Add `--resume` when that first authenticated comment is intentionally restarting
+  work on a completed issue, so the wrapper includes `resume: true` in the
+  comment payload.
 - Once auth is available, use `./scripts/paperclip-api.sh` for the common Paperclip
   operations needed during heartbeats:
   - `health`
@@ -54,6 +57,12 @@ Or use the one-shot wrapper:
 
 ```bash
 ./scripts/paperclip-mark-blocked-current.sh
+```
+
+For completed issues that need an explicit resume comment:
+
+```bash
+./scripts/paperclip-mark-blocked-current.sh --resume
 ```
 
 That wrapper performs:

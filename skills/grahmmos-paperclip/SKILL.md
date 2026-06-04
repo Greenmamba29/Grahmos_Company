@@ -84,6 +84,8 @@ action, and the current runtime evidence.
 Use `./scripts/paperclip-mark-blocked-current.sh` once auth is available to
 resolve the current issue id, post a real task comment, and submit that blocked
 disposition in one command.
+Add `--resume` when that comment is intentionally restarting work on a completed
+issue so the wrapper includes `resume: true` in the `POST /comments` payload.
 
 Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 `me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,
@@ -104,6 +106,9 @@ disposition applied immediately after auth is restored without managing the temp
 payload file yourself. The wrapper posts `POST /comments` first and then patches
 the issue status, which better matches the execution-contract requirement to
 leave a task comment before exit.
+Use `./scripts/paperclip-mark-blocked-current.sh --resume` for the completed-issue
+restart case where the Paperclip execution contract requires a structured
+`resume: true` comment payload.
 Use `./scripts/paperclip-api.sh current-issue-id` or
 `./scripts/paperclip-api.sh issue-comment-current ...` /
 `./scripts/paperclip-api.sh issue-blocked-current ...` when the run should target
