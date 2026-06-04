@@ -47,6 +47,7 @@ Useful examples:
 - `./scripts/paperclip-api.sh sample-payload update-done | ./scripts/paperclip-api.sh issue-update-current -`
 - `./scripts/paperclip-api.sh build-markdown-document plan.md "Implementation plan" "Initial plan draft"`
 - `./scripts/paperclip-api.sh issue-document-put-markdown-current plan plan.md "Implementation plan" "Initial plan draft"`
+- `./scripts/paperclip-api.sh issue-plan-latest-revision-current`
 - `./scripts/paperclip-api.sh sample-payload plan-document | ./scripts/paperclip-api.sh issue-document-put-current plan -`
 - `./scripts/paperclip-api.sh build-plan-confirmation REVISION_ID ISSUE-123 | ./scripts/paperclip-api.sh issue-interaction-current -`
 - `./scripts/paperclip-api.sh issue-plan-confirmation-current ISSUE-123`
@@ -67,6 +68,8 @@ is the simplest way to save it without building the JSON envelope by hand.
 If you also want to immediately create the approval request after saving that
 plan, `issue-plan-from-markdown-current` performs the full flow in one command
 once auth is available.
+If you only need the latest plan revision id to inspect or compose a custom
+confirmation flow, `issue-plan-latest-revision-current` returns just that id.
 
 For the most common execution-contract actions, prefer the direct wrappers:
 - `issue-comment-resume-current`
