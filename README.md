@@ -20,6 +20,8 @@ This is the Company run main repo for Grahmos.
   - `issue-comments ISSUE_ID [AFTER_COMMENT_ID]`
   - `issue-comment ISSUE_ID JSON_FILE|-`
   - `issue-comment-current JSON_FILE|-`
+  - `issue-interaction ISSUE_ID JSON_FILE|-`
+  - `issue-interaction-current JSON_FILE|-`
   - `issue-update ISSUE_ID JSON_FILE|-`
   - `issue-blocked ISSUE_ID UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]`
   - `issue-blocked-current UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]`
@@ -27,3 +29,7 @@ This is the Company run main repo for Grahmos.
 The comment helper accepts the raw JSON body expected by `POST /api/issues/{issueId}/comments`,
 so it can carry structured fields such as `resume`, `reopen`, or `interrupt` when
 the execution contract requires them.
+The interaction helper accepts the raw JSON body expected by
+`POST /api/issues/{issueId}/interactions`, so the agent can create
+`ask_user_questions`, `suggest_tasks`, or `request_confirmation` records once auth
+is available.
