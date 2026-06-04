@@ -5,22 +5,28 @@ usage() {
   cat <<'EOF'
 Usage:
   ./scripts/paperclip-api.sh health
+  ./scripts/paperclip-api.sh session
   ./scripts/paperclip-api.sh me
   ./scripts/paperclip-api.sh inbox-lite
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get ISSUE_ID
   ./scripts/paperclip-api.sh issue-comments ISSUE_ID [AFTER_COMMENT_ID]
+  ./scripts/paperclip-api.sh issue-comment ISSUE_ID JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-comment-current JSON_FILE|-
   ./scripts/paperclip-api.sh issue-update ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-blocked ISSUE_ID UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
   ./scripts/paperclip-api.sh issue-blocked-current UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
 
 Examples:
   ./scripts/paperclip-api.sh health
+  ./scripts/paperclip-api.sh session
   ./scripts/paperclip-api.sh me
   ./scripts/paperclip-api.sh inbox-lite
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get 123e4567-e89b-12d3-a456-426614174000
   ./scripts/paperclip-api.sh issue-comments 123e4567-e89b-12d3-a456-426614174000
+  printf '{"body":"Work started.","resume":true}\n' | \
+    ./scripts/paperclip-api.sh issue-comment 123e4567-e89b-12d3-a456-426614174000 -
   ./scripts/paperclip-api.sh issue-update 123e4567-e89b-12d3-a456-426614174000 payload.json
   ./scripts/paperclip-api.sh issue-blocked \
     123e4567-e89b-12d3-a456-426614174000 \
@@ -36,7 +42,8 @@ Examples:
 
 Notes:
   - The script expects PAPERCLIP_API_URL for all commands.
-  - Authenticated commands require PAPERCLIP_API_KEY.
+  - `session` checks whether the current shell has a board-authenticated session.
+  - Issue and agent commands require PAPERCLIP_API_KEY.
   - Mutating commands automatically send X-Paperclip-Run-Id when PAPERCLIP_RUN_ID is present.
 EOF
 }
@@ -217,6 +224,9 @@ case "$cmd" in
   health)
     request GET /api/health
     ;;
+  session)
+    request GET /api/auth/get-session
+    ;;
   me)
     require_auth
     request GET /api/agents/me
@@ -250,6 +260,30 @@ case "$cmd" in
       path="$path?after=$after_comment_id&order=asc"
     fi
     request GET "$path"
+    ;;
+  issue-comment)
+    require_auth
+    issue_id="${2:-}"
+    source="${3:-}"
+    if [[ -z "$issue_id" || -z "$source" ]]; then
+      echo "error: ISSUE_ID and JSON_FILE|- are required" >&2
+      exit 2
+    fi
+    body_file="$(read_body_file "$source")"
+    request POST "/api/issues/$issue_id/comments" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-comment-current)
+    require_auth
+    source="${2:-}"
+    if [[ -z "$source" ]]; then
+      echo "error: JSON_FILE|- is required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    body_file="$(read_body_file "$source")"
+    request POST "/api/issues/$issue_id/comments" "$body_file"
+    rm -f "$body_file"
     ;;
   issue-update)
     require_auth

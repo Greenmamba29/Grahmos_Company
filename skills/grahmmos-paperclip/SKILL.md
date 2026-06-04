@@ -47,9 +47,9 @@ The CEO agent uses the Cursor Cloud adapter which runs in Cursor's hosted cloud 
 - GH_TOKEN: GitHub fine-grained PAT (github_pat_...) with all-repos access
 
 ### Control-Plane Auth Caveat
-Cursor Cloud runs get Cursor/GitHub credentials for repository work, but they do not
-automatically get a Paperclip control-plane bearer token in the shell. In practice,
-the cloud runtime may expose:
+Cursor Cloud runs get Cursor/GitHub credentials for repository work, but the shell
+does not automatically inherit a private Paperclip board session. In practice, the
+cloud runtime may expose:
 - PAPERCLIP_AGENT_ID
 - PAPERCLIP_COMPANY_ID
 - PAPERCLIP_API_URL
@@ -61,29 +61,41 @@ the cloud runtime may expose:
 - PAPERCLIP_TASK_ID
 - PAPERCLIP_WAKE_COMMENT_ID
 
-Without `PAPERCLIP_API_KEY`, the agent cannot call endpoints such as:
+Without a board-authenticated session or `PAPERCLIP_API_KEY`, the agent cannot call
+endpoints such as:
+- `GET /api/heartbeat-runs/{runId}/issues`
 - `GET /api/agents/me/inbox-lite`
-- `PATCH /api/issues/{issueId}`
 - `POST /api/issues/{issueId}/comments`
+- `PATCH /api/issues/{issueId}`
 - `POST /api/issues/{issueId}/interactions`
 
 This means a Cursor Cloud agent can work on the Git repo, but it cannot read or
-update Paperclip issues unless you explicitly provide a Paperclip agent key.
+update Paperclip issues unless you explicitly provide a Paperclip auth path.
 Run `./scripts/paperclip-runtime-check.sh` in the cloud workspace to confirm the
-current runtime state before attempting issue operations.
-Once auth is available, use `./scripts/paperclip-api.sh` to query `me`,
-`inbox-lite`, issue details, issue comments, and `PATCH /api/issues/{issueId}`
-without rebuilding the curl commands each heartbeat.
+current runtime state before attempting issue operations. The runtime check
+distinguishes between:
+- a board-authenticated shell session that can resolve `/api/heartbeat-runs/{runId}/issues`
+- bearer-token access through `PAPERCLIP_API_KEY`
+
+Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
+`me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,
+and `PATCH /api/issues/{issueId}` without rebuilding the curl commands each heartbeat.
+Use `./scripts/paperclip-api.sh issue-comment ...` when the execution contract
+requires a task comment, including structured fields like `resume`, `reopen`, or
+`interrupt`.
 Use `./scripts/paperclip-api.sh issue-blocked ...` when the correct disposition is
 `blocked` and the issue must name an unblock owner and required action.
 Use `./scripts/paperclip-api.sh current-issue-id` or
+`./scripts/paperclip-api.sh issue-comment-current ...` /
 `./scripts/paperclip-api.sh issue-blocked-current ...` when the run should target
 the current task automatically. The helper prefers `PAPERCLIP_TASK_ID`; otherwise
 it only auto-selects when `inbox-lite` returns exactly one issue.
 
 #### Workaround
 Add a long-lived Paperclip agent API key to the Cursor Cloud adapter environment as
-`PAPERCLIP_API_KEY` using a Paperclip secret reference. The request shape is:
+`PAPERCLIP_API_KEY` using a Paperclip secret reference. This gives the shell a
+bearer-token path even when the private Paperclip web session is unavailable. The
+request shape is:
 
 ```json
 {
@@ -175,6 +187,16 @@ metadata about its run but no Paperclip bearer token for control-plane calls.
 **Fix:** Add `PAPERCLIP_API_KEY` to the Cursor Cloud adapter `env` as a Paperclip
 agent key secret, then retry the heartbeat. Include `X-Paperclip-Run-Id` on
 mutating requests for issue updates, comments, and interactions.
+
+### Error: `401 {"error":"Board authentication required"}`
+**Cause:** The shell can reach the private Paperclip deployment, but it does not
+have a board-authenticated session cookie. This is common in Cursor Cloud shells.
+**Fix:**
+1. Run `./scripts/paperclip-runtime-check.sh` to confirm the failure mode.
+2. If issue operations must happen from the shell, inject `PAPERCLIP_API_KEY` into
+   the Cursor Cloud adapter environment and retry.
+3. Use `./scripts/paperclip-api.sh issue-comment ...` once auth is available so the
+   agent can satisfy the execution contract requirement to leave a task comment.
 
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
