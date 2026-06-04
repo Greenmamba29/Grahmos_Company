@@ -82,7 +82,8 @@ Use `./scripts/paperclip-blocked-payload.sh` to generate the exact blocked-issue
 JSON body for `PATCH /api/issues/{issueId}` with a named unblock owner, required
 action, and the current runtime evidence.
 Use `./scripts/paperclip-mark-blocked-current.sh` once auth is available to
-resolve the current issue id and submit that blocked disposition in one command.
+resolve the current issue id, post a real task comment, and submit that blocked
+disposition in one command.
 
 Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 `me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,
@@ -100,7 +101,9 @@ then submit it through `./scripts/paperclip-api.sh issue-update ...` once auth i
 available.
 Use `./scripts/paperclip-mark-blocked-current.sh` when you want the same blocked
 disposition applied immediately after auth is restored without managing the temp
-payload file yourself.
+payload file yourself. The wrapper posts `POST /comments` first and then patches
+the issue status, which better matches the execution-contract requirement to
+leave a task comment before exit.
 Use `./scripts/paperclip-api.sh current-issue-id` or
 `./scripts/paperclip-api.sh issue-comment-current ...` /
 `./scripts/paperclip-api.sh issue-blocked-current ...` when the run should target
