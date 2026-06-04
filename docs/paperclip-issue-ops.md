@@ -4,6 +4,7 @@ This repo now includes several helpers for authenticated Paperclip issue work:
 
 ```bash
 ./scripts/paperclip-api
+./scripts/paperclip-auth-diagnose
 ./scripts/paperclip-issue-update
 ./scripts/paperclip-issue-interaction
 ./scripts/paperclip-blocked-update
@@ -47,6 +48,19 @@ export PAPERCLIP_COOKIE_HEADER="paperclip_session=<value>"
 ```
 
 If neither is set, the helper exits with a clear error message.
+
+Before attempting issue writes after auth injection, verify the session with:
+
+```bash
+./scripts/paperclip-auth-diagnose
+```
+
+This checks:
+
+- whether the expected `PAPERCLIP_*` runtime IDs are present
+- whether `PAPERCLIP_AUTH_HEADER` or `PAPERCLIP_COOKIE_HEADER` is set
+- whether `/api/auth/get-session` succeeds
+- whether a simple assigned-issues query succeeds
 
 ## Common operations
 
@@ -169,6 +183,10 @@ Key schema details recovered from the Paperclip frontend bundle:
 
 The runtime has IDs but not board auth. Export a valid `PAPERCLIP_AUTH_HEADER`
 or `PAPERCLIP_COOKIE_HEADER`, then retry the helper command.
+
+After injecting auth, run `./scripts/paperclip-auth-diagnose` first. If both the
+session check and assigned-issues check succeed, the issue helpers should be
+able to post comments, interactions, and status updates.
 
 ### I can identify the run, but not the task
 

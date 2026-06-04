@@ -10,7 +10,13 @@ import urllib.parse
 ACTIVE_STATUSES = {"backlog", "todo", "in_progress", "in_review", "blocked"}
 
 
-def run_api(method: str, path: str, body: dict | None = None):
+def run_api(
+    method: str,
+    path: str,
+    body: dict | None = None,
+    *,
+    print_errors: bool = True,
+):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     helper = os.path.join(script_dir, "paperclip-api")
     cmd = [helper, method, path]
@@ -18,7 +24,8 @@ def run_api(method: str, path: str, body: dict | None = None):
         cmd.append(json.dumps(body))
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
-        sys.stderr.write(proc.stderr or proc.stdout)
+        if print_errors:
+            sys.stderr.write(proc.stderr or proc.stdout)
         raise SystemExit(proc.returncode)
     if not proc.stdout.strip():
         return None

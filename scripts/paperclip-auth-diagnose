@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+
+import json
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from paperclip_common import run_api
+
+
+def main():
+    company_id = os.environ.get("PAPERCLIP_COMPANY_ID")
+    agent_id = os.environ.get("PAPERCLIP_AGENT_ID")
+
+    checks = [
+        ("session", "/auth/get-session"),
+    ]
+    if company_id:
+        checks.append(
+            (
+                "assigned_issues",
+                f"/companies/{company_id}/issues?assigneeAgentId={agent_id or ''}&limit=1",
+            )
+        )
+
+    results = {
+        "paperclip_api_url_present": bool(os.environ.get("PAPERCLIP_API_URL")),
+        "paperclip_company_id_present": bool(company_id),
+        "paperclip_agent_id_present": bool(agent_id),
+        "auth_header_present": bool(os.environ.get("PAPERCLIP_AUTH_HEADER")),
+        "cookie_header_present": bool(os.environ.get("PAPERCLIP_COOKIE_HEADER")),
+        "checks": {},
+    }
+
+    for name, path in checks:
+        try:
+            response = run_api("GET", path, print_errors=False)
+            if isinstance(response, list):
+                summary = {"ok": True, "type": "list", "count": len(response)}
+            elif isinstance(response, dict):
+                summary = {
+                    "ok": True,
+                    "type": "object",
+                    "keys": sorted(response.keys())[:20],
+                }
+            else:
+                summary = {"ok": True, "type": type(response).__name__}
+        except SystemExit as exc:
+            summary = {"ok": False, "exit_code": exc.code}
+        results["checks"][name] = summary
+
+    print(json.dumps(results, indent=2))
+
+
+if __name__ == "__main__":
+    main()

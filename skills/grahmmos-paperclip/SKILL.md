@@ -75,6 +75,7 @@ Grahmos_Company/
     paperclip-issue-ops.md   # Agent issue/update runbook
   scripts/
     paperclip-api            # Authenticated Paperclip API helper
+    paperclip-auth-diagnose  # Auth/session verification helper
     paperclip-issue-update   # Comment + disposition helper for assigned issues
     paperclip-issue-interaction  # Interaction helper for issue-thread requests
     paperclip-blocked-update     # Compliant blocked-status helper
@@ -90,6 +91,7 @@ agent shell, use the repo helper:
 
 ```bash
 ./scripts/paperclip-api
+./scripts/paperclip-auth-diagnose
 ./scripts/paperclip-issue-update
 ./scripts/paperclip-issue-interaction
 ./scripts/paperclip-blocked-update
