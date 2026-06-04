@@ -101,6 +101,8 @@ when bearer auth is available. Auto-selection still requires exactly one issue i
 the chosen source.
 Run `./scripts/test-paperclip-api.sh` to smoke-test the helper against a local
 mock Paperclip API before changing request resolution or payload behavior.
+Run `./scripts/test-paperclip-runtime-check.sh` to smoke-test the runtime
+diagnostic before changing its exit-path logic or auth heuristics.
 
 #### Workaround
 Add a long-lived Paperclip agent API key to the Cursor Cloud adapter environment as
@@ -165,6 +167,7 @@ Grahmos_Company/
     paperclip-api.sh           # Paperclip API helper for issue operations
     paperclip-runtime-check.sh # Runtime auth diagnostic helper
     test-paperclip-api.sh      # Local smoke test for Paperclip helper flows
+    test-paperclip-runtime-check.sh # Local smoke test for runtime diagnostics
   skills/
     grahmmos-paperclip/
       SKILL.md       # This file - company setup documentation

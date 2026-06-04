@@ -51,3 +51,7 @@ final disposition updates do not need an explicit issue ID once auth is availabl
   mock Paperclip API. The smoke test covers current-issue resolution, run-bound
   issue lookup, current-task read/update helpers, interaction/comment posting,
   and blocked disposition payload generation.
+- Run `./scripts/test-paperclip-runtime-check.sh` to exercise the runtime
+  diagnostic against a local mock Paperclip API. The smoke test covers missing
+  env handling, board-session success, blocked-no-auth behavior, bearer-token
+  success, and rejected bearer auth.
