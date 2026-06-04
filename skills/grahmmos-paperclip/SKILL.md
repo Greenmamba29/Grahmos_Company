@@ -99,6 +99,36 @@ Grahmos_Company/
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
 
+### Error: `401 {"error":"Board authentication required"}`
+**Cause:** The shell has Paperclip runtime metadata (`PAPERCLIP_*` variables), but no
+board-authenticated session cookie for the private Paperclip API.
+**Symptoms:**
+- `/api/health` succeeds
+- `/api/auth/get-session` returns `401`
+- issue reads, comments, interactions, and disposition updates fail from shell
+**Fix:**
+1. Run `./scripts/paperclip-runtime-check.sh` from the repo root to confirm the
+   runtime is healthy and isolate auth vs. transport failures.
+2. Establish a board-authenticated session for the runtime before expecting
+   shell-side issue API calls to succeed.
+3. If authentication cannot be provided, treat the run as blocked for Paperclip
+   issue updates and leave durable progress in repo artifacts instead of retrying
+   blind API calls.
+
+## Shell Runtime Checks
+
+Use the repository diagnostic whenever a cloud agent needs to confirm whether it
+can access Paperclip issue state from the shell:
+
+```bash
+./scripts/paperclip-runtime-check.sh
+```
+
+Interpretation:
+- exit `0`: runtime and issue lookup are working
+- exit `1`: runtime or endpoint failure
+- exit `2`: board authentication is missing, so issue operations will fail
+
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
 - Interval: every 300 seconds (5 minutes)
