@@ -96,6 +96,9 @@ Use `./scripts/paperclip-api.sh issues-list ...` and `issues-count ...` to query
 `/companies/{companyId}/issues` directly once auth is available.
 Use `./scripts/paperclip-api.sh issues-single-id ...` when the company issue query
 should return exactly one task id.
+Use `./scripts/paperclip-api.sh run-get`, `run-events`, `run-log`, and
+`run-workspace-operations` to inspect the current heartbeat run directly once
+auth is available.
 Use `./scripts/paperclip-api.sh run-issues` to inspect the current heartbeat-run
 issue list directly when the runtime has a board-authenticated path.
 Use `./scripts/paperclip-api.sh issue-comment ...` when the execution contract

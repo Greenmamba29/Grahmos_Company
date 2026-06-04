@@ -11,6 +11,10 @@ Usage:
   ./scripts/paperclip-api.sh issues-list [QUERY_STRING]
   ./scripts/paperclip-api.sh issues-count [QUERY_STRING]
   ./scripts/paperclip-api.sh issues-single-id [QUERY_STRING]
+  ./scripts/paperclip-api.sh run-get [RUN_ID]
+  ./scripts/paperclip-api.sh run-events [RUN_ID] [AFTER_SEQ] [LIMIT]
+  ./scripts/paperclip-api.sh run-log [RUN_ID] [OFFSET] [LIMIT_BYTES]
+  ./scripts/paperclip-api.sh run-workspace-operations [RUN_ID]
   ./scripts/paperclip-api.sh run-issues
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get ISSUE_ID
@@ -29,6 +33,10 @@ Examples:
   ./scripts/paperclip-api.sh issues-list 'limit=10&sortField=updatedAt&sortDir=desc'
   ./scripts/paperclip-api.sh issues-count 'status=blocked'
   ./scripts/paperclip-api.sh issues-single-id 'q=paperclip&limit=2'
+  ./scripts/paperclip-api.sh run-get
+  ./scripts/paperclip-api.sh run-events 123e4567-e89b-12d3-a456-426614174000 0 20
+  ./scripts/paperclip-api.sh run-log 123e4567-e89b-12d3-a456-426614174000 0 8192
+  ./scripts/paperclip-api.sh run-workspace-operations
   ./scripts/paperclip-api.sh run-issues
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get 123e4567-e89b-12d3-a456-426614174000
@@ -51,6 +59,7 @@ Examples:
 Notes:
   - The script expects PAPERCLIP_API_URL for all commands.
   - `issues-list`, `issues-count`, and `issues-single-id` default to PAPERCLIP_COMPANY_ID.
+  - `run-get`, `run-events`, `run-log`, and `run-workspace-operations` default to PAPERCLIP_RUN_ID.
   - `session` checks whether the current shell has a board-authenticated session.
   - `me` and `inbox-lite` require PAPERCLIP_API_KEY.
   - Issue commands can work through either PAPERCLIP_API_KEY or a board-authenticated session.
@@ -70,6 +79,15 @@ require_company_id() {
     echo "error: PAPERCLIP_COMPANY_ID is required" >&2
     exit 2
   fi
+}
+
+default_run_id() {
+  local run_id="${1:-${PAPERCLIP_RUN_ID:-}}"
+  if [[ -z "$run_id" ]]; then
+    echo "error: RUN_ID is required (or set PAPERCLIP_RUN_ID)" >&2
+    exit 2
+  fi
+  printf '%s\n' "$run_id"
 }
 
 require_auth() {
@@ -326,6 +344,26 @@ case "$cmd" in
     ;;
   issues-single-id)
     resolve_issue_id_from_company_query "${2:-}"
+    ;;
+  run-get)
+    run_id="$(default_run_id "${2:-}")"
+    request GET "/api/heartbeat-runs/$run_id"
+    ;;
+  run-events)
+    run_id="$(default_run_id "${2:-}")"
+    after_seq="${3:-0}"
+    limit="${4:-20}"
+    request GET "/api/heartbeat-runs/$run_id/events?afterSeq=$after_seq&limit=$limit"
+    ;;
+  run-log)
+    run_id="$(default_run_id "${2:-}")"
+    offset="${3:-0}"
+    limit_bytes="${4:-8192}"
+    request GET "/api/heartbeat-runs/$run_id/log?offset=$offset&limitBytes=$limit_bytes"
+    ;;
+  run-workspace-operations)
+    run_id="$(default_run_id "${2:-}")"
+    request GET "/api/heartbeat-runs/$run_id/workspace-operations"
     ;;
   run-issues)
     if [[ -z "${PAPERCLIP_RUN_ID:-}" ]]; then

@@ -32,6 +32,10 @@ This is the Company run main repo for Grahmos.
   - `issues-list [QUERY_STRING]`
   - `issues-count [QUERY_STRING]`
   - `issues-single-id [QUERY_STRING]`
+  - `run-get [RUN_ID]`
+  - `run-events [RUN_ID] [AFTER_SEQ] [LIMIT]`
+  - `run-log [RUN_ID] [OFFSET] [LIMIT_BYTES]`
+  - `run-workspace-operations [RUN_ID]`
   - `run-issues`
   - `current-issue-id`
   - `issue-get ISSUE_ID`
@@ -65,6 +69,15 @@ directly through the company route first:
 ./scripts/paperclip-api.sh issues-list 'limit=20&sortField=updatedAt&sortDir=desc'
 ./scripts/paperclip-api.sh issues-count 'status=blocked'
 ./scripts/paperclip-api.sh issues-single-id 'q=paperclip&limit=2'
+```
+
+If run-based debugging is needed after auth is restored:
+
+```bash
+./scripts/paperclip-api.sh run-get
+./scripts/paperclip-api.sh run-events
+./scripts/paperclip-api.sh run-log
+./scripts/paperclip-api.sh run-workspace-operations
 ```
 
 Or use the one-shot wrapper:
