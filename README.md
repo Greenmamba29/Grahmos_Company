@@ -43,6 +43,7 @@ This is the Company run main repo for Grahmos.
   - `issue-update-current-template STATUS COMMENT [RESUME_TRUE_OR_FALSE]`
   - `issue-blocked ISSUE_ID UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]`
   - `issue-blocked-current UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]`
+  - `issue-blocked-current-template UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]`
 
 The comment helper accepts the raw JSON body expected by `POST /api/issues/{issueId}/comments`,
 so it can carry structured fields such as `resume`, `reopen`, or `interrupt` when
@@ -62,4 +63,4 @@ plus extra JSON for fields like `questions`, `continuationPolicy`,
 `idempotencyKey`, or `supersedeOnUserComment`.
 If you want the helper to generate the payload and apply it to the current issue in
 one step, use `issue-comment-current-template`, `issue-update-current-template`, or
-`issue-interaction-current-template`.
+`issue-interaction-current-template`, or `issue-blocked-current-template`.

@@ -29,6 +29,7 @@ Usage:
   ./scripts/paperclip-api.sh issue-update-current-template STATUS COMMENT [RESUME_TRUE_OR_FALSE]
   ./scripts/paperclip-api.sh issue-blocked ISSUE_ID UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
   ./scripts/paperclip-api.sh issue-blocked-current UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
+  ./scripts/paperclip-api.sh issue-blocked-current-template UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
 
 Examples:
   ./scripts/paperclip-api.sh health
@@ -60,6 +61,10 @@ Examples:
     ./scripts/paperclip-api.sh issue-interaction-current-template ask_user_questions "Need input" -
   ./scripts/paperclip-api.sh issue-update 123e4567-e89b-12d3-a456-426614174000 payload.json
   ./scripts/paperclip-api.sh issue-update-current-template done "Verified and complete."
+  ./scripts/paperclip-api.sh issue-blocked-current-template \
+    "Paperclip operator" \
+    "Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env" \
+    "The runtime currently cannot mutate issue state."
   printf '{"status":"done","comment":"Verified and complete."}\n' | \
     ./scripts/paperclip-api.sh issue-update-current -
   ./scripts/paperclip-api.sh issue-blocked \
@@ -619,6 +624,20 @@ case "$cmd" in
     rm -f "$body_file"
     ;;
   issue-blocked-current)
+    require_auth
+    unblock_owner="${2:-}"
+    required_action="${3:-}"
+    details="${4:-}"
+    if [[ -z "$unblock_owner" || -z "$required_action" ]]; then
+      echo "error: UNBLOCK_OWNER and REQUIRED_ACTION are required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    body_file="$(write_blocked_payload "$unblock_owner" "$required_action" "$details")"
+    request PATCH "/api/issues/$issue_id" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-blocked-current-template)
     require_auth
     unblock_owner="${2:-}"
     required_action="${3:-}"
