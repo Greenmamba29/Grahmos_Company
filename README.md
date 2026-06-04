@@ -40,6 +40,8 @@ The same helper also supports listing interactions and driving the follow-up
 lifecycle through accept, reject, cancel, and respond commands once an
 interaction exists.
 Useful examples:
+- `./scripts/paperclip-api.sh issue-comment-resume-current`
+- `./scripts/paperclip-api.sh issue-done-current "Completed and verified."`
 - `./scripts/paperclip-api.sh sample-payload comment-resume | ./scripts/paperclip-api.sh issue-comment-current -`
 - `./scripts/paperclip-api.sh sample-payload update-done | ./scripts/paperclip-api.sh issue-update-current -`
 - `./scripts/paperclip-api.sh sample-payload plan-document | ./scripts/paperclip-api.sh issue-document-put-current plan -`
@@ -56,6 +58,10 @@ contract requires updating the `plan` document before creating a
 for that flow, while `issue-plan-confirmation-current` performs the full
 "resolve latest plan revision -> create confirmation" flow in one command once
 auth is available.
+
+For the most common execution-contract actions, prefer the direct wrappers:
+- `issue-comment-resume-current`
+- `issue-done-current`
 
 Quick regression check:
 - `./scripts/test-paperclip-helpers.sh`

@@ -20,20 +20,34 @@ echo "Paperclip helper smoke test"
 echo "==========================="
 
 echo
-echo "[1/12] bash syntax checks"
+echo "[1/14] bash syntax checks"
 bash -n "$API_SCRIPT"
 bash -n "$RUNTIME_CHECK_SCRIPT"
 
 echo
-echo "[2/12] help surface includes current-issue helpers"
-"$API_SCRIPT" --help | rg 'build-plan-confirmation|issue-update-current|issue-document-put-current|issue-document-revisions-current|issue-plan-confirmation-current|issue-interaction-current|issue-interactions-current|issue-interaction-accept-current|issue-interaction-respond-current' >/dev/null
+echo "[2/14] help surface includes current-issue helpers"
+"$API_SCRIPT" --help | rg 'build-resume-comment|build-done-update|build-plan-confirmation|issue-comment-resume-current|issue-done-current|issue-update-current|issue-document-put-current|issue-document-revisions-current|issue-plan-confirmation-current|issue-interaction-current|issue-interactions-current|issue-interaction-accept-current|issue-interaction-respond-current' >/dev/null
 
 echo
-echo "[3/12] sample payload catalog is available"
+echo "[3/14] sample payload catalog is available"
 "$API_SCRIPT" sample-payload help | rg 'comment-resume|plan-document|plan-confirmation|update-done|request-confirmation|interaction-accept|interaction-respond' >/dev/null
 
 echo
-echo "[4/12] request_confirmation sample matches expected schema"
+echo "[4/14] build-resume-comment emits the expected envelope"
+"$API_SCRIPT" build-resume-comment | jq -e '
+  .resume == true and
+  .body == "Resuming work in this heartbeat."
+' >/dev/null
+
+echo
+echo "[5/14] build-done-update emits the expected envelope"
+"$API_SCRIPT" build-done-update | jq -e '
+  .status == "done" and
+  .comment == "Completed and verified."
+' >/dev/null
+
+echo
+echo "[6/14] request_confirmation sample matches expected schema"
 "$API_SCRIPT" sample-payload request-confirmation | jq -e '
   .kind == "request_confirmation" and
   .continuationPolicy == "wake_assignee_on_accept" and
@@ -43,7 +57,7 @@ echo "[4/12] request_confirmation sample matches expected schema"
 ' >/dev/null
 
 echo
-echo "[5/12] build-plan-confirmation emits the expected envelope"
+echo "[7/14] build-plan-confirmation emits the expected envelope"
 "$API_SCRIPT" build-plan-confirmation revision-123 ISSUE-123 | jq -e '
   .kind == "request_confirmation" and
   .idempotencyKey == "confirmation:ISSUE-123:plan:revision-123" and
@@ -52,7 +66,7 @@ echo "[5/12] build-plan-confirmation emits the expected envelope"
 ' >/dev/null
 
 echo
-echo "[6/12] plan document sample matches expected schema"
+echo "[8/14] plan document sample matches expected schema"
 "$API_SCRIPT" sample-payload plan-document | jq -e '
   .title == "Implementation plan" and
   .format == "markdown" and
@@ -61,7 +75,7 @@ echo "[6/12] plan document sample matches expected schema"
 ' >/dev/null
 
 echo
-echo "[7/12] ask_user_questions sample matches expected schema"
+echo "[9/14] ask_user_questions sample matches expected schema"
 "$API_SCRIPT" sample-payload ask-user-questions | jq -e '
   .kind == "ask_user_questions" and
   .continuationPolicy == "wake_assignee" and
@@ -71,7 +85,7 @@ echo "[7/12] ask_user_questions sample matches expected schema"
 ' >/dev/null
 
 echo
-echo "[8/12] suggest_tasks sample matches expected schema"
+echo "[10/14] suggest_tasks sample matches expected schema"
 "$API_SCRIPT" sample-payload suggest-tasks | jq -e '
   .kind == "suggest_tasks" and
   .continuationPolicy == "wake_assignee" and
@@ -81,14 +95,14 @@ echo "[8/12] suggest_tasks sample matches expected schema"
 ' >/dev/null
 
 echo
-echo "[9/12] interaction accept sample matches expected schema"
+echo "[11/14] interaction accept sample matches expected schema"
 "$API_SCRIPT" sample-payload interaction-accept | jq -e '
   (.selectedClientKeys | length) == 1 and
   .selectedClientKeys[0] == "task-1"
 ' >/dev/null
 
 echo
-echo "[10/12] interaction respond sample matches expected schema"
+echo "[12/14] interaction respond sample matches expected schema"
 "$API_SCRIPT" sample-payload interaction-respond | jq -e '
   (.answers | length) == 1 and
   .answers[0].questionId == "next-step" and
@@ -96,7 +110,7 @@ echo "[10/12] interaction respond sample matches expected schema"
 ' >/dev/null
 
 echo
-echo "[11/12] plan-confirmation shortcut fails with the expected auth gate"
+echo "[13/14] plan-confirmation shortcut fails with the expected auth gate"
 set +e
 "$API_SCRIPT" issue-plan-confirmation-current ISSUE-123 >/tmp/paperclip-plan-confirmation-current.out 2>/tmp/paperclip-plan-confirmation-current.err
 plan_confirmation_code=$?
@@ -110,10 +124,14 @@ fi
 rg 'PAPERCLIP_API_KEY is required' /tmp/paperclip-plan-confirmation-current.err >/dev/null
 
 echo
-echo "[12/12] unauthenticated current-issue commands fail with the expected auth gate"
+echo "[14/14] unauthenticated current-issue commands fail with the expected auth gate"
 set +e
+"$API_SCRIPT" issue-comment-resume-current >/tmp/paperclip-comment-resume-current.out 2>/tmp/paperclip-comment-resume-current.err
+comment_resume_code=$?
 printf '{"status":"done"}\n' | "$API_SCRIPT" issue-update-current - >/tmp/paperclip-update-current.out 2>/tmp/paperclip-update-current.err
 update_code=$?
+"$API_SCRIPT" issue-done-current >/tmp/paperclip-done-current.out 2>/tmp/paperclip-done-current.err
+done_code=$?
 "$API_SCRIPT" sample-payload plan-document | "$API_SCRIPT" issue-document-put-current plan - >/tmp/paperclip-document-put-current.out 2>/tmp/paperclip-document-put-current.err
 document_put_code=$?
 printf '{"kind":"ask_user_questions"}\n' | "$API_SCRIPT" issue-interaction-current - >/tmp/paperclip-interaction-current.out 2>/tmp/paperclip-interaction-current.err
@@ -124,8 +142,18 @@ interactions_list_code=$?
 interaction_accept_code=$?
 set -e
 
+if [[ "$comment_resume_code" -ne 3 ]]; then
+  echo "expected issue-comment-resume-current to exit 3 without PAPERCLIP_API_KEY, got $comment_resume_code" >&2
+  exit 1
+fi
+
 if [[ "$update_code" -ne 3 ]]; then
   echo "expected issue-update-current to exit 3 without PAPERCLIP_API_KEY, got $update_code" >&2
+  exit 1
+fi
+
+if [[ "$done_code" -ne 3 ]]; then
+  echo "expected issue-done-current to exit 3 without PAPERCLIP_API_KEY, got $done_code" >&2
   exit 1
 fi
 
@@ -149,7 +177,9 @@ if [[ "$interaction_accept_code" -ne 3 ]]; then
   exit 1
 fi
 
+rg 'PAPERCLIP_API_KEY is required' /tmp/paperclip-comment-resume-current.err >/dev/null
 rg 'PAPERCLIP_API_KEY is required' /tmp/paperclip-update-current.err >/dev/null
+rg 'PAPERCLIP_API_KEY is required' /tmp/paperclip-done-current.err >/dev/null
 rg 'PAPERCLIP_API_KEY is required' /tmp/paperclip-document-put-current.err >/dev/null
 rg 'PAPERCLIP_API_KEY is required' /tmp/paperclip-interaction-current.err >/dev/null
 rg 'PAPERCLIP_API_KEY is required' /tmp/paperclip-interactions-current.err >/dev/null

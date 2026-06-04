@@ -6,6 +6,8 @@ usage() {
 Usage:
   ./scripts/paperclip-api.sh health
   ./scripts/paperclip-api.sh sample-payload TYPE
+  ./scripts/paperclip-api.sh build-resume-comment [BODY]
+  ./scripts/paperclip-api.sh build-done-update [COMMENT]
   ./scripts/paperclip-api.sh build-plan-confirmation REVISION_ID [ISSUE_ID]
   ./scripts/paperclip-api.sh session
   ./scripts/paperclip-api.sh me
@@ -15,8 +17,12 @@ Usage:
   ./scripts/paperclip-api.sh issue-comments ISSUE_ID [AFTER_COMMENT_ID]
   ./scripts/paperclip-api.sh issue-comment ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-comment-current JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-comment-resume ISSUE_ID [BODY]
+  ./scripts/paperclip-api.sh issue-comment-resume-current [BODY]
   ./scripts/paperclip-api.sh issue-update ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-update-current JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-done ISSUE_ID [COMMENT]
+  ./scripts/paperclip-api.sh issue-done-current [COMMENT]
   ./scripts/paperclip-api.sh issue-documents ISSUE_ID
   ./scripts/paperclip-api.sh issue-documents-current
   ./scripts/paperclip-api.sh issue-document-get ISSUE_ID KEY
@@ -47,6 +53,8 @@ Examples:
   ./scripts/paperclip-api.sh sample-payload plan-document
   ./scripts/paperclip-api.sh sample-payload request-confirmation
   ./scripts/paperclip-api.sh sample-payload interaction-respond
+  ./scripts/paperclip-api.sh build-resume-comment
+  ./scripts/paperclip-api.sh build-done-update
   ./scripts/paperclip-api.sh build-plan-confirmation 123e4567-e89b-12d3-a456-426614174000 ISSUE-123
   ./scripts/paperclip-api.sh health
   ./scripts/paperclip-api.sh session
@@ -57,8 +65,10 @@ Examples:
   ./scripts/paperclip-api.sh issue-comments 123e4567-e89b-12d3-a456-426614174000
   printf '{"body":"Work started.","resume":true}\n' | \
     ./scripts/paperclip-api.sh issue-comment 123e4567-e89b-12d3-a456-426614174000 -
+  ./scripts/paperclip-api.sh issue-comment-resume-current
   printf '{"status":"done","comment":"Verified and finished."}\n' | \
     ./scripts/paperclip-api.sh issue-update-current -
+  ./scripts/paperclip-api.sh issue-done-current "Verified and finished."
   ./scripts/paperclip-api.sh sample-payload plan-document | \
     ./scripts/paperclip-api.sh issue-document-put-current plan -
   ./scripts/paperclip-api.sh issue-plan-confirmation-current ISSUE-123
@@ -84,6 +94,7 @@ Examples:
 Notes:
   - The script expects PAPERCLIP_API_URL for all commands.
   - `sample-payload` prints valid JSON examples for common comment, update, and interaction requests.
+  - `build-resume-comment` and `build-done-update` print the most common execution-contract payloads.
   - `build-plan-confirmation` prints a request_confirmation payload targeting the `plan` document for a specific revision id.
   - `issue-plan-confirmation*` resolves the latest `plan` document revision and posts the matching request_confirmation interaction.
   - `session` checks whether the current shell has a board-authenticated session.
@@ -356,6 +367,44 @@ sys.stdout.write("\n")
 PY
 }
 
+build_resume_comment() {
+  local body="${1:-Resuming work in this heartbeat.}"
+
+  python3 - "$body" <<'PY'
+import json
+import sys
+
+json.dump(
+    {
+        "body": sys.argv[1],
+        "resume": True,
+    },
+    sys.stdout,
+    indent=2,
+)
+sys.stdout.write("\n")
+PY
+}
+
+build_done_update() {
+  local comment="${1:-Completed and verified.}"
+
+  python3 - "$comment" <<'PY'
+import json
+import sys
+
+json.dump(
+    {
+        "status": "done",
+        "comment": sys.argv[1],
+    },
+    sys.stdout,
+    indent=2,
+)
+sys.stdout.write("\n")
+PY
+}
+
 resolve_latest_document_revision_id() {
   local issue_id="${1:-}"
   local key="${2:-}"
@@ -569,6 +618,12 @@ case "$cmd" in
   sample-payload)
     sample_payload "${2:-}"
     ;;
+  build-resume-comment)
+    build_resume_comment "${2:-Resuming work in this heartbeat.}"
+    ;;
+  build-done-update)
+    build_done_update "${2:-Completed and verified.}"
+    ;;
   build-plan-confirmation)
     build_plan_confirmation "${2:-}" "${3:-ISSUE-123}"
     ;;
@@ -633,6 +688,28 @@ case "$cmd" in
     request POST "/api/issues/$issue_id/comments" "$body_file"
     rm -f "$body_file"
     ;;
+  issue-comment-resume)
+    require_auth
+    issue_id="${2:-}"
+    body="${3:-Resuming work in this heartbeat.}"
+    if [[ -z "$issue_id" ]]; then
+      echo "error: ISSUE_ID is required" >&2
+      exit 2
+    fi
+    body_file="$(mktemp)"
+    build_resume_comment "$body" > "$body_file"
+    request POST "/api/issues/$issue_id/comments" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-comment-resume-current)
+    require_auth
+    body="${2:-Resuming work in this heartbeat.}"
+    issue_id="$(resolve_current_issue_id)"
+    body_file="$(mktemp)"
+    build_resume_comment "$body" > "$body_file"
+    request POST "/api/issues/$issue_id/comments" "$body_file"
+    rm -f "$body_file"
+    ;;
   issue-update)
     require_auth
     issue_id="${2:-}"
@@ -654,6 +731,28 @@ case "$cmd" in
     fi
     issue_id="$(resolve_current_issue_id)"
     body_file="$(read_body_file "$source")"
+    request PATCH "/api/issues/$issue_id" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-done)
+    require_auth
+    issue_id="${2:-}"
+    comment="${3:-Completed and verified.}"
+    if [[ -z "$issue_id" ]]; then
+      echo "error: ISSUE_ID is required" >&2
+      exit 2
+    fi
+    body_file="$(mktemp)"
+    build_done_update "$comment" > "$body_file"
+    request PATCH "/api/issues/$issue_id" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-done-current)
+    require_auth
+    comment="${2:-Completed and verified.}"
+    issue_id="$(resolve_current_issue_id)"
+    body_file="$(mktemp)"
+    build_done_update "$comment" > "$body_file"
     request PATCH "/api/issues/$issue_id" "$body_file"
     rm -f "$body_file"
     ;;

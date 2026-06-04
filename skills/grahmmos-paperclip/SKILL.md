@@ -83,6 +83,9 @@ Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 without rebuilding the curl commands each heartbeat.
 Use `./scripts/paperclip-api.sh sample-payload ...` to print valid JSON envelopes
 for common execution-contract actions before piping them into the live commands.
+Use `./scripts/paperclip-api.sh issue-comment-resume-current` and
+`./scripts/paperclip-api.sh issue-done-current ...` for the simplest path to the
+two most common execution-contract updates once auth is available.
 Use `./scripts/paperclip-api.sh issue-comment ...` when the execution contract
 requires a task comment, including structured fields like `resume`, `reopen`, or
 `interrupt`.
@@ -115,6 +118,10 @@ it only auto-selects when `inbox-lite` returns exactly one issue.
 Example authenticated flows:
 
 ```bash
+./scripts/paperclip-api.sh issue-comment-resume-current
+
+./scripts/paperclip-api.sh issue-done-current "Completed and verified."
+
 ./scripts/paperclip-api.sh sample-payload comment-resume | \
   ./scripts/paperclip-api.sh issue-comment-current -
 
