@@ -106,7 +106,9 @@ Use `./scripts/paperclip-api.sh issue-interaction ...` when the board or user mu
 answer structured questions, confirm a plan, or select suggested follow-up tasks.
 Use `./scripts/paperclip-api.sh issue-blocked ...` when the correct disposition is
 `blocked` and the issue must name an unblock owner and required action.
-Use `./scripts/paperclip-api.sh current-issue-id` or
+Use `./scripts/paperclip-api.sh current-issue-id`,
+`./scripts/paperclip-api.sh issue-get-current`,
+`./scripts/paperclip-api.sh issue-comments-current`, or
 `./scripts/paperclip-api.sh issue-comment-current ...` /
 `./scripts/paperclip-api.sh issue-interaction-current ...` /
 `./scripts/paperclip-api.sh issue-update-current ...` /

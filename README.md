@@ -25,7 +25,9 @@ This is the Company run main repo for Grahmos.
   - `adapter-env-template PAPERCLIP_SECRET_ID [CURSOR_SECRET_ID]`
   - `current-issue-id`
   - `issue-get ISSUE_ID`
+  - `issue-get-current`
   - `issue-comments ISSUE_ID [AFTER_COMMENT_ID]`
+  - `issue-comments-current [AFTER_COMMENT_ID]`
   - `issue-comment ISSUE_ID JSON_FILE|-`
   - `issue-comment-current JSON_FILE|-`
   - `issue-interaction ISSUE_ID JSON_FILE|-`

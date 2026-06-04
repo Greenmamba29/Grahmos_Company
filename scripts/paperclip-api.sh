@@ -11,7 +11,9 @@ Usage:
   ./scripts/paperclip-api.sh adapter-env-template PAPERCLIP_SECRET_ID [CURSOR_SECRET_ID]
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get ISSUE_ID
+  ./scripts/paperclip-api.sh issue-get-current
   ./scripts/paperclip-api.sh issue-comments ISSUE_ID [AFTER_COMMENT_ID]
+  ./scripts/paperclip-api.sh issue-comments-current [AFTER_COMMENT_ID]
   ./scripts/paperclip-api.sh issue-comment ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-comment-current JSON_FILE|-
   ./scripts/paperclip-api.sh issue-interaction ISSUE_ID JSON_FILE|-
@@ -31,7 +33,9 @@ Examples:
     cursor-api-key-secret-id
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get 123e4567-e89b-12d3-a456-426614174000
+  ./scripts/paperclip-api.sh issue-get-current
   ./scripts/paperclip-api.sh issue-comments 123e4567-e89b-12d3-a456-426614174000
+  ./scripts/paperclip-api.sh issue-comments-current
   printf '{"body":"Work started.","resume":true}\n' | \
     ./scripts/paperclip-api.sh issue-comment 123e4567-e89b-12d3-a456-426614174000 -
   printf '{"kind":"ask_user_questions","title":"Need input","questions":[{"id":"auth","label":"Should I inject PAPERCLIP_API_KEY next?"}],"continuationPolicy":"wake_assignee"}\n' | \
@@ -306,6 +310,11 @@ case "$cmd" in
     fi
     request GET "/api/issues/$issue_id"
     ;;
+  issue-get-current)
+    require_auth
+    issue_id="$(resolve_current_issue_id)"
+    request GET "/api/issues/$issue_id"
+    ;;
   issue-comments)
     require_auth
     issue_id="${2:-}"
@@ -314,6 +323,16 @@ case "$cmd" in
       echo "error: ISSUE_ID is required" >&2
       exit 2
     fi
+    path="/api/issues/$issue_id/comments"
+    if [[ -n "$after_comment_id" ]]; then
+      path="$path?after=$after_comment_id&order=asc"
+    fi
+    request GET "$path"
+    ;;
+  issue-comments-current)
+    require_auth
+    after_comment_id="${2:-}"
+    issue_id="$(resolve_current_issue_id)"
     path="/api/issues/$issue_id/comments"
     if [[ -n "$after_comment_id" ]]; then
       path="$path?after=$after_comment_id&order=asc"
