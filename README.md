@@ -38,3 +38,5 @@ The update and interaction helpers likewise accept the raw JSON body expected by
 `PATCH /api/issues/{issueId}` and `POST /api/issues/{issueId}/interactions`.
 The interaction action helpers wrap `/accept`, `/reject`, `/cancel`, and `/respond`
 so follow-up confirmation/question workflows can be completed from the shell too.
+See `docs/paperclip-runtime-unblock.md` for ready-to-send blocked/resume payloads
+that can be used as soon as `PAPERCLIP_API_KEY` is injected into the runtime.
