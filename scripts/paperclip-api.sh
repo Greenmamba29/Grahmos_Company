@@ -20,10 +20,13 @@ Usage:
   ./scripts/paperclip-api.sh issue-comments-current [AFTER_COMMENT_ID]
   ./scripts/paperclip-api.sh issue-comment ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-comment-current JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-comment-current-template BODY [RESUME_TRUE_OR_FALSE]
   ./scripts/paperclip-api.sh issue-interaction ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-interaction-current JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-interaction-current-template KIND TITLE [JSON_FILE|-]
   ./scripts/paperclip-api.sh issue-update ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-update-current JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-update-current-template STATUS COMMENT [RESUME_TRUE_OR_FALSE]
   ./scripts/paperclip-api.sh issue-blocked ISSUE_ID UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
   ./scripts/paperclip-api.sh issue-blocked-current UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
 
@@ -48,11 +51,15 @@ Examples:
   ./scripts/paperclip-api.sh issue-get-current
   ./scripts/paperclip-api.sh issue-comments 123e4567-e89b-12d3-a456-426614174000
   ./scripts/paperclip-api.sh issue-comments-current
+  ./scripts/paperclip-api.sh issue-comment-current-template "Resuming with auth fixed." true
   printf '{"body":"Work started.","resume":true}\n' | \
     ./scripts/paperclip-api.sh issue-comment 123e4567-e89b-12d3-a456-426614174000 -
   printf '{"kind":"ask_user_questions","title":"Need input","questions":[{"id":"auth","label":"Should I inject PAPERCLIP_API_KEY next?"}],"continuationPolicy":"wake_assignee"}\n' | \
     ./scripts/paperclip-api.sh issue-interaction 123e4567-e89b-12d3-a456-426614174000 -
+  printf '{"questions":[{"id":"auth","label":"Should I inject PAPERCLIP_API_KEY next?"}],"continuationPolicy":"wake_assignee"}\n' | \
+    ./scripts/paperclip-api.sh issue-interaction-current-template ask_user_questions "Need input" -
   ./scripts/paperclip-api.sh issue-update 123e4567-e89b-12d3-a456-426614174000 payload.json
+  ./scripts/paperclip-api.sh issue-update-current-template done "Verified and complete."
   printf '{"status":"done","comment":"Verified and complete."}\n' | \
     ./scripts/paperclip-api.sh issue-update-current -
   ./scripts/paperclip-api.sh issue-blocked \
@@ -78,6 +85,8 @@ Notes:
     that can be piped into the current-issue mutation helpers.
   - `interaction-template` merges `kind` and `title` with optional extra JSON for
     ask_user_questions, suggest_tasks, or request_confirmation payloads.
+  - `issue-*-current-template` commands generate the payload and immediately apply it
+    to the current issue once auth is available.
 EOF
 }
 
@@ -503,6 +512,20 @@ case "$cmd" in
     request POST "/api/issues/$issue_id/comments" "$body_file"
     rm -f "$body_file"
     ;;
+  issue-comment-current-template)
+    require_auth
+    body="${2:-}"
+    resume_flag="${3:-}"
+    if [[ -z "$body" ]]; then
+      echo "error: BODY is required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    body_file="$(mktemp)"
+    print_comment_template "$body" "$resume_flag" > "$body_file"
+    request POST "/api/issues/$issue_id/comments" "$body_file"
+    rm -f "$body_file"
+    ;;
   issue-interaction)
     require_auth
     issue_id="${2:-}"
@@ -527,6 +550,21 @@ case "$cmd" in
     request POST "/api/issues/$issue_id/interactions" "$body_file"
     rm -f "$body_file"
     ;;
+  issue-interaction-current-template)
+    require_auth
+    kind="${2:-}"
+    title="${3:-}"
+    source="${4:-}"
+    if [[ -z "$kind" || -z "$title" ]]; then
+      echo "error: KIND and TITLE are required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    body_file="$(mktemp)"
+    print_interaction_template "$kind" "$title" "$source" > "$body_file"
+    request POST "/api/issues/$issue_id/interactions" "$body_file"
+    rm -f "$body_file"
+    ;;
   issue-update)
     require_auth
     issue_id="${2:-}"
@@ -548,6 +586,21 @@ case "$cmd" in
     fi
     issue_id="$(resolve_current_issue_id)"
     body_file="$(read_body_file "$source")"
+    request PATCH "/api/issues/$issue_id" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-update-current-template)
+    require_auth
+    status="${2:-}"
+    comment="${3:-}"
+    resume_flag="${4:-}"
+    if [[ -z "$status" || -z "$comment" ]]; then
+      echo "error: STATUS and COMMENT are required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    body_file="$(mktemp)"
+    print_update_template "$status" "$comment" "$resume_flag" > "$body_file"
     request PATCH "/api/issues/$issue_id" "$body_file"
     rm -f "$body_file"
     ;;

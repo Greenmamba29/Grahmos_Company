@@ -124,6 +124,10 @@ Use `./scripts/paperclip-api.sh current-issue-id`,
 `./scripts/paperclip-api.sh issue-blocked-current ...` when the run should target
 the current task automatically. The helper prefers `PAPERCLIP_TASK_ID`; otherwise
 it only auto-selects when `inbox-lite` returns exactly one issue.
+For the most common execution-contract flows, prefer the one-step helpers:
+- `./scripts/paperclip-api.sh issue-comment-current-template BODY [RESUME_TRUE_OR_FALSE]`
+- `./scripts/paperclip-api.sh issue-update-current-template STATUS COMMENT [RESUME_TRUE_OR_FALSE]`
+- `./scripts/paperclip-api.sh issue-interaction-current-template KIND TITLE [JSON_FILE|-]`
 
 #### Workaround
 Add a long-lived Paperclip agent API key to the Cursor Cloud adapter environment as
