@@ -10,6 +10,7 @@ Usage:
   ./scripts/paperclip-api.sh inbox-lite
   ./scripts/paperclip-api.sh issues-list [QUERY_STRING]
   ./scripts/paperclip-api.sh issues-count [QUERY_STRING]
+  ./scripts/paperclip-api.sh issues-single-id [QUERY_STRING]
   ./scripts/paperclip-api.sh run-issues
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get ISSUE_ID
@@ -27,6 +28,7 @@ Examples:
   ./scripts/paperclip-api.sh inbox-lite
   ./scripts/paperclip-api.sh issues-list 'limit=10&sortField=updatedAt&sortDir=desc'
   ./scripts/paperclip-api.sh issues-count 'status=blocked'
+  ./scripts/paperclip-api.sh issues-single-id 'q=paperclip&limit=2'
   ./scripts/paperclip-api.sh run-issues
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get 123e4567-e89b-12d3-a456-426614174000
@@ -48,7 +50,7 @@ Examples:
 
 Notes:
   - The script expects PAPERCLIP_API_URL for all commands.
-  - `issues-list` and `issues-count` default to PAPERCLIP_COMPANY_ID.
+  - `issues-list`, `issues-count`, and `issues-single-id` default to PAPERCLIP_COMPANY_ID.
   - `session` checks whether the current shell has a board-authenticated session.
   - `me` and `inbox-lite` require PAPERCLIP_API_KEY.
   - Issue commands can work through either PAPERCLIP_API_KEY or a board-authenticated session.
@@ -263,6 +265,31 @@ resolve_current_issue_id() {
   exit 3
 }
 
+resolve_issue_id_from_company_query() {
+  local query_string="${1:-}"
+
+  require_company_id
+  require_api_url
+
+  local path="/api/companies/$PAPERCLIP_COMPANY_ID/issues"
+  if [[ -n "$query_string" ]]; then
+    path="$path?$query_string"
+  fi
+
+  local code
+  local tmp_body
+  read -r code tmp_body < <(request_capture GET "$path")
+  if [[ "$code" -lt 200 || "$code" -ge 300 ]]; then
+    echo "HTTP $code" >&2
+    cat "$tmp_body" >&2
+    rm -f "$tmp_body"
+    exit 1
+  fi
+
+  parse_single_issue_id_from_file "$tmp_body" "/api/companies/{companyId}/issues"
+  rm -f "$tmp_body"
+}
+
 cmd="${1:-}"
 case "$cmd" in
   health)
@@ -296,6 +323,9 @@ case "$cmd" in
       path="$path?$query_string"
     fi
     request GET "$path"
+    ;;
+  issues-single-id)
+    resolve_issue_id_from_company_query "${2:-}"
     ;;
   run-issues)
     if [[ -z "${PAPERCLIP_RUN_ID:-}" ]]; then

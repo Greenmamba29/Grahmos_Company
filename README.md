@@ -31,6 +31,7 @@ This is the Company run main repo for Grahmos.
   - `inbox-lite`
   - `issues-list [QUERY_STRING]`
   - `issues-count [QUERY_STRING]`
+  - `issues-single-id [QUERY_STRING]`
   - `run-issues`
   - `current-issue-id`
   - `issue-get ISSUE_ID`
@@ -63,6 +64,7 @@ directly through the company route first:
 ```bash
 ./scripts/paperclip-api.sh issues-list 'limit=20&sortField=updatedAt&sortDir=desc'
 ./scripts/paperclip-api.sh issues-count 'status=blocked'
+./scripts/paperclip-api.sh issues-single-id 'q=paperclip&limit=2'
 ```
 
 Or use the one-shot wrapper:
@@ -81,6 +83,12 @@ For multi-issue or explicit-target cases:
 
 ```bash
 ./scripts/paperclip-mark-blocked-current.sh --issue-id 123e4567-e89b-12d3-a456-426614174000
+```
+
+For query-based issue selection after auth is restored:
+
+```bash
+./scripts/paperclip-mark-blocked-current.sh --query 'q=paperclip&limit=5'
 ```
 
 That wrapper performs:

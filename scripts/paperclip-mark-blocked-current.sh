@@ -5,6 +5,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 resume_comment="false"
 issue_id=""
+issue_query=""
 args=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -18,6 +19,14 @@ while [[ $# -gt 0 ]]; do
         exit 2
       fi
       issue_id="$2"
+      shift 2
+      ;;
+    --query)
+      if [[ $# -lt 2 ]]; then
+        echo "error: --query requires a value" >&2
+        exit 2
+      fi
+      issue_query="$2"
       shift 2
       ;;
     --)
@@ -47,7 +56,11 @@ trap cleanup EXIT
 
 "$script_dir/paperclip-blocked-payload.sh" "$unblock_owner" "$required_action" > "$payload_file"
 if [[ -z "$issue_id" ]]; then
-  issue_id="$("$script_dir/paperclip-api.sh" current-issue-id)"
+  if [[ -n "$issue_query" ]]; then
+    issue_id="$("$script_dir/paperclip-api.sh" issues-single-id "$issue_query")"
+  else
+    issue_id="$("$script_dir/paperclip-api.sh" current-issue-id)"
+  fi
 fi
 
 python3 - "$payload_file" "$comment_file" "$status_file" "$resume_comment" <<'PY'
