@@ -49,6 +49,9 @@ final disposition updates do not need an explicit issue ID once auth is availabl
 
 - Run `./scripts/test-paperclip-tools.sh` for the full Paperclip helper verification
   suite. It checks shell syntax and then runs both mock-server smoke tests.
+- See `./scripts/paperclip-payload-examples.md` for copy/paste payloads covering
+  resume comments, current-issue updates, blocked dispositions, and the supported
+  interaction kinds.
 - Run `./scripts/test-paperclip-api.sh` to exercise the helper against a local
   mock Paperclip API. The smoke test covers current-issue resolution, run-bound
   issue lookup, current-task read/update helpers, interaction/comment posting,

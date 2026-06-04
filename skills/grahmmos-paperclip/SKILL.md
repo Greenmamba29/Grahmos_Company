@@ -101,6 +101,9 @@ when bearer auth is available. Auto-selection still requires exactly one issue i
 the chosen source.
 Run `./scripts/test-paperclip-tools.sh` for the full Paperclip helper verification
 suite, including shell syntax checks and both smoke tests.
+See `./scripts/paperclip-payload-examples.md` for ready-to-send payloads covering
+resume comments, current-issue updates, blocked disposition, and the supported
+interaction kinds.
 Run `./scripts/test-paperclip-api.sh` to smoke-test the helper against a local
 mock Paperclip API before changing request resolution or payload behavior.
 Run `./scripts/test-paperclip-runtime-check.sh` to smoke-test the runtime
@@ -167,6 +170,7 @@ Grahmos_Company/
   .gitignore         # Git ignore
   scripts/
     paperclip-api.sh           # Paperclip API helper for issue operations
+    paperclip-payload-examples.md # Copy/paste Paperclip payloads and invocations
     paperclip-runtime-check.sh # Runtime auth diagnostic helper
     test-paperclip-api.sh      # Local smoke test for Paperclip helper flows
     test-paperclip-tools.sh    # Aggregate verification runner for all helpers
