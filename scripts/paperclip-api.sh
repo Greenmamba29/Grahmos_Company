@@ -7,15 +7,18 @@ Usage:
   ./scripts/paperclip-api.sh health
   ./scripts/paperclip-api.sh me
   ./scripts/paperclip-api.sh inbox-lite
+  ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get ISSUE_ID
   ./scripts/paperclip-api.sh issue-comments ISSUE_ID [AFTER_COMMENT_ID]
   ./scripts/paperclip-api.sh issue-update ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-blocked ISSUE_ID UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
+  ./scripts/paperclip-api.sh issue-blocked-current UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
 
 Examples:
   ./scripts/paperclip-api.sh health
   ./scripts/paperclip-api.sh me
   ./scripts/paperclip-api.sh inbox-lite
+  ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get 123e4567-e89b-12d3-a456-426614174000
   ./scripts/paperclip-api.sh issue-comments 123e4567-e89b-12d3-a456-426614174000
   ./scripts/paperclip-api.sh issue-update 123e4567-e89b-12d3-a456-426614174000 payload.json
@@ -24,6 +27,10 @@ Examples:
     "Paperclip operator" \
     "Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env" \
     "The runtime currently cannot mutate issue state."
+  ./scripts/paperclip-api.sh issue-blocked-current \
+    "Paperclip operator" \
+    "Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env" \
+    "Uses PAPERCLIP_TASK_ID when present, otherwise requires a single-item inbox."
   printf '{"comment":"Resuming with runtime auth fixed.","resume":true}\n' | \
     ./scripts/paperclip-api.sh issue-update 123e4567-e89b-12d3-a456-426614174000 -
 
@@ -148,6 +155,63 @@ PY
   printf '%s\n' "$tmp_body"
 }
 
+resolve_current_issue_id() {
+  if [[ -n "${PAPERCLIP_TASK_ID:-}" ]]; then
+    printf '%s\n' "$PAPERCLIP_TASK_ID"
+    return 0
+  fi
+
+  require_auth
+  require_api_url
+
+  local tmp_body
+  tmp_body="$(mktemp)"
+  local code
+  code="$(curl -sSL \
+    -H "Accept: application/json" \
+    -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
+    -o "$tmp_body" \
+    -w '%{http_code}' \
+    "$PAPERCLIP_API_URL/api/agents/me/inbox-lite")"
+
+  if [[ "$code" -lt 200 || "$code" -ge 300 ]]; then
+    echo "HTTP $code" >&2
+    cat "$tmp_body" >&2
+    rm -f "$tmp_body"
+    exit 1
+  fi
+
+  python3 - "$tmp_body" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+data = json.loads(Path(sys.argv[1]).read_text())
+items = data if isinstance(data, list) else data.get("items", [])
+
+if not items:
+    print("error: inbox-lite returned no issues and PAPERCLIP_TASK_ID is not set", file=sys.stderr)
+    raise SystemExit(4)
+
+if len(items) > 1:
+    print("error: multiple issues in inbox-lite; pass ISSUE_ID explicitly", file=sys.stderr)
+    for item in items:
+        ident = item.get("identifier") or item.get("id")
+        title = item.get("title") or ""
+        print(f"- {ident}: {title}", file=sys.stderr)
+    raise SystemExit(5)
+
+issue_id = items[0].get("id")
+if not issue_id:
+    print("error: inbox-lite item did not include an id", file=sys.stderr)
+    raise SystemExit(6)
+
+print(issue_id)
+PY
+
+  rm -f "$tmp_body"
+}
+
 cmd="${1:-}"
 case "$cmd" in
   health)
@@ -160,6 +224,9 @@ case "$cmd" in
   inbox-lite)
     require_auth
     request GET /api/agents/me/inbox-lite
+    ;;
+  current-issue-id)
+    resolve_current_issue_id
     ;;
   issue-get)
     require_auth
@@ -206,6 +273,20 @@ case "$cmd" in
       echo "error: ISSUE_ID, UNBLOCK_OWNER, and REQUIRED_ACTION are required" >&2
       exit 2
     fi
+    body_file="$(write_blocked_payload "$unblock_owner" "$required_action" "$details")"
+    request PATCH "/api/issues/$issue_id" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-blocked-current)
+    require_auth
+    unblock_owner="${2:-}"
+    required_action="${3:-}"
+    details="${4:-}"
+    if [[ -z "$unblock_owner" || -z "$required_action" ]]; then
+      echo "error: UNBLOCK_OWNER and REQUIRED_ACTION are required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
     body_file="$(write_blocked_payload "$unblock_owner" "$required_action" "$details")"
     request PATCH "/api/issues/$issue_id" "$body_file"
     rm -f "$body_file"
