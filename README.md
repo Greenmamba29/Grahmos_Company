@@ -31,6 +31,7 @@ This is the Company run main repo for Grahmos.
   - `issue-interaction ISSUE_ID JSON_FILE|-`
   - `issue-interaction-current JSON_FILE|-`
   - `issue-update ISSUE_ID JSON_FILE|-`
+  - `issue-update-current JSON_FILE|-`
   - `issue-blocked ISSUE_ID UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]`
   - `issue-blocked-current UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]`
 

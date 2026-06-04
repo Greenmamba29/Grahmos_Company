@@ -17,6 +17,7 @@ Usage:
   ./scripts/paperclip-api.sh issue-interaction ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-interaction-current JSON_FILE|-
   ./scripts/paperclip-api.sh issue-update ISSUE_ID JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-update-current JSON_FILE|-
   ./scripts/paperclip-api.sh issue-blocked ISSUE_ID UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
   ./scripts/paperclip-api.sh issue-blocked-current UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
 
@@ -36,6 +37,8 @@ Examples:
   printf '{"kind":"ask_user_questions","title":"Need input","questions":[{"id":"auth","label":"Should I inject PAPERCLIP_API_KEY next?"}],"continuationPolicy":"wake_assignee"}\n' | \
     ./scripts/paperclip-api.sh issue-interaction 123e4567-e89b-12d3-a456-426614174000 -
   ./scripts/paperclip-api.sh issue-update 123e4567-e89b-12d3-a456-426614174000 payload.json
+  printf '{"status":"done","comment":"Verified and complete."}\n' | \
+    ./scripts/paperclip-api.sh issue-update-current -
   ./scripts/paperclip-api.sh issue-blocked \
     123e4567-e89b-12d3-a456-426614174000 \
     "Paperclip operator" \
@@ -373,6 +376,18 @@ case "$cmd" in
       echo "error: ISSUE_ID and JSON_FILE|- are required" >&2
       exit 2
     fi
+    body_file="$(read_body_file "$source")"
+    request PATCH "/api/issues/$issue_id" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-update-current)
+    require_auth
+    source="${2:-}"
+    if [[ -z "$source" ]]; then
+      echo "error: JSON_FILE|- is required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
     body_file="$(read_body_file "$source")"
     request PATCH "/api/issues/$issue_id" "$body_file"
     rm -f "$body_file"
