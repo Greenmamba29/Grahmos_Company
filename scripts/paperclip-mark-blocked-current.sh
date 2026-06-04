@@ -4,6 +4,7 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 resume_comment="false"
+dry_run="false"
 issue_id=""
 issue_query=""
 args=()
@@ -11,6 +12,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --resume)
       resume_comment="true"
+      shift
+      ;;
+    --dry-run)
+      dry_run="true"
       shift
       ;;
     --issue-id)
@@ -80,6 +85,30 @@ if resume_comment:
 Path(sys.argv[2]).write_text(json.dumps(comment_payload, indent=2) + "\n")
 Path(sys.argv[3]).write_text(json.dumps({"status": status}, indent=2) + "\n")
 PY
+
+if [[ "$dry_run" == "true" ]]; then
+  python3 - "$issue_id" "$comment_file" "$status_file" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+issue_id = sys.argv[1]
+comment_payload = json.loads(Path(sys.argv[2]).read_text())
+status_payload = json.loads(Path(sys.argv[3]).read_text())
+
+json.dump(
+    {
+        "issueId": issue_id,
+        "commentPayload": comment_payload,
+        "statusPayload": status_payload,
+    },
+    sys.stdout,
+    indent=2,
+)
+sys.stdout.write("\n")
+PY
+  exit 0
+fi
 
 "$script_dir/paperclip-api.sh" issue-comment "$issue_id" "$comment_file"
 "$script_dir/paperclip-api.sh" issue-update "$issue_id" "$status_file"

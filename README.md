@@ -23,6 +23,8 @@ This is the Company run main repo for Grahmos.
   comment payload.
 - Add `--issue-id <uuid>` when you already know the target issue and want to
   bypass current-issue auto-resolution entirely.
+- Add `--dry-run` to preview the selected issue id plus the exact comment/status
+  payloads before any API mutation happens.
 - Once auth is available, use `./scripts/paperclip-api.sh` for the common Paperclip
   operations needed during heartbeats:
   - `health`
@@ -102,6 +104,12 @@ For query-based issue selection after auth is restored:
 
 ```bash
 ./scripts/paperclip-mark-blocked-current.sh --query 'q=paperclip&limit=5'
+```
+
+To preview the exact payloads without mutating anything:
+
+```bash
+./scripts/paperclip-mark-blocked-current.sh --issue-id 123e4567-e89b-12d3-a456-426614174000 --dry-run
 ```
 
 That wrapper performs:

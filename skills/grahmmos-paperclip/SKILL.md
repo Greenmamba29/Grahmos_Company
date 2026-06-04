@@ -88,6 +88,8 @@ Add `--resume` when that comment is intentionally restarting work on a completed
 issue so the wrapper includes `resume: true` in the `POST /comments` payload.
 Add `--issue-id <uuid>` when the target task is already known and you want to
 skip current-issue auto-resolution.
+Add `--dry-run` when you want to preview the selected issue id plus the exact
+comment and status payloads before any mutation occurs.
 
 Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 `me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,
@@ -123,6 +125,9 @@ restored but current-issue discovery is ambiguous or intentionally bypassed.
 Use `./scripts/paperclip-mark-blocked-current.sh --query 'q=paperclip&limit=5'`
 when you want the wrapper to resolve a single task id from the company issue list
 before posting the blocked update.
+Use `./scripts/paperclip-mark-blocked-current.sh --issue-id <uuid> --dry-run`
+when you want a mutation-free preview of the exact blocked update that would be
+submitted.
 Use `./scripts/paperclip-api.sh issues-list 'limit=20&sortField=updatedAt&sortDir=desc'`
 when you need to enumerate candidate issues before selecting an explicit
 `--issue-id`.
