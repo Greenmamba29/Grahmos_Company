@@ -182,6 +182,27 @@ This usually means the Paperclip board requires an authenticated browser session
 or session cookie, even though the repo workspace and heartbeat env vars are
 already present.
 
+### Browser fallback is unavailable in this runtime
+
+If direct `/api/...` access is unauthenticated, you might try to recover an
+existing authenticated browser session. In this cloud runtime, the following
+checks were useful and can fail independently:
+
+- MCP catalog may not expose a Browser server at all, even if local plugin files
+  reference browser automation capabilities
+- an X11 desktop can exist on `DISPLAY=:1` without any live browser window or
+  reusable authenticated session
+- a Chrome profile may exist but still contain no persisted Paperclip cookies
+
+Recommended order:
+
+1. Check whether Browser tools are actually available through MCP in the current
+   runtime.
+2. If not, inspect whether a live desktop/browser session already exists.
+3. If neither path is available and no auth header/cookie is present, use the
+   blocked helper once auth is available, or route the unblock to the named
+   platform/operator owner.
+
 ### I need to mark the issue blocked cleanly
 
 Use the blocked helper so the issue comment always names the unblock owner and
