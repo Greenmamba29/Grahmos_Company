@@ -40,3 +40,5 @@ The interaction action helpers wrap `/accept`, `/reject`, `/cancel`, and `/respo
 so follow-up confirmation/question workflows can be completed from the shell too.
 See `docs/paperclip-runtime-unblock.md` for ready-to-send blocked/resume payloads
 that can be used as soon as `PAPERCLIP_API_KEY` is injected into the runtime.
+Those payloads are checked in under `paperclip/payloads/` so the next authenticated
+heartbeat can send them directly without retyping JSON in the shell.

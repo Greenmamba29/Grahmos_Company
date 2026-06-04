@@ -58,13 +58,7 @@ blocked immediately, use this payload:
 Send it with:
 
 ```sh
-cat <<'EOF' >/tmp/paperclip-blocked-current.json
-{
-  "status": "blocked",
-  "comment": "Blocked.\n\nUnblock owner: Paperclip operator / Osiris Hermes\nRequired action: Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter environment and rerun the heartbeat.\n\nDetails: Verified in Cursor Cloud with ./scripts/paperclip-runtime-check.sh. The runtime can reach the private Paperclip deployment, but /api/auth/get-session returns 401 and /api/heartbeat-runs/{runId}/issues returns 401 because the shell has neither a board-authenticated session nor PAPERCLIP_API_KEY."
-}
-EOF
-./scripts/paperclip-api.sh issue-update-current /tmp/paperclip-blocked-current.json
+./scripts/paperclip-api.sh issue-update-current paperclip/payloads/blocked-current.json
 ```
 
 ## Ready-to-send resume comment payload
@@ -81,13 +75,7 @@ If auth has been fixed and the task should resume with a structured wake signal:
 Send it with:
 
 ```sh
-cat <<'EOF' >/tmp/paperclip-resume-comment.json
-{
-  "body": "Resuming after Paperclip control-plane auth was restored. Repo-side helpers, diagnostics, and task-update workflows are implemented on branch cursor/paperclip-runtime-tools-1a8a and verified locally.",
-  "resume": true
-}
-EOF
-./scripts/paperclip-api.sh issue-comment-current /tmp/paperclip-resume-comment.json
+./scripts/paperclip-api.sh issue-comment-current paperclip/payloads/resume-comment.json
 ```
 
 ## Optional follow-up interaction payload
@@ -116,23 +104,5 @@ If the task needs structured operator input instead of an immediate unblock:
 Send it with:
 
 ```sh
-cat <<'EOF' >/tmp/paperclip-auth-question.json
-{
-  "kind": "ask_user_questions",
-  "title": "Paperclip auth path unavailable in Cursor Cloud",
-  "summary": "The shell can modify the Git repo but cannot update the assigned Paperclip issue without control-plane auth.",
-  "continuationPolicy": "wake_assignee",
-  "payload": {
-    "title": "Which auth path should Prometheus use for Paperclip issue updates?",
-    "questions": [
-      {
-        "id": "paperclip-auth-path",
-        "label": "Choose the unblock path",
-        "helpText": "Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env, or provide another supported control-plane auth path."
-      }
-    ]
-  }
-}
-EOF
-./scripts/paperclip-api.sh issue-interaction-current /tmp/paperclip-auth-question.json
+./scripts/paperclip-api.sh issue-interaction-current paperclip/payloads/auth-question.json
 ```
