@@ -625,6 +625,66 @@ request() {
   rm -f "$tmp_body"
 }
 
+request_issue_path() {
+  local method="$1"
+  local issue_id="$2"
+  local suffix="${3:-}"
+  local body_file="${4:-}"
+  request "$method" "/api/issues/$issue_id$suffix" "$body_file"
+}
+
+request_current_issue_path() {
+  local method="$1"
+  local suffix="${2:-}"
+  local body_file="${3:-}"
+  local issue_id
+  issue_id="$(resolve_current_issue_id)"
+  request_issue_path "$method" "$issue_id" "$suffix" "$body_file"
+}
+
+request_issue_body_from_source() {
+  local method="$1"
+  local issue_id="$2"
+  local suffix="$3"
+  local source="$4"
+  local body_file
+  body_file="$(read_body_file "$source")"
+  request_issue_path "$method" "$issue_id" "$suffix" "$body_file"
+  rm -f "$body_file"
+}
+
+request_current_issue_body_from_source() {
+  local method="$1"
+  local suffix="$2"
+  local source="$3"
+  local issue_id
+  issue_id="$(resolve_current_issue_id)"
+  request_issue_body_from_source "$method" "$issue_id" "$suffix" "$source"
+}
+
+request_issue_built_payload() {
+  local method="$1"
+  local issue_id="$2"
+  local suffix="$3"
+  local builder="$4"
+  shift 4
+  local body_file
+  body_file="$(mktemp)"
+  "$builder" "$@" > "$body_file"
+  request_issue_path "$method" "$issue_id" "$suffix" "$body_file"
+  rm -f "$body_file"
+}
+
+request_current_issue_built_payload() {
+  local method="$1"
+  local suffix="$2"
+  local builder="$3"
+  shift 3
+  local issue_id
+  issue_id="$(resolve_current_issue_id)"
+  request_issue_built_payload "$method" "$issue_id" "$suffix" "$builder" "$@"
+}
+
 read_body_file() {
   local source="$1"
   local tmp_body
@@ -669,6 +729,17 @@ sys.stdout.write("\n")
 PY
 
   printf '%s\n' "$tmp_body"
+}
+
+build_reason_payload() {
+  local reason="${1:-}"
+  python3 - "$reason" <<'PY'
+import json
+import sys
+
+json.dump({"reason": sys.argv[1]}, sys.stdout)
+sys.stdout.write("\n")
+PY
 }
 
 resolve_current_issue_id() {
@@ -796,9 +867,7 @@ case "$cmd" in
       echo "error: ISSUE_ID and JSON_FILE|- are required" >&2
       exit 2
     fi
-    body_file="$(read_body_file "$source")"
-    request POST "/api/issues/$issue_id/comments" "$body_file"
-    rm -f "$body_file"
+    request_issue_body_from_source POST "$issue_id" "/comments" "$source"
     ;;
   issue-comment-current)
     require_auth
@@ -807,10 +876,7 @@ case "$cmd" in
       echo "error: JSON_FILE|- is required" >&2
       exit 2
     fi
-    issue_id="$(resolve_current_issue_id)"
-    body_file="$(read_body_file "$source")"
-    request POST "/api/issues/$issue_id/comments" "$body_file"
-    rm -f "$body_file"
+    request_current_issue_body_from_source POST "/comments" "$source"
     ;;
   issue-comment-resume)
     require_auth
@@ -820,19 +886,12 @@ case "$cmd" in
       echo "error: ISSUE_ID is required" >&2
       exit 2
     fi
-    body_file="$(mktemp)"
-    build_resume_comment "$body" > "$body_file"
-    request POST "/api/issues/$issue_id/comments" "$body_file"
-    rm -f "$body_file"
+    request_issue_built_payload POST "$issue_id" "/comments" build_resume_comment "$body"
     ;;
   issue-comment-resume-current)
     require_auth
     body="${2:-Resuming work in this heartbeat.}"
-    issue_id="$(resolve_current_issue_id)"
-    body_file="$(mktemp)"
-    build_resume_comment "$body" > "$body_file"
-    request POST "/api/issues/$issue_id/comments" "$body_file"
-    rm -f "$body_file"
+    request_current_issue_built_payload POST "/comments" build_resume_comment "$body"
     ;;
   issue-status)
     require_auth
@@ -843,10 +902,7 @@ case "$cmd" in
       echo "error: ISSUE_ID and STATUS are required" >&2
       exit 2
     fi
-    body_file="$(mktemp)"
-    build_status_update "$status" "$comment" > "$body_file"
-    request PATCH "/api/issues/$issue_id" "$body_file"
-    rm -f "$body_file"
+    request_issue_built_payload PATCH "$issue_id" "" build_status_update "$status" "$comment"
     ;;
   issue-status-current)
     require_auth
@@ -856,11 +912,7 @@ case "$cmd" in
       echo "error: STATUS is required" >&2
       exit 2
     fi
-    issue_id="$(resolve_current_issue_id)"
-    body_file="$(mktemp)"
-    build_status_update "$status" "$comment" > "$body_file"
-    request PATCH "/api/issues/$issue_id" "$body_file"
-    rm -f "$body_file"
+    request_current_issue_built_payload PATCH "" build_status_update "$status" "$comment"
     ;;
   issue-update)
     require_auth
@@ -870,9 +922,7 @@ case "$cmd" in
       echo "error: ISSUE_ID and JSON_FILE|- are required" >&2
       exit 2
     fi
-    body_file="$(read_body_file "$source")"
-    request PATCH "/api/issues/$issue_id" "$body_file"
-    rm -f "$body_file"
+    request_issue_body_from_source PATCH "$issue_id" "" "$source"
     ;;
   issue-update-current)
     require_auth
@@ -881,10 +931,7 @@ case "$cmd" in
       echo "error: JSON_FILE|- is required" >&2
       exit 2
     fi
-    issue_id="$(resolve_current_issue_id)"
-    body_file="$(read_body_file "$source")"
-    request PATCH "/api/issues/$issue_id" "$body_file"
-    rm -f "$body_file"
+    request_current_issue_body_from_source PATCH "" "$source"
     ;;
   issue-done)
     require_auth
@@ -894,19 +941,12 @@ case "$cmd" in
       echo "error: ISSUE_ID is required" >&2
       exit 2
     fi
-    body_file="$(mktemp)"
-    build_done_update "$comment" > "$body_file"
-    request PATCH "/api/issues/$issue_id" "$body_file"
-    rm -f "$body_file"
+    request_issue_built_payload PATCH "$issue_id" "" build_done_update "$comment"
     ;;
   issue-done-current)
     require_auth
     comment="${2:-Completed and verified.}"
-    issue_id="$(resolve_current_issue_id)"
-    body_file="$(mktemp)"
-    build_done_update "$comment" > "$body_file"
-    request PATCH "/api/issues/$issue_id" "$body_file"
-    rm -f "$body_file"
+    request_current_issue_built_payload PATCH "" build_done_update "$comment"
     ;;
   issue-documents)
     require_auth
@@ -953,10 +993,8 @@ case "$cmd" in
       echo "error: ISSUE_ID, KEY, and JSON_FILE|- are required" >&2
       exit 2
     fi
-    body_file="$(read_body_file "$source")"
     encoded_key="$(url_encode "$key")"
-    request PUT "/api/issues/$issue_id/documents/$encoded_key" "$body_file"
-    rm -f "$body_file"
+    request_issue_body_from_source PUT "$issue_id" "/documents/$encoded_key" "$source"
     ;;
   issue-document-put-current)
     require_auth
@@ -966,11 +1004,8 @@ case "$cmd" in
       echo "error: KEY and JSON_FILE|- are required" >&2
       exit 2
     fi
-    issue_id="$(resolve_current_issue_id)"
-    body_file="$(read_body_file "$source")"
     encoded_key="$(url_encode "$key")"
-    request PUT "/api/issues/$issue_id/documents/$encoded_key" "$body_file"
-    rm -f "$body_file"
+    request_current_issue_body_from_source PUT "/documents/$encoded_key" "$source"
     ;;
   issue-document-put-markdown)
     require_auth
@@ -986,11 +1021,8 @@ case "$cmd" in
     if [[ -z "$title" ]]; then
       title="$(default_document_title "$key")"
     fi
-    body_file="$(mktemp)"
-    build_markdown_document "$source" "$title" "$change_summary" > "$body_file"
     encoded_key="$(url_encode "$key")"
-    request PUT "/api/issues/$issue_id/documents/$encoded_key" "$body_file"
-    rm -f "$body_file"
+    request_issue_built_payload PUT "$issue_id" "/documents/$encoded_key" build_markdown_document "$source" "$title" "$change_summary"
     ;;
   issue-document-put-markdown-current)
     require_auth
@@ -1005,12 +1037,8 @@ case "$cmd" in
     if [[ -z "$title" ]]; then
       title="$(default_document_title "$key")"
     fi
-    issue_id="$(resolve_current_issue_id)"
-    body_file="$(mktemp)"
-    build_markdown_document "$source" "$title" "$change_summary" > "$body_file"
     encoded_key="$(url_encode "$key")"
-    request PUT "/api/issues/$issue_id/documents/$encoded_key" "$body_file"
-    rm -f "$body_file"
+    request_current_issue_built_payload PUT "/documents/$encoded_key" build_markdown_document "$source" "$title" "$change_summary"
     ;;
   issue-document-revisions)
     require_auth
@@ -1073,20 +1101,14 @@ case "$cmd" in
       exit 2
     fi
     revision_id="$(resolve_latest_document_revision_id "$issue_id" "plan")"
-    body_file="$(mktemp)"
-    build_plan_confirmation "$revision_id" "$issue_ref" > "$body_file"
-    request POST "/api/issues/$issue_id/interactions" "$body_file"
-    rm -f "$body_file"
+    request_issue_built_payload POST "$issue_id" "/interactions" build_plan_confirmation "$revision_id" "$issue_ref"
     ;;
   issue-plan-confirmation-current)
     require_auth
     issue_id="$(resolve_current_issue_id)"
     issue_ref="${2:-$issue_id}"
     revision_id="$(resolve_latest_document_revision_id "$issue_id" "plan")"
-    body_file="$(mktemp)"
-    build_plan_confirmation "$revision_id" "$issue_ref" > "$body_file"
-    request POST "/api/issues/$issue_id/interactions" "$body_file"
-    rm -f "$body_file"
+    request_issue_built_payload POST "$issue_id" "/interactions" build_plan_confirmation "$revision_id" "$issue_ref"
     ;;
   issue-plan-from-markdown)
     issue_plan_from_markdown "${2:-}" "${3:-}" "${4:-}" "${5:-}" "${6:-}"
@@ -1111,9 +1133,7 @@ case "$cmd" in
       echo "error: ISSUE_ID and JSON_FILE|- are required" >&2
       exit 2
     fi
-    body_file="$(read_body_file "$source")"
-    request POST "/api/issues/$issue_id/interactions" "$body_file"
-    rm -f "$body_file"
+    request_issue_body_from_source POST "$issue_id" "/interactions" "$source"
     ;;
   issue-interaction-current)
     require_auth
@@ -1122,10 +1142,7 @@ case "$cmd" in
       echo "error: JSON_FILE|- is required" >&2
       exit 2
     fi
-    issue_id="$(resolve_current_issue_id)"
-    body_file="$(read_body_file "$source")"
-    request POST "/api/issues/$issue_id/interactions" "$body_file"
-    rm -f "$body_file"
+    request_current_issue_body_from_source POST "/interactions" "$source"
     ;;
   issue-interactions)
     require_auth
@@ -1151,11 +1168,9 @@ case "$cmd" in
       exit 2
     fi
     if [[ -n "$source" ]]; then
-      body_file="$(read_body_file "$source")"
-      request POST "/api/issues/$issue_id/interactions/$interaction_id/accept" "$body_file"
-      rm -f "$body_file"
+      request_issue_body_from_source POST "$issue_id" "/interactions/$interaction_id/accept" "$source"
     else
-      request POST "/api/issues/$issue_id/interactions/$interaction_id/accept"
+      request_issue_path POST "$issue_id" "/interactions/$interaction_id/accept"
     fi
     ;;
   issue-interaction-accept-current)
@@ -1168,11 +1183,9 @@ case "$cmd" in
     fi
     issue_id="$(resolve_current_issue_id)"
     if [[ -n "$source" ]]; then
-      body_file="$(read_body_file "$source")"
-      request POST "/api/issues/$issue_id/interactions/$interaction_id/accept" "$body_file"
-      rm -f "$body_file"
+      request_issue_body_from_source POST "$issue_id" "/interactions/$interaction_id/accept" "$source"
     else
-      request POST "/api/issues/$issue_id/interactions/$interaction_id/accept"
+      request_issue_path POST "$issue_id" "/interactions/$interaction_id/accept"
     fi
     ;;
   issue-interaction-reject)
@@ -1185,17 +1198,9 @@ case "$cmd" in
       exit 2
     fi
     if [[ -n "$reason" ]]; then
-      tmp_body="$(mktemp)"
-      python3 - "$reason" > "$tmp_body" <<'PY'
-import json
-import sys
-json.dump({"reason": sys.argv[1]}, sys.stdout)
-sys.stdout.write("\n")
-PY
-      request POST "/api/issues/$issue_id/interactions/$interaction_id/reject" "$tmp_body"
-      rm -f "$tmp_body"
+      request_issue_built_payload POST "$issue_id" "/interactions/$interaction_id/reject" build_reason_payload "$reason"
     else
-      request POST "/api/issues/$issue_id/interactions/$interaction_id/reject"
+      request_issue_path POST "$issue_id" "/interactions/$interaction_id/reject"
     fi
     ;;
   issue-interaction-reject-current)
@@ -1208,17 +1213,9 @@ PY
     fi
     issue_id="$(resolve_current_issue_id)"
     if [[ -n "$reason" ]]; then
-      tmp_body="$(mktemp)"
-      python3 - "$reason" > "$tmp_body" <<'PY'
-import json
-import sys
-json.dump({"reason": sys.argv[1]}, sys.stdout)
-sys.stdout.write("\n")
-PY
-      request POST "/api/issues/$issue_id/interactions/$interaction_id/reject" "$tmp_body"
-      rm -f "$tmp_body"
+      request_issue_built_payload POST "$issue_id" "/interactions/$interaction_id/reject" build_reason_payload "$reason"
     else
-      request POST "/api/issues/$issue_id/interactions/$interaction_id/reject"
+      request_issue_path POST "$issue_id" "/interactions/$interaction_id/reject"
     fi
     ;;
   issue-interaction-cancel)
@@ -1231,17 +1228,9 @@ PY
       exit 2
     fi
     if [[ -n "$reason" ]]; then
-      tmp_body="$(mktemp)"
-      python3 - "$reason" > "$tmp_body" <<'PY'
-import json
-import sys
-json.dump({"reason": sys.argv[1]}, sys.stdout)
-sys.stdout.write("\n")
-PY
-      request POST "/api/issues/$issue_id/interactions/$interaction_id/cancel" "$tmp_body"
-      rm -f "$tmp_body"
+      request_issue_built_payload POST "$issue_id" "/interactions/$interaction_id/cancel" build_reason_payload "$reason"
     else
-      request POST "/api/issues/$issue_id/interactions/$interaction_id/cancel"
+      request_issue_path POST "$issue_id" "/interactions/$interaction_id/cancel"
     fi
     ;;
   issue-interaction-cancel-current)
@@ -1254,17 +1243,9 @@ PY
     fi
     issue_id="$(resolve_current_issue_id)"
     if [[ -n "$reason" ]]; then
-      tmp_body="$(mktemp)"
-      python3 - "$reason" > "$tmp_body" <<'PY'
-import json
-import sys
-json.dump({"reason": sys.argv[1]}, sys.stdout)
-sys.stdout.write("\n")
-PY
-      request POST "/api/issues/$issue_id/interactions/$interaction_id/cancel" "$tmp_body"
-      rm -f "$tmp_body"
+      request_issue_built_payload POST "$issue_id" "/interactions/$interaction_id/cancel" build_reason_payload "$reason"
     else
-      request POST "/api/issues/$issue_id/interactions/$interaction_id/cancel"
+      request_issue_path POST "$issue_id" "/interactions/$interaction_id/cancel"
     fi
     ;;
   issue-interaction-respond)
@@ -1276,9 +1257,7 @@ PY
       echo "error: ISSUE_ID, INTERACTION_ID, and JSON_FILE|- are required" >&2
       exit 2
     fi
-    body_file="$(read_body_file "$source")"
-    request POST "/api/issues/$issue_id/interactions/$interaction_id/respond" "$body_file"
-    rm -f "$body_file"
+    request_issue_body_from_source POST "$issue_id" "/interactions/$interaction_id/respond" "$source"
     ;;
   issue-interaction-respond-current)
     require_auth
@@ -1289,9 +1268,7 @@ PY
       exit 2
     fi
     issue_id="$(resolve_current_issue_id)"
-    body_file="$(read_body_file "$source")"
-    request POST "/api/issues/$issue_id/interactions/$interaction_id/respond" "$body_file"
-    rm -f "$body_file"
+    request_issue_body_from_source POST "$issue_id" "/interactions/$interaction_id/respond" "$source"
     ;;
   issue-blocked)
     require_auth
@@ -1304,7 +1281,7 @@ PY
       exit 2
     fi
     body_file="$(write_blocked_payload "$unblock_owner" "$required_action" "$details")"
-    request PATCH "/api/issues/$issue_id" "$body_file"
+    request_issue_path PATCH "$issue_id" "" "$body_file"
     rm -f "$body_file"
     ;;
   issue-blocked-current)
@@ -1318,7 +1295,7 @@ PY
     fi
     issue_id="$(resolve_current_issue_id)"
     body_file="$(write_blocked_payload "$unblock_owner" "$required_action" "$details")"
-    request PATCH "/api/issues/$issue_id" "$body_file"
+    request_issue_path PATCH "$issue_id" "" "$body_file"
     rm -f "$body_file"
     ;;
   ""|-h|--help|help)
