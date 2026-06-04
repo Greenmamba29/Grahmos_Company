@@ -65,12 +65,20 @@ def main():
             "./scripts/paperclip-issue-interaction --print-example request_confirmation",
             "./scripts/paperclip-blocked-update --reason \"<reason>\" --owner \"<owner>\" --action \"<action>\"",
         ]
+        results["command_templates"] = {
+            "resume_heartbeat": "./scripts/paperclip-issue-update --comment \"Heartbeat: resumed work from an authenticated shell.\" --status in_progress",
+            "blocked_update": "./scripts/paperclip-blocked-update --reason \"<reason>\" --owner \"<owner>\" --action \"<action>\"",
+        }
     else:
         results["recommended_next_steps"] = [
             "Inject PAPERCLIP_AUTH_HEADER or PAPERCLIP_COOKIE_HEADER into the runtime.",
             "Re-run ./scripts/paperclip-auth-diagnose until auth_ready is true.",
             "Then use the issue helpers to post the required comment, interaction, or final status update.",
         ]
+        results["command_templates"] = {
+            "recheck_auth": "./scripts/paperclip-auth-diagnose",
+            "blocked_update_after_auth": "./scripts/paperclip-blocked-update --reason \"Paperclip board auth is unavailable from the cloud shell.\" --owner \"Paperclip platform/operator\" --action \"Inject a valid PAPERCLIP_AUTH_HEADER or PAPERCLIP_COOKIE_HEADER into the runtime.\" --evidence \"Direct /api requests returned 401 Unauthorized and Board authentication required.\"",
+        }
 
     print(json.dumps(results, indent=2))
 

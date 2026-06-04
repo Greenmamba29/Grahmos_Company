@@ -63,6 +63,7 @@ This checks:
 - whether a simple assigned-issues query succeeds
 - whether the runtime is actually `auth_ready`
 - which next commands an operator should run based on the result
+- copy-paste command templates for the likely next recovery step
 
 ## Common operations
 
