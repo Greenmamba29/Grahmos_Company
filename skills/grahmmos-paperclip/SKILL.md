@@ -88,6 +88,9 @@ requires a task comment, including structured fields like `resume`, `reopen`, or
 `interrupt`.
 Use `./scripts/paperclip-api.sh issue-update-current ...` to update the current
 task disposition without manually resolving the issue ID first.
+Use `./scripts/paperclip-api.sh issue-document-put-current plan ...` to update the
+plan document before creating a `request_confirmation` interaction that targets
+the latest plan revision.
 Use `./scripts/paperclip-api.sh issue-interaction ...` or
 `./scripts/paperclip-api.sh issue-interaction-current ...` when the board/user
 must choose suggested tasks, answer structured questions, or confirm a proposal.
@@ -116,6 +119,9 @@ Example authenticated flows:
   ./scripts/paperclip-api.sh issue-interaction-current -
 
 ./scripts/paperclip-api.sh issue-interactions-current
+
+./scripts/paperclip-api.sh sample-payload plan-document | \
+  ./scripts/paperclip-api.sh issue-document-put-current plan -
 
 ./scripts/paperclip-api.sh sample-payload interaction-respond | \
   ./scripts/paperclip-api.sh issue-interaction-respond-current INTERACTION_ID -

@@ -16,6 +16,14 @@ Usage:
   ./scripts/paperclip-api.sh issue-comment-current JSON_FILE|-
   ./scripts/paperclip-api.sh issue-update ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-update-current JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-documents ISSUE_ID
+  ./scripts/paperclip-api.sh issue-documents-current
+  ./scripts/paperclip-api.sh issue-document-get ISSUE_ID KEY
+  ./scripts/paperclip-api.sh issue-document-get-current KEY
+  ./scripts/paperclip-api.sh issue-document-put ISSUE_ID KEY JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-document-put-current KEY JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-document-revisions ISSUE_ID KEY
+  ./scripts/paperclip-api.sh issue-document-revisions-current KEY
   ./scripts/paperclip-api.sh issue-interaction ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-interaction-current JSON_FILE|-
   ./scripts/paperclip-api.sh issue-interactions ISSUE_ID
@@ -33,6 +41,7 @@ Usage:
 
 Examples:
   ./scripts/paperclip-api.sh sample-payload comment-resume
+  ./scripts/paperclip-api.sh sample-payload plan-document
   ./scripts/paperclip-api.sh sample-payload request-confirmation
   ./scripts/paperclip-api.sh sample-payload interaction-respond
   ./scripts/paperclip-api.sh health
@@ -46,6 +55,8 @@ Examples:
     ./scripts/paperclip-api.sh issue-comment 123e4567-e89b-12d3-a456-426614174000 -
   printf '{"status":"done","comment":"Verified and finished."}\n' | \
     ./scripts/paperclip-api.sh issue-update-current -
+  ./scripts/paperclip-api.sh sample-payload plan-document | \
+    ./scripts/paperclip-api.sh issue-document-put-current plan -
   printf '{"kind":"ask_user_questions","title":"Need board input"}\n' | \
     ./scripts/paperclip-api.sh issue-interaction-current -
   ./scripts/paperclip-api.sh issue-interactions-current
@@ -129,6 +140,16 @@ EOF
 {
   "status": "blocked",
   "comment": "Blocked.\n\nUnblock owner: Paperclip operator\nRequired action: Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter environment."
+}
+EOF
+      ;;
+    plan-document)
+      cat <<'EOF'
+{
+  "title": "Implementation plan",
+  "format": "markdown",
+  "body": "## Summary\n- Define the implementation plan\n- Note dependencies and blockers\n\n## Steps\n1. Update the plan document\n2. Request confirmation against the latest revision\n3. Begin implementation after acceptance\n",
+  "changeSummary": "Initial plan draft"
 }
 EOF
       ;;
@@ -251,6 +272,7 @@ Supported sample payload types:
   comment-resume
   update-done
   update-blocked
+  plan-document
   suggest-tasks
   ask-user-questions
   request-confirmation
@@ -499,6 +521,86 @@ case "$cmd" in
     body_file="$(read_body_file "$source")"
     request PATCH "/api/issues/$issue_id" "$body_file"
     rm -f "$body_file"
+    ;;
+  issue-documents)
+    require_auth
+    issue_id="${2:-}"
+    if [[ -z "$issue_id" ]]; then
+      echo "error: ISSUE_ID is required" >&2
+      exit 2
+    fi
+    request GET "/api/issues/$issue_id/documents"
+    ;;
+  issue-documents-current)
+    require_auth
+    issue_id="$(resolve_current_issue_id)"
+    request GET "/api/issues/$issue_id/documents"
+    ;;
+  issue-document-get)
+    require_auth
+    issue_id="${2:-}"
+    key="${3:-}"
+    if [[ -z "$issue_id" || -z "$key" ]]; then
+      echo "error: ISSUE_ID and KEY are required" >&2
+      exit 2
+    fi
+    request GET "/api/issues/$issue_id/documents/$key"
+    ;;
+  issue-document-get-current)
+    require_auth
+    key="${2:-}"
+    if [[ -z "$key" ]]; then
+      echo "error: KEY is required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    request GET "/api/issues/$issue_id/documents/$key"
+    ;;
+  issue-document-put)
+    require_auth
+    issue_id="${2:-}"
+    key="${3:-}"
+    source="${4:-}"
+    if [[ -z "$issue_id" || -z "$key" || -z "$source" ]]; then
+      echo "error: ISSUE_ID, KEY, and JSON_FILE|- are required" >&2
+      exit 2
+    fi
+    body_file="$(read_body_file "$source")"
+    request PUT "/api/issues/$issue_id/documents/$key" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-document-put-current)
+    require_auth
+    key="${2:-}"
+    source="${3:-}"
+    if [[ -z "$key" || -z "$source" ]]; then
+      echo "error: KEY and JSON_FILE|- are required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    body_file="$(read_body_file "$source")"
+    request PUT "/api/issues/$issue_id/documents/$key" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-document-revisions)
+    require_auth
+    issue_id="${2:-}"
+    key="${3:-}"
+    if [[ -z "$issue_id" || -z "$key" ]]; then
+      echo "error: ISSUE_ID and KEY are required" >&2
+      exit 2
+    fi
+    request GET "/api/issues/$issue_id/documents/$key/revisions"
+    ;;
+  issue-document-revisions-current)
+    require_auth
+    key="${2:-}"
+    if [[ -z "$key" ]]; then
+      echo "error: KEY is required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    request GET "/api/issues/$issue_id/documents/$key/revisions"
     ;;
   issue-interaction)
     require_auth
