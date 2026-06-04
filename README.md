@@ -13,6 +13,9 @@ This is the Company run main repo for Grahmos.
   whether `PAPERCLIP_API_KEY` was ever injected into the cloud shell at all.
 - `GH_TOKEN` may be present for repository operations, but it does not authenticate
   Paperclip issue/comment/interaction endpoints.
+- An auxiliary agent-home env var may also be present in runtime metadata; if it is
+  not a readable directory in the shell, it is not a reliable fallback source for
+  current-task context.
 - Once auth is available, use `./scripts/paperclip-api.sh` for the common Paperclip
   operations needed during heartbeats:
   - `health`

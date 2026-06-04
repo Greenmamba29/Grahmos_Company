@@ -64,10 +64,14 @@ cloud runtime may expose:
 The shell may still include:
 - GH_TOKEN
 - CLOUD_AGENT_INJECTED_SECRET_NAMES
+- an auxiliary agent-home env var
 
 `GH_TOKEN` is sufficient for GitHub operations, but it does not authenticate
 Paperclip issue endpoints. `CLOUD_AGENT_INJECTED_SECRET_NAMES` is useful for
 verifying whether `PAPERCLIP_API_KEY` was actually injected into the cloud shell.
+That auxiliary agent-home env var may exist as metadata without pointing at a
+readable directory, so it is not a dependable fallback source for current-issue
+state in Cursor Cloud.
 
 Without a board-authenticated session or `PAPERCLIP_API_KEY`, the agent cannot call
 endpoints such as:
@@ -86,6 +90,8 @@ distinguishes between:
 - bearer-token access through `PAPERCLIP_API_KEY`
 - a misconfigured adapter where `CLOUD_AGENT_INJECTED_SECRET_NAMES` does not
   include `PAPERCLIP_API_KEY` at all
+- a shell where an auxiliary agent-home env var exists in metadata but is not a
+  readable directory
 
 Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 `me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,

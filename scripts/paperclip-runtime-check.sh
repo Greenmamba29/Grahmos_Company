@@ -33,6 +33,10 @@ base = os.environ["PAPERCLIP_API_URL"].rstrip("/")
 run_id = os.environ["PAPERCLIP_RUN_ID"]
 api_key = os.environ.get("PAPERCLIP_API_KEY", "").strip()
 gh_token = os.environ.get("GH_TOKEN", "").strip()
+aux_home_keys = [
+    key for key in os.environ if key.startswith("AG") and key.endswith("_HOME")
+]
+aux_home = os.environ.get(aux_home_keys[0], "").strip() if aux_home_keys else ""
 injected_secret_names = {
     item.strip()
     for item in os.environ.get("CLOUD_AGENT_INJECTED_SECRET_NAMES", "").split(",")
@@ -92,6 +96,8 @@ summary = {
     "api_key_present": bool(api_key),
     "paperclip_api_key_injected": "PAPERCLIP_API_KEY" in injected_secret_names,
     "gh_token_present": bool(gh_token),
+    "aux_home_env_present": bool(aux_home_keys),
+    "aux_home_is_directory": bool(aux_home) and os.path.isdir(aux_home),
     "bearer_me_status": bearer_me_status,
     "bearer_inbox_status": bearer_inbox_status,
 }
@@ -135,6 +141,9 @@ if session_status == 401:
         print(f"Server response: {error}")
     if gh_token:
         print("GH_TOKEN is present for GitHub operations, but it cannot authenticate Paperclip issue endpoints.")
+    if aux_home and not os.path.isdir(aux_home):
+        print("An auxiliary agent-home env var is present in runtime metadata, but it is not a readable directory in this shell.")
+        print("Do not rely on that env var as a fallback source for current issue or comment context here.")
     if "PAPERCLIP_API_KEY" not in injected_secret_names:
         print(
             "The runtime metadata shows that PAPERCLIP_API_KEY was not injected into this cloud shell."
