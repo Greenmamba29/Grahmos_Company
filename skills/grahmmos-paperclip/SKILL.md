@@ -80,6 +80,8 @@ distinguishes between:
 Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 `me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,
 and `PATCH /api/issues/{issueId}` without rebuilding the curl commands each heartbeat.
+Use `./scripts/paperclip-api.sh run-issues` to inspect the current heartbeat-run
+issue list directly when the runtime has a board-authenticated path.
 Use `./scripts/paperclip-api.sh issue-comment ...` when the execution contract
 requires a task comment, including structured fields like `resume`, `reopen`, or
 `interrupt`.
@@ -88,8 +90,9 @@ Use `./scripts/paperclip-api.sh issue-blocked ...` when the correct disposition 
 Use `./scripts/paperclip-api.sh current-issue-id` or
 `./scripts/paperclip-api.sh issue-comment-current ...` /
 `./scripts/paperclip-api.sh issue-blocked-current ...` when the run should target
-the current task automatically. The helper prefers `PAPERCLIP_TASK_ID`; otherwise
-it only auto-selects when `inbox-lite` returns exactly one issue.
+the current task automatically. The helper prefers `PAPERCLIP_TASK_ID`, then
+`/api/heartbeat-runs/{runId}/issues`, and finally `inbox-lite`; it only
+auto-selects when the chosen source returns exactly one issue.
 
 #### Workaround
 Add a long-lived Paperclip agent API key to the Cursor Cloud adapter environment as

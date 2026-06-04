@@ -15,6 +15,7 @@ This is the Company run main repo for Grahmos.
   - `session`
   - `me`
   - `inbox-lite`
+  - `run-issues`
   - `current-issue-id`
   - `issue-get ISSUE_ID`
   - `issue-comments ISSUE_ID [AFTER_COMMENT_ID]`
@@ -27,3 +28,7 @@ This is the Company run main repo for Grahmos.
 The comment helper accepts the raw JSON body expected by `POST /api/issues/{issueId}/comments`,
 so it can carry structured fields such as `resume`, `reopen`, or `interrupt` when
 the execution contract requires them.
+
+`current-issue-id` now prefers `PAPERCLIP_TASK_ID`, then falls back to
+`/api/heartbeat-runs/{runId}/issues`, and finally to `/api/agents/me/inbox-lite`
+when `PAPERCLIP_API_KEY` is available.

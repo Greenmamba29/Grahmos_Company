@@ -8,6 +8,7 @@ Usage:
   ./scripts/paperclip-api.sh session
   ./scripts/paperclip-api.sh me
   ./scripts/paperclip-api.sh inbox-lite
+  ./scripts/paperclip-api.sh run-issues
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get ISSUE_ID
   ./scripts/paperclip-api.sh issue-comments ISSUE_ID [AFTER_COMMENT_ID]
@@ -22,6 +23,7 @@ Examples:
   ./scripts/paperclip-api.sh session
   ./scripts/paperclip-api.sh me
   ./scripts/paperclip-api.sh inbox-lite
+  ./scripts/paperclip-api.sh run-issues
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get 123e4567-e89b-12d3-a456-426614174000
   ./scripts/paperclip-api.sh issue-comments 123e4567-e89b-12d3-a456-426614174000
@@ -43,7 +45,8 @@ Examples:
 Notes:
   - The script expects PAPERCLIP_API_URL for all commands.
   - `session` checks whether the current shell has a board-authenticated session.
-  - Issue and agent commands require PAPERCLIP_API_KEY.
+  - `me` and `inbox-lite` require PAPERCLIP_API_KEY.
+  - Issue commands can work through either PAPERCLIP_API_KEY or a board-authenticated session.
   - Mutating commands automatically send X-Paperclip-Run-Id when PAPERCLIP_RUN_ID is present.
 EOF
 }
@@ -83,6 +86,26 @@ request() {
   local path="$2"
   local body_file="${3:-}"
 
+  local code
+  local tmp_body
+  read -r code tmp_body < <(request_capture "$method" "$path" "$body_file")
+
+  if [[ "$code" -lt 200 || "$code" -ge 300 ]]; then
+    echo "HTTP $code" >&2
+    cat "$tmp_body" >&2
+    rm -f "$tmp_body"
+    exit 1
+  fi
+
+  cat "$tmp_body" | print_json
+  rm -f "$tmp_body"
+}
+
+request_capture() {
+  local method="$1"
+  local path="$2"
+  local body_file="${3:-}"
+
   require_api_url
 
   local -a args
@@ -104,16 +127,42 @@ request() {
   tmp_body="$(mktemp)"
   local code
   code="$(curl "${args[@]}" -o "$tmp_body" -w '%{http_code}' "$PAPERCLIP_API_URL$path")"
+  printf '%s %s\n' "$code" "$tmp_body"
+}
 
-  if [[ "$code" -lt 200 || "$code" -ge 300 ]]; then
-    echo "HTTP $code" >&2
-    cat "$tmp_body" >&2
-    rm -f "$tmp_body"
-    exit 1
-  fi
+parse_single_issue_id_from_file() {
+  local source="$1"
+  local context_label="$2"
 
-  cat "$tmp_body" | print_json
-  rm -f "$tmp_body"
+  python3 - "$source" "$context_label" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+source = Path(sys.argv[1])
+context = sys.argv[2]
+data = json.loads(source.read_text())
+items = data if isinstance(data, list) else data.get("items") or data.get("issues") or []
+
+if not items:
+    print(f"error: {context} returned no issues", file=sys.stderr)
+    raise SystemExit(4)
+
+if len(items) > 1:
+    print(f"error: {context} returned multiple issues; pass ISSUE_ID explicitly", file=sys.stderr)
+    for item in items:
+        ident = item.get("identifier") or item.get("id")
+        title = item.get("title") or ""
+        print(f"- {ident}: {title}", file=sys.stderr)
+    raise SystemExit(5)
+
+issue_id = items[0].get("id")
+if not issue_id:
+    print(f"error: {context} issue entry did not include an id", file=sys.stderr)
+    raise SystemExit(6)
+
+print(issue_id)
+PY
 }
 
 read_body_file() {
@@ -168,55 +217,38 @@ resolve_current_issue_id() {
     return 0
   fi
 
-  require_auth
   require_api_url
 
-  local tmp_body
-  tmp_body="$(mktemp)"
   local code
-  code="$(curl -sSL \
-    -H "Accept: application/json" \
-    -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
-    -o "$tmp_body" \
-    -w '%{http_code}' \
-    "$PAPERCLIP_API_URL/api/agents/me/inbox-lite")"
+  local tmp_body
 
-  if [[ "$code" -lt 200 || "$code" -ge 300 ]]; then
+  if [[ -n "${PAPERCLIP_RUN_ID:-}" ]]; then
+    read -r code tmp_body < <(request_capture GET "/api/heartbeat-runs/$PAPERCLIP_RUN_ID/issues")
+    if [[ "$code" -ge 200 && "$code" -lt 300 ]]; then
+      parse_single_issue_id_from_file "$tmp_body" "/api/heartbeat-runs/{runId}/issues"
+      rm -f "$tmp_body"
+      return 0
+    fi
+    rm -f "$tmp_body"
+  fi
+
+  if [[ -n "${PAPERCLIP_API_KEY:-}" ]]; then
+    read -r code tmp_body < <(request_capture GET "/api/agents/me/inbox-lite")
+    if [[ "$code" -ge 200 && "$code" -lt 300 ]]; then
+      parse_single_issue_id_from_file "$tmp_body" "/api/agents/me/inbox-lite"
+      rm -f "$tmp_body"
+      return 0
+    fi
     echo "HTTP $code" >&2
     cat "$tmp_body" >&2
     rm -f "$tmp_body"
     exit 1
   fi
 
-  python3 - "$tmp_body" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-data = json.loads(Path(sys.argv[1]).read_text())
-items = data if isinstance(data, list) else data.get("items", [])
-
-if not items:
-    print("error: inbox-lite returned no issues and PAPERCLIP_TASK_ID is not set", file=sys.stderr)
-    raise SystemExit(4)
-
-if len(items) > 1:
-    print("error: multiple issues in inbox-lite; pass ISSUE_ID explicitly", file=sys.stderr)
-    for item in items:
-        ident = item.get("identifier") or item.get("id")
-        title = item.get("title") or ""
-        print(f"- {ident}: {title}", file=sys.stderr)
-    raise SystemExit(5)
-
-issue_id = items[0].get("id")
-if not issue_id:
-    print("error: inbox-lite item did not include an id", file=sys.stderr)
-    raise SystemExit(6)
-
-print(issue_id)
-PY
-
-  rm -f "$tmp_body"
+  echo "error: could not resolve the current issue id" >&2
+  echo "  tried: PAPERCLIP_TASK_ID, /api/heartbeat-runs/{runId}/issues, /api/agents/me/inbox-lite" >&2
+  echo "  next: provide PAPERCLIP_TASK_ID, use a board-authenticated shell session, or set PAPERCLIP_API_KEY" >&2
+  exit 3
 }
 
 cmd="${1:-}"
@@ -235,11 +267,17 @@ case "$cmd" in
     require_auth
     request GET /api/agents/me/inbox-lite
     ;;
+  run-issues)
+    if [[ -z "${PAPERCLIP_RUN_ID:-}" ]]; then
+      echo "error: PAPERCLIP_RUN_ID is required" >&2
+      exit 2
+    fi
+    request GET "/api/heartbeat-runs/$PAPERCLIP_RUN_ID/issues"
+    ;;
   current-issue-id)
     resolve_current_issue_id
     ;;
   issue-get)
-    require_auth
     issue_id="${2:-}"
     if [[ -z "$issue_id" ]]; then
       echo "error: ISSUE_ID is required" >&2
@@ -248,7 +286,6 @@ case "$cmd" in
     request GET "/api/issues/$issue_id"
     ;;
   issue-comments)
-    require_auth
     issue_id="${2:-}"
     after_comment_id="${3:-}"
     if [[ -z "$issue_id" ]]; then
@@ -262,7 +299,6 @@ case "$cmd" in
     request GET "$path"
     ;;
   issue-comment)
-    require_auth
     issue_id="${2:-}"
     source="${3:-}"
     if [[ -z "$issue_id" || -z "$source" ]]; then
@@ -274,7 +310,6 @@ case "$cmd" in
     rm -f "$body_file"
     ;;
   issue-comment-current)
-    require_auth
     source="${2:-}"
     if [[ -z "$source" ]]; then
       echo "error: JSON_FILE|- is required" >&2
@@ -286,7 +321,6 @@ case "$cmd" in
     rm -f "$body_file"
     ;;
   issue-update)
-    require_auth
     issue_id="${2:-}"
     source="${3:-}"
     if [[ -z "$issue_id" || -z "$source" ]]; then
@@ -298,7 +332,6 @@ case "$cmd" in
     rm -f "$body_file"
     ;;
   issue-blocked)
-    require_auth
     issue_id="${2:-}"
     unblock_owner="${3:-}"
     required_action="${4:-}"
@@ -312,7 +345,6 @@ case "$cmd" in
     rm -f "$body_file"
     ;;
   issue-blocked-current)
-    require_auth
     unblock_owner="${2:-}"
     required_action="${3:-}"
     details="${4:-}"
