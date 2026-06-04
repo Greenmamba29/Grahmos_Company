@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  paperclip-api METHOD PATH [JSON_BODY]
+
+Examples:
+  paperclip-api GET "/companies/$PAPERCLIP_COMPANY_ID/issues?assigneeAgentId=$PAPERCLIP_AGENT_ID&limit=10"
+  paperclip-api POST "/issues/$ISSUE_ID/comments" '{"body":"Heartbeat update","interrupt":false}'
+  paperclip-api PATCH "/issues/$ISSUE_ID" '{"status":"done"}'
+
+Environment:
+  PAPERCLIP_API_URL        Required. Base Paperclip URL, e.g. https://paperclip.example.com
+  PAPERCLIP_AUTH_HEADER    Optional. Full Authorization header value, e.g. "Bearer <token>"
+  PAPERCLIP_COOKIE_HEADER  Optional. Full Cookie header value, e.g. "paperclip_session=<value>"
+
+One of PAPERCLIP_AUTH_HEADER or PAPERCLIP_COOKIE_HEADER must be set.
+EOF
+}
+
+if [[ $# -lt 2 || $# -gt 3 ]]; then
+  usage
+  exit 64
+fi
+
+if [[ -z "${PAPERCLIP_API_URL:-}" ]]; then
+  echo "error: PAPERCLIP_API_URL is required" >&2
+  exit 64
+fi
+
+if [[ -z "${PAPERCLIP_AUTH_HEADER:-}" && -z "${PAPERCLIP_COOKIE_HEADER:-}" ]]; then
+  cat >&2 <<'EOF'
+error: missing Paperclip auth
+
+Set one of:
+  PAPERCLIP_AUTH_HEADER="Bearer <token>"
+  PAPERCLIP_COOKIE_HEADER="paperclip_session=<value>"
+
+Cursor cloud shells expose PAPERCLIP_* runtime IDs, but they may not include a
+board-authenticated session by default.
+EOF
+  exit 65
+fi
+
+method="$1"
+path="$2"
+body="${3:-}"
+url="${PAPERCLIP_API_URL%/}/api${path}"
+
+headers=(
+  -H "Accept: application/json"
+)
+
+if [[ -n "${PAPERCLIP_AUTH_HEADER:-}" ]]; then
+  headers+=(-H "Authorization: ${PAPERCLIP_AUTH_HEADER}")
+fi
+
+if [[ -n "${PAPERCLIP_COOKIE_HEADER:-}" ]]; then
+  headers+=(-H "Cookie: ${PAPERCLIP_COOKIE_HEADER}")
+fi
+
+curl_args=(
+  --fail
+  --silent
+  --show-error
+  -X "$method"
+  "${headers[@]}"
+)
+
+if [[ -n "$body" ]]; then
+  payload="$body"
+  if [[ "$body" == @* ]]; then
+    payload="$(<"${body#@}")"
+  fi
+  curl_args+=(
+    -H "Content-Type: application/json"
+    --data "$payload"
+  )
+fi
+
+curl "${curl_args[@]}" "$url"

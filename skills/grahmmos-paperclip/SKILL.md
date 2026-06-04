@@ -71,10 +71,35 @@ Grahmos_Company/
   README.md          # Repository readme
   LICENSE            # MIT License
   .gitignore         # Git ignore
+  docs/
+    paperclip-issue-ops.md   # Agent issue/update runbook
+  scripts/
+    paperclip-api            # Authenticated Paperclip API helper
   skills/
     grahmmos-paperclip/
       SKILL.md       # This file - company setup documentation
 ```
+
+## Agent issue ops helper
+
+For issue comments, disposition updates, and other board mutations from a cloud
+agent shell, use the repo helper:
+
+```bash
+./scripts/paperclip-api
+```
+
+The full workflow and auth requirements are documented in:
+
+```text
+docs/paperclip-issue-ops.md
+```
+
+Important: runtime IDs such as `PAPERCLIP_API_URL`, `PAPERCLIP_COMPANY_ID`,
+`PAPERCLIP_AGENT_ID`, and `PAPERCLIP_RUN_ID` may be present even when the shell
+does not have a board-authenticated session. In that case, `/api/...` requests
+will still return 401 until a valid auth header or Paperclip session cookie is
+provided.
 
 ## Troubleshooting Guide
 
