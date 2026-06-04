@@ -79,14 +79,21 @@ distinguishes between:
 
 Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 `me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,
-and `PATCH /api/issues/{issueId}` without rebuilding the curl commands each heartbeat.
+`PATCH /api/issues/{issueId}`, and `POST /api/issues/{issueId}/interactions`
+without rebuilding the curl commands each heartbeat.
 Use `./scripts/paperclip-api.sh issue-comment ...` when the execution contract
 requires a task comment, including structured fields like `resume`, `reopen`, or
 `interrupt`.
+Use `./scripts/paperclip-api.sh issue-update-current ...` to update the current
+task disposition without manually resolving the issue ID first.
+Use `./scripts/paperclip-api.sh issue-interaction ...` or
+`./scripts/paperclip-api.sh issue-interaction-current ...` when the board/user
+must choose suggested tasks, answer structured questions, or confirm a proposal.
 Use `./scripts/paperclip-api.sh issue-blocked ...` when the correct disposition is
 `blocked` and the issue must name an unblock owner and required action.
 Use `./scripts/paperclip-api.sh current-issue-id` or
 `./scripts/paperclip-api.sh issue-comment-current ...` /
+`./scripts/paperclip-api.sh issue-interaction-current ...` /
 `./scripts/paperclip-api.sh issue-blocked-current ...` when the run should target
 the current task automatically. The helper prefers `PAPERCLIP_TASK_ID`; otherwise
 it only auto-selects when `inbox-lite` returns exactly one issue.
@@ -195,8 +202,10 @@ have a board-authenticated session cookie. This is common in Cursor Cloud shells
 1. Run `./scripts/paperclip-runtime-check.sh` to confirm the failure mode.
 2. If issue operations must happen from the shell, inject `PAPERCLIP_API_KEY` into
    the Cursor Cloud adapter environment and retry.
-3. Use `./scripts/paperclip-api.sh issue-comment ...` once auth is available so the
-   agent can satisfy the execution contract requirement to leave a task comment.
+3. Use `./scripts/paperclip-api.sh issue-comment ...`,
+   `./scripts/paperclip-api.sh issue-update-current ...`, or
+   `./scripts/paperclip-api.sh issue-interaction-current ...` once auth is
+   available so the agent can satisfy the execution contract directly from shell.
 
 ## Heartbeat Schedule
 - Heartbeat on interval: ON

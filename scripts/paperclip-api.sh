@@ -14,6 +14,9 @@ Usage:
   ./scripts/paperclip-api.sh issue-comment ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-comment-current JSON_FILE|-
   ./scripts/paperclip-api.sh issue-update ISSUE_ID JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-update-current JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-interaction ISSUE_ID JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-interaction-current JSON_FILE|-
   ./scripts/paperclip-api.sh issue-blocked ISSUE_ID UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
   ./scripts/paperclip-api.sh issue-blocked-current UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
 
@@ -27,6 +30,10 @@ Examples:
   ./scripts/paperclip-api.sh issue-comments 123e4567-e89b-12d3-a456-426614174000
   printf '{"body":"Work started.","resume":true}\n' | \
     ./scripts/paperclip-api.sh issue-comment 123e4567-e89b-12d3-a456-426614174000 -
+  printf '{"status":"done","comment":"Verified and finished."}\n' | \
+    ./scripts/paperclip-api.sh issue-update-current -
+  printf '{"kind":"ask_user_questions","title":"Need board input"}\n' | \
+    ./scripts/paperclip-api.sh issue-interaction-current -
   ./scripts/paperclip-api.sh issue-update 123e4567-e89b-12d3-a456-426614174000 payload.json
   ./scripts/paperclip-api.sh issue-blocked \
     123e4567-e89b-12d3-a456-426614174000 \
@@ -295,6 +302,42 @@ case "$cmd" in
     fi
     body_file="$(read_body_file "$source")"
     request PATCH "/api/issues/$issue_id" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-update-current)
+    require_auth
+    source="${2:-}"
+    if [[ -z "$source" ]]; then
+      echo "error: JSON_FILE|- is required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    body_file="$(read_body_file "$source")"
+    request PATCH "/api/issues/$issue_id" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-interaction)
+    require_auth
+    issue_id="${2:-}"
+    source="${3:-}"
+    if [[ -z "$issue_id" || -z "$source" ]]; then
+      echo "error: ISSUE_ID and JSON_FILE|- are required" >&2
+      exit 2
+    fi
+    body_file="$(read_body_file "$source")"
+    request POST "/api/issues/$issue_id/interactions" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-interaction-current)
+    require_auth
+    source="${2:-}"
+    if [[ -z "$source" ]]; then
+      echo "error: JSON_FILE|- is required" >&2
+      exit 2
+    fi
+    issue_id="$(resolve_current_issue_id)"
+    body_file="$(read_body_file "$source")"
+    request POST "/api/issues/$issue_id/interactions" "$body_file"
     rm -f "$body_file"
     ;;
   issue-blocked)
