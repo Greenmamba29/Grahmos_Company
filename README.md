@@ -24,6 +24,10 @@ This is the Company run main repo for Grahmos.
   - `issue-update-current JSON_FILE|-`
   - `issue-interaction ISSUE_ID JSON_FILE|-`
   - `issue-interaction-current JSON_FILE|-`
+  - `interaction-accept ISSUE_ID INTERACTION_ID [JSON_FILE|-]`
+  - `interaction-reject ISSUE_ID INTERACTION_ID [REASON]`
+  - `interaction-cancel ISSUE_ID INTERACTION_ID [REASON]`
+  - `interaction-respond ISSUE_ID INTERACTION_ID JSON_FILE|-`
   - `issue-blocked ISSUE_ID UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]`
   - `issue-blocked-current UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]`
 
@@ -32,3 +36,5 @@ The comment helper accepts the raw JSON body expected by
 `resume`, `reopen`, or `interrupt` when the execution contract requires them.
 The update and interaction helpers likewise accept the raw JSON body expected by
 `PATCH /api/issues/{issueId}` and `POST /api/issues/{issueId}/interactions`.
+The interaction action helpers wrap `/accept`, `/reject`, `/cancel`, and `/respond`
+so follow-up confirmation/question workflows can be completed from the shell too.

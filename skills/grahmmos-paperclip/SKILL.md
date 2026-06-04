@@ -89,6 +89,10 @@ Use `./scripts/paperclip-api.sh issue-interaction ...` /
 `./scripts/paperclip-api.sh issue-interaction-current ...` when the board or user
 must respond through `suggest_tasks`, `ask_user_questions`, or
 `request_confirmation`.
+Use `./scripts/paperclip-api.sh interaction-accept ...`,
+`interaction-reject ...`, `interaction-cancel ...`, and
+`interaction-respond ...` to complete the follow-up interaction lifecycle once a
+board/user response exists.
 Use `./scripts/paperclip-api.sh issue-blocked ...` when the correct disposition is
 `blocked` and the issue must name an unblock owner and required action.
 Use `./scripts/paperclip-api.sh current-issue-id` or
