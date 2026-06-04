@@ -13,6 +13,7 @@ This is the Company run main repo for Grahmos.
   operations needed during heartbeats:
   - `health`
   - `session`
+  - `current-run-issues`
   - `me`
   - `inbox-lite`
   - `current-issue-id`
@@ -33,3 +34,7 @@ The interaction helper accepts the raw JSON body expected by
 `POST /api/issues/{issueId}/interactions`, so the shell can create
 `suggest_tasks`, `ask_user_questions`, or `request_confirmation` interactions once
 Paperclip auth is available.
+When `PAPERCLIP_TASK_ID` is missing, `current-issue-id` now prefers the
+`/api/heartbeat-runs/{runId}/issues` lookup before falling back to inbox-lite, so
+the helper aligns with the runtime diagnostic and can use the run-bound issue list
+whenever a board-authenticated session is available.

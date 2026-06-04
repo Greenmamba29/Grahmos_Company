@@ -6,6 +6,7 @@ usage() {
 Usage:
   ./scripts/paperclip-api.sh health
   ./scripts/paperclip-api.sh session
+  ./scripts/paperclip-api.sh current-run-issues
   ./scripts/paperclip-api.sh me
   ./scripts/paperclip-api.sh inbox-lite
   ./scripts/paperclip-api.sh current-issue-id
@@ -22,6 +23,7 @@ Usage:
 Examples:
   ./scripts/paperclip-api.sh health
   ./scripts/paperclip-api.sh session
+  ./scripts/paperclip-api.sh current-run-issues
   ./scripts/paperclip-api.sh me
   ./scripts/paperclip-api.sh inbox-lite
   ./scripts/paperclip-api.sh current-issue-id
@@ -46,6 +48,7 @@ Examples:
 Notes:
   - The script expects PAPERCLIP_API_URL for all commands.
   - `session` checks whether the current shell has a board-authenticated session.
+  - `current-run-issues` uses `PAPERCLIP_RUN_ID` to query the run-bound issue list.
   - Issue and agent commands require PAPERCLIP_API_KEY.
   - Comment and interaction helpers accept the raw JSON body expected by the API.
   - Mutating commands automatically send X-Paperclip-Run-Id when PAPERCLIP_RUN_ID is present.
@@ -134,6 +137,51 @@ read_body_file() {
   printf '%s\n' "$tmp_body"
 }
 
+resolve_single_issue_id_from_file() {
+  local source_file="$1"
+  local source_name="$2"
+
+  python3 - "$source_file" "$source_name" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+data = json.loads(Path(sys.argv[1]).read_text())
+source_name = sys.argv[2]
+items = data if isinstance(data, list) else data.get("items", [])
+
+if not items:
+    print(f"error: {source_name} returned no issues", file=sys.stderr)
+    raise SystemExit(4)
+
+if len(items) > 1:
+    print(f"error: multiple issues in {source_name}; pass ISSUE_ID explicitly", file=sys.stderr)
+    for item in items:
+        ident = item.get("identifier") or item.get("id")
+        title = item.get("title") or ""
+        print(f"- {ident}: {title}", file=sys.stderr)
+    raise SystemExit(5)
+
+issue_id = items[0].get("id")
+if not issue_id:
+    print(f"error: {source_name} item did not include an id", file=sys.stderr)
+    raise SystemExit(6)
+
+print(issue_id)
+PY
+}
+
+request_current_run_issues() {
+  require_api_url
+
+  if [[ -z "${PAPERCLIP_RUN_ID:-}" ]]; then
+    echo "error: PAPERCLIP_RUN_ID is required" >&2
+    exit 2
+  fi
+
+  request GET "/api/heartbeat-runs/$PAPERCLIP_RUN_ID/issues"
+}
+
 write_blocked_payload() {
   local unblock_owner="$1"
   local required_action="$2"
@@ -172,55 +220,48 @@ resolve_current_issue_id() {
     return 0
   fi
 
-  require_auth
   require_api_url
 
-  local tmp_body
-  tmp_body="$(mktemp)"
-  local code
-  code="$(curl -sSL \
+  if [[ -n "${PAPERCLIP_RUN_ID:-}" ]]; then
+    local run_body
+    run_body="$(mktemp)"
+    local run_code
+    run_code="$(curl -sSL \
+      -H "Accept: application/json" \
+      -o "$run_body" \
+      -w '%{http_code}' \
+      "$PAPERCLIP_API_URL/api/heartbeat-runs/$PAPERCLIP_RUN_ID/issues")"
+
+    if [[ "$run_code" -ge 200 && "$run_code" -lt 300 ]]; then
+      resolve_single_issue_id_from_file "$run_body" "heartbeat-runs/$PAPERCLIP_RUN_ID/issues"
+      rm -f "$run_body"
+      return 0
+    fi
+
+    rm -f "$run_body"
+  fi
+
+  require_auth
+
+  local inbox_body
+  inbox_body="$(mktemp)"
+  local inbox_code
+  inbox_code="$(curl -sSL \
     -H "Accept: application/json" \
     -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
-    -o "$tmp_body" \
+    -o "$inbox_body" \
     -w '%{http_code}' \
     "$PAPERCLIP_API_URL/api/agents/me/inbox-lite")"
 
-  if [[ "$code" -lt 200 || "$code" -ge 300 ]]; then
-    echo "HTTP $code" >&2
-    cat "$tmp_body" >&2
-    rm -f "$tmp_body"
+  if [[ "$inbox_code" -lt 200 || "$inbox_code" -ge 300 ]]; then
+    echo "HTTP $inbox_code" >&2
+    cat "$inbox_body" >&2
+    rm -f "$inbox_body"
     exit 1
   fi
 
-  python3 - "$tmp_body" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-data = json.loads(Path(sys.argv[1]).read_text())
-items = data if isinstance(data, list) else data.get("items", [])
-
-if not items:
-    print("error: inbox-lite returned no issues and PAPERCLIP_TASK_ID is not set", file=sys.stderr)
-    raise SystemExit(4)
-
-if len(items) > 1:
-    print("error: multiple issues in inbox-lite; pass ISSUE_ID explicitly", file=sys.stderr)
-    for item in items:
-        ident = item.get("identifier") or item.get("id")
-        title = item.get("title") or ""
-        print(f"- {ident}: {title}", file=sys.stderr)
-    raise SystemExit(5)
-
-issue_id = items[0].get("id")
-if not issue_id:
-    print("error: inbox-lite item did not include an id", file=sys.stderr)
-    raise SystemExit(6)
-
-print(issue_id)
-PY
-
-  rm -f "$tmp_body"
+  resolve_single_issue_id_from_file "$inbox_body" "inbox-lite"
+  rm -f "$inbox_body"
 }
 
 cmd="${1:-}"
@@ -230,6 +271,9 @@ case "$cmd" in
     ;;
   session)
     request GET /api/auth/get-session
+    ;;
+  current-run-issues)
+    request_current_run_issues
     ;;
   me)
     require_auth
