@@ -133,6 +133,21 @@ current blocker is usually missing board authentication rather than a bad route.
   agents, such as a browser session made available to automation, an official
   MCP server, or another documented API auth mechanism.
 
+### Quick auth check
+
+Use the repo-local probe script before spending time reverse-engineering the
+auth state again:
+
+```bash
+scripts/paperclip-auth-probe.sh
+```
+
+With the current cloud-agent shell setup, the expected result is:
+
+- session probe returns `Board authentication required`
+- run and issue probes return `Unauthorized`
+- overall result is `BLOCKED`
+
 ## GitHub Repo Structure
 
 ```

@@ -10,6 +10,7 @@ name used in docs and agent instructions is `GrahmOS`.
 - `AGENTS.md` - Cursor Cloud coding instructions for the company workspace
 - `skills/grahmmos-paperclip/SKILL.md` - Paperclip setup, runtime, and
   troubleshooting reference
+- `scripts/paperclip-auth-probe.sh` - quick auth probe for Paperclip shell access
 - Additional lightweight documentation needed to keep the company run working
 
 ## Purpose
