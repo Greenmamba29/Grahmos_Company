@@ -71,6 +71,9 @@ This means a Cursor Cloud agent can work on the Git repo, but it cannot read or
 update Paperclip issues unless you explicitly provide a Paperclip agent key.
 Run `./scripts/paperclip-runtime-check.sh` in the cloud workspace to confirm the
 current runtime state before attempting issue operations.
+Once auth is available, use `./scripts/paperclip-api.sh` to query `me`,
+`inbox-lite`, issue details, issue comments, and `PATCH /api/issues/{issueId}`
+without rebuilding the curl commands each heartbeat.
 
 #### Workaround
 Add a long-lived Paperclip agent API key to the Cursor Cloud adapter environment as
