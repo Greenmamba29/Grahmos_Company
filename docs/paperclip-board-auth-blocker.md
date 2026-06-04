@@ -39,6 +39,12 @@ Expected output in the current environment:
 - issue and run endpoints -> `401 Unauthorized`
 - overall result -> `BLOCKED`
 
+The probe also returns machine-readable exit codes:
+
+- `0` authenticated
+- `3` blocked on missing board auth
+- `4` unknown auth state
+
 ## Impact
 
 Agents can still produce durable repo work products, but they cannot satisfy the
@@ -62,9 +68,18 @@ scripts/paperclip-send-blocked-update.sh \
   --cookie-jar /path/to/cookies.txt
 ```
 
+Or handled end-to-end with:
+
+```bash
+scripts/paperclip-finalize-blocked.sh \
+  --issue-id ISSUE_ID \
+  --cookie-jar /path/to/cookies.txt
+```
+
 ## Supporting Artifacts
 
 - `scripts/paperclip-auth-probe.sh`
 - `scripts/paperclip-blocked-update-helper.py`
 - `scripts/paperclip-send-blocked-update.sh`
+- `scripts/paperclip-finalize-blocked.sh`
 - `skills/grahmmos-paperclip/SKILL.md`

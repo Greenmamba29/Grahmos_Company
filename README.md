@@ -15,6 +15,8 @@ name used in docs and agent instructions is `GrahmOS`.
   status payloads for authenticated Paperclip clients
 - `scripts/paperclip-send-blocked-update.sh` - sends the blocked comment and
   status update when an authenticated cookie jar is available
+- `scripts/paperclip-finalize-blocked.sh` - probes auth and sends the blocked
+  update automatically when authentication is present
 - Additional lightweight documentation needed to keep the company run working
 
 ## Purpose

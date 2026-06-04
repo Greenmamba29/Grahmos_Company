@@ -150,6 +150,12 @@ With the current cloud-agent shell setup, the expected result is:
 - run and issue probes return `Unauthorized`
 - overall result is `BLOCKED`
 
+Probe exit codes:
+
+- `0` authenticated
+- `3` blocked on missing board auth
+- `4` unknown auth state
+
 ### Generate a blocked update once auth exists
 
 When an authenticated browser session, MCP surface, or other supported API auth
@@ -170,6 +176,14 @@ Once you have an authenticated cookie jar, send both updates with:
 
 ```bash
 scripts/paperclip-send-blocked-update.sh \
+  --issue-id ISSUE_ID \
+  --cookie-jar /path/to/cookies.txt
+```
+
+Or use the all-in-one path that probes first and only sends if auth is present:
+
+```bash
+scripts/paperclip-finalize-blocked.sh \
   --issue-id ISSUE_ID \
   --cookie-jar /path/to/cookies.txt
 ```

@@ -161,9 +161,11 @@ if "Board authentication required" in session_error:
     print("Reason: board authentication is required before shell requests can comment on or update issues.")
     print("Owner: Paperclip board admin/operator")
     print("Action: provide a supported authenticated automation path (browser session, MCP, or documented API auth).")
+    sys.exit(3)
 elif isinstance(session_json, dict) and session_json:
     print("Result: AUTHENTICATED")
     print("Reason: auth session payload is present; retry issue/run operations with the same cookie jar.")
+    sys.exit(0)
 else:
     print("Result: UNKNOWN")
     print(f"Session response: {session_error[:300]}")
@@ -171,4 +173,5 @@ else:
         print(f"Run response: {run_error[:300]}")
     if issues_error:
         print(f"Issues response: {issues_error[:300]}")
+    sys.exit(4)
 PY
