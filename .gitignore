@@ -4,3 +4,7 @@
 
 # LangGraph
 .langgraph_api/
+
+# Python helper caches
+__pycache__/
+*.py[cod]
