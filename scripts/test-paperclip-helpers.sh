@@ -20,20 +20,20 @@ echo "Paperclip helper smoke test"
 echo "==========================="
 
 echo
-echo "[1/11] bash syntax checks"
+echo "[1/12] bash syntax checks"
 bash -n "$API_SCRIPT"
 bash -n "$RUNTIME_CHECK_SCRIPT"
 
 echo
-echo "[2/11] help surface includes current-issue helpers"
-"$API_SCRIPT" --help | rg 'build-plan-confirmation|issue-update-current|issue-document-put-current|issue-document-revisions-current|issue-interaction-current|issue-interactions-current|issue-interaction-accept-current|issue-interaction-respond-current' >/dev/null
+echo "[2/12] help surface includes current-issue helpers"
+"$API_SCRIPT" --help | rg 'build-plan-confirmation|issue-update-current|issue-document-put-current|issue-document-revisions-current|issue-plan-confirmation-current|issue-interaction-current|issue-interactions-current|issue-interaction-accept-current|issue-interaction-respond-current' >/dev/null
 
 echo
-echo "[3/11] sample payload catalog is available"
+echo "[3/12] sample payload catalog is available"
 "$API_SCRIPT" sample-payload help | rg 'comment-resume|plan-document|plan-confirmation|update-done|request-confirmation|interaction-accept|interaction-respond' >/dev/null
 
 echo
-echo "[4/11] request_confirmation sample matches expected schema"
+echo "[4/12] request_confirmation sample matches expected schema"
 "$API_SCRIPT" sample-payload request-confirmation | jq -e '
   .kind == "request_confirmation" and
   .continuationPolicy == "wake_assignee_on_accept" and
@@ -43,7 +43,7 @@ echo "[4/11] request_confirmation sample matches expected schema"
 ' >/dev/null
 
 echo
-echo "[5/11] build-plan-confirmation emits the expected envelope"
+echo "[5/12] build-plan-confirmation emits the expected envelope"
 "$API_SCRIPT" build-plan-confirmation revision-123 ISSUE-123 | jq -e '
   .kind == "request_confirmation" and
   .idempotencyKey == "confirmation:ISSUE-123:plan:revision-123" and
@@ -52,7 +52,7 @@ echo "[5/11] build-plan-confirmation emits the expected envelope"
 ' >/dev/null
 
 echo
-echo "[6/11] plan document sample matches expected schema"
+echo "[6/12] plan document sample matches expected schema"
 "$API_SCRIPT" sample-payload plan-document | jq -e '
   .title == "Implementation plan" and
   .format == "markdown" and
@@ -61,7 +61,7 @@ echo "[6/11] plan document sample matches expected schema"
 ' >/dev/null
 
 echo
-echo "[7/11] ask_user_questions sample matches expected schema"
+echo "[7/12] ask_user_questions sample matches expected schema"
 "$API_SCRIPT" sample-payload ask-user-questions | jq -e '
   .kind == "ask_user_questions" and
   .continuationPolicy == "wake_assignee" and
@@ -71,7 +71,7 @@ echo "[7/11] ask_user_questions sample matches expected schema"
 ' >/dev/null
 
 echo
-echo "[8/11] suggest_tasks sample matches expected schema"
+echo "[8/12] suggest_tasks sample matches expected schema"
 "$API_SCRIPT" sample-payload suggest-tasks | jq -e '
   .kind == "suggest_tasks" and
   .continuationPolicy == "wake_assignee" and
@@ -81,14 +81,14 @@ echo "[8/11] suggest_tasks sample matches expected schema"
 ' >/dev/null
 
 echo
-echo "[9/11] interaction accept sample matches expected schema"
+echo "[9/12] interaction accept sample matches expected schema"
 "$API_SCRIPT" sample-payload interaction-accept | jq -e '
   (.selectedClientKeys | length) == 1 and
   .selectedClientKeys[0] == "task-1"
 ' >/dev/null
 
 echo
-echo "[10/11] interaction respond sample matches expected schema"
+echo "[10/12] interaction respond sample matches expected schema"
 "$API_SCRIPT" sample-payload interaction-respond | jq -e '
   (.answers | length) == 1 and
   .answers[0].questionId == "next-step" and
@@ -96,7 +96,21 @@ echo "[10/11] interaction respond sample matches expected schema"
 ' >/dev/null
 
 echo
-echo "[11/11] unauthenticated current-issue commands fail with the expected auth gate"
+echo "[11/12] plan-confirmation shortcut fails with the expected auth gate"
+set +e
+"$API_SCRIPT" issue-plan-confirmation-current ISSUE-123 >/tmp/paperclip-plan-confirmation-current.out 2>/tmp/paperclip-plan-confirmation-current.err
+plan_confirmation_code=$?
+set -e
+
+if [[ "$plan_confirmation_code" -ne 3 ]]; then
+  echo "expected issue-plan-confirmation-current to exit 3 without PAPERCLIP_API_KEY, got $plan_confirmation_code" >&2
+  exit 1
+fi
+
+rg 'PAPERCLIP_API_KEY is required' /tmp/paperclip-plan-confirmation-current.err >/dev/null
+
+echo
+echo "[12/12] unauthenticated current-issue commands fail with the expected auth gate"
 set +e
 printf '{"status":"done"}\n' | "$API_SCRIPT" issue-update-current - >/tmp/paperclip-update-current.out 2>/tmp/paperclip-update-current.err
 update_code=$?

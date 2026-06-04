@@ -94,6 +94,9 @@ the latest plan revision.
 Use `./scripts/paperclip-api.sh build-plan-confirmation REVISION_ID ISSUE-ID` to
 generate the correct confirmation envelope with the required
 `confirmation:{issueId}:plan:{revisionId}` idempotency key.
+Use `./scripts/paperclip-api.sh issue-plan-confirmation-current ISSUE-ID` to let
+the helper resolve the latest `plan` revision and post the confirmation
+interaction directly in one step.
 Use `./scripts/paperclip-api.sh issue-interaction ...` or
 `./scripts/paperclip-api.sh issue-interaction-current ...` when the board/user
 must choose suggested tasks, answer structured questions, or confirm a proposal.
@@ -128,6 +131,8 @@ Example authenticated flows:
 
 ./scripts/paperclip-api.sh build-plan-confirmation REVISION_ID ISSUE-123 | \
   ./scripts/paperclip-api.sh issue-interaction-current -
+
+./scripts/paperclip-api.sh issue-plan-confirmation-current ISSUE-123
 
 ./scripts/paperclip-api.sh sample-payload interaction-respond | \
   ./scripts/paperclip-api.sh issue-interaction-respond-current INTERACTION_ID -

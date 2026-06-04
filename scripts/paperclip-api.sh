@@ -25,6 +25,8 @@ Usage:
   ./scripts/paperclip-api.sh issue-document-put-current KEY JSON_FILE|-
   ./scripts/paperclip-api.sh issue-document-revisions ISSUE_ID KEY
   ./scripts/paperclip-api.sh issue-document-revisions-current KEY
+  ./scripts/paperclip-api.sh issue-plan-confirmation ISSUE_ID [ISSUE_REF]
+  ./scripts/paperclip-api.sh issue-plan-confirmation-current [ISSUE_REF]
   ./scripts/paperclip-api.sh issue-interaction ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-interaction-current JSON_FILE|-
   ./scripts/paperclip-api.sh issue-interactions ISSUE_ID
@@ -59,6 +61,7 @@ Examples:
     ./scripts/paperclip-api.sh issue-update-current -
   ./scripts/paperclip-api.sh sample-payload plan-document | \
     ./scripts/paperclip-api.sh issue-document-put-current plan -
+  ./scripts/paperclip-api.sh issue-plan-confirmation-current ISSUE-123
   printf '{"kind":"ask_user_questions","title":"Need board input"}\n' | \
     ./scripts/paperclip-api.sh issue-interaction-current -
   ./scripts/paperclip-api.sh issue-interactions-current
@@ -82,6 +85,7 @@ Notes:
   - The script expects PAPERCLIP_API_URL for all commands.
   - `sample-payload` prints valid JSON examples for common comment, update, and interaction requests.
   - `build-plan-confirmation` prints a request_confirmation payload targeting the `plan` document for a specific revision id.
+  - `issue-plan-confirmation*` resolves the latest `plan` document revision and posts the matching request_confirmation interaction.
   - `session` checks whether the current shell has a board-authenticated session.
   - Issue and agent commands require PAPERCLIP_API_KEY.
   - Mutating commands automatically send X-Paperclip-Run-Id when PAPERCLIP_RUN_ID is present.
@@ -347,10 +351,73 @@ payload = {
         },
     },
 }
-
 json.dump(payload, sys.stdout, indent=2)
 sys.stdout.write("\n")
 PY
+}
+
+resolve_latest_document_revision_id() {
+  local issue_id="${1:-}"
+  local key="${2:-}"
+
+  if [[ -z "$issue_id" || -z "$key" ]]; then
+    echo "error: ISSUE_ID and KEY are required" >&2
+    exit 2
+  fi
+
+  require_auth
+  require_api_url
+
+  local encoded_key
+  encoded_key="$(url_encode "$key")"
+
+  local tmp_body
+  tmp_body="$(mktemp)"
+  local code
+  code="$(curl -sSL \
+    -H "Accept: application/json" \
+    -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
+    -o "$tmp_body" \
+    -w '%{http_code}' \
+    "$PAPERCLIP_API_URL/api/issues/$issue_id/documents/$encoded_key/revisions")"
+
+  if [[ "$code" -lt 200 || "$code" -ge 300 ]]; then
+    echo "HTTP $code" >&2
+    cat "$tmp_body" >&2
+    rm -f "$tmp_body"
+    exit 1
+  fi
+
+  python3 - "$tmp_body" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+data = json.loads(Path(sys.argv[1]).read_text())
+items = data if isinstance(data, list) else data.get("items", [])
+
+if not items:
+    print("error: no document revisions found", file=sys.stderr)
+    raise SystemExit(7)
+
+def sort_key(item):
+    revision_number = item.get("revisionNumber")
+    if isinstance(revision_number, int):
+        return (1, revision_number)
+    timestamp = item.get("createdAt") or item.get("updatedAt") or ""
+    return (0, timestamp)
+
+latest = max(items, key=sort_key)
+revision_id = latest.get("id") or latest.get("revisionId")
+
+if not revision_id:
+    print("error: latest revision did not include an id", file=sys.stderr)
+    raise SystemExit(8)
+
+print(revision_id)
+PY
+
+  rm -f "$tmp_body"
 }
 
 request() {
@@ -675,6 +742,30 @@ case "$cmd" in
     issue_id="$(resolve_current_issue_id)"
     encoded_key="$(url_encode "$key")"
     request GET "/api/issues/$issue_id/documents/$encoded_key/revisions"
+    ;;
+  issue-plan-confirmation)
+    require_auth
+    issue_id="${2:-}"
+    issue_ref="${3:-$issue_id}"
+    if [[ -z "$issue_id" ]]; then
+      echo "error: ISSUE_ID is required" >&2
+      exit 2
+    fi
+    revision_id="$(resolve_latest_document_revision_id "$issue_id" "plan")"
+    body_file="$(mktemp)"
+    build_plan_confirmation "$revision_id" "$issue_ref" > "$body_file"
+    request POST "/api/issues/$issue_id/interactions" "$body_file"
+    rm -f "$body_file"
+    ;;
+  issue-plan-confirmation-current)
+    require_auth
+    issue_id="$(resolve_current_issue_id)"
+    issue_ref="${2:-$issue_id}"
+    revision_id="$(resolve_latest_document_revision_id "$issue_id" "plan")"
+    body_file="$(mktemp)"
+    build_plan_confirmation "$revision_id" "$issue_ref" > "$body_file"
+    request POST "/api/issues/$issue_id/interactions" "$body_file"
+    rm -f "$body_file"
     ;;
   issue-interaction)
     require_auth
