@@ -58,6 +58,12 @@ blocked immediately, use this payload:
 Send it with:
 
 ```sh
+./scripts/paperclip-send-current.sh blocked-current
+```
+
+Equivalent direct command:
+
+```sh
 ./scripts/paperclip-api.sh issue-update-current paperclip/payloads/blocked-current.json
 ```
 
@@ -73,6 +79,12 @@ If auth has been fixed and the task should resume with a structured wake signal:
 ```
 
 Send it with:
+
+```sh
+./scripts/paperclip-send-current.sh resume-comment
+```
+
+Equivalent direct command:
 
 ```sh
 ./scripts/paperclip-api.sh issue-comment-current paperclip/payloads/resume-comment.json
@@ -102,6 +114,12 @@ If the task needs structured operator input instead of an immediate unblock:
 ```
 
 Send it with:
+
+```sh
+./scripts/paperclip-send-current.sh auth-question
+```
+
+Equivalent direct command:
 
 ```sh
 ./scripts/paperclip-api.sh issue-interaction-current paperclip/payloads/auth-question.json

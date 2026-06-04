@@ -88,6 +88,16 @@ assert_stdout_contains "issue-123"
 pass "paperclip-api current-issue-id prefers PAPERCLIP_TASK_ID"
 cleanup_last
 
+run_expect 0 ./scripts/paperclip-send-current.sh --print-command blocked-current
+assert_stdout_contains "./scripts/paperclip-api.sh issue-update-current paperclip/payloads/blocked-current.json"
+pass "paperclip-send-current prints blocked-current command"
+cleanup_last
+
+run_expect 2 ./scripts/paperclip-send-current.sh nope
+assert_stderr_contains "error: unknown mode: nope"
+pass "paperclip-send-current rejects unknown mode"
+cleanup_last
+
 run_expect 1 env \
   -u PAPERCLIP_API_URL \
   -u PAPERCLIP_AGENT_ID \

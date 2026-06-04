@@ -42,3 +42,5 @@ See `docs/paperclip-runtime-unblock.md` for ready-to-send blocked/resume payload
 that can be used as soon as `PAPERCLIP_API_KEY` is injected into the runtime.
 Those payloads are checked in under `paperclip/payloads/` so the next authenticated
 heartbeat can send them directly without retyping JSON in the shell.
+Use `./scripts/paperclip-send-current.sh blocked-current|resume-comment|auth-question`
+to send the checked-in payloads with a short one-command wrapper.
