@@ -86,6 +86,8 @@ resolve the current issue id, post a real task comment, and submit that blocked
 disposition in one command.
 Add `--resume` when that comment is intentionally restarting work on a completed
 issue so the wrapper includes `resume: true` in the `POST /comments` payload.
+Add `--issue-id <uuid>` when the target task is already known and you want to
+skip current-issue auto-resolution.
 
 Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 `me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,
@@ -109,6 +111,8 @@ leave a task comment before exit.
 Use `./scripts/paperclip-mark-blocked-current.sh --resume` for the completed-issue
 restart case where the Paperclip execution contract requires a structured
 `resume: true` comment payload.
+Use `./scripts/paperclip-mark-blocked-current.sh --issue-id <uuid>` when auth is
+restored but current-issue discovery is ambiguous or intentionally bypassed.
 Use `./scripts/paperclip-api.sh current-issue-id` or
 `./scripts/paperclip-api.sh issue-comment-current ...` /
 `./scripts/paperclip-api.sh issue-blocked-current ...` when the run should target

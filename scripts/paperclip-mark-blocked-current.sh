@@ -4,13 +4,34 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 resume_comment="false"
+issue_id=""
 args=()
-for arg in "$@"; do
-  if [[ "$arg" == "--resume" ]]; then
-    resume_comment="true"
-  else
-    args+=("$arg")
-  fi
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --resume)
+      resume_comment="true"
+      shift
+      ;;
+    --issue-id)
+      if [[ $# -lt 2 ]]; then
+        echo "error: --issue-id requires a value" >&2
+        exit 2
+      fi
+      issue_id="$2"
+      shift 2
+      ;;
+    --)
+      shift
+      while [[ $# -gt 0 ]]; do
+        args+=("$1")
+        shift
+      done
+      ;;
+    *)
+      args+=("$1")
+      shift
+      ;;
+  esac
 done
 
 unblock_owner="${args[0]:-Paperclip operator / Osiris Hermes}"
@@ -25,7 +46,9 @@ cleanup() {
 trap cleanup EXIT
 
 "$script_dir/paperclip-blocked-payload.sh" "$unblock_owner" "$required_action" > "$payload_file"
-issue_id="$("$script_dir/paperclip-api.sh" current-issue-id)"
+if [[ -z "$issue_id" ]]; then
+  issue_id="$("$script_dir/paperclip-api.sh" current-issue-id)"
+fi
 
 python3 - "$payload_file" "$comment_file" "$status_file" "$resume_comment" <<'PY'
 import json

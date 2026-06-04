@@ -21,6 +21,8 @@ This is the Company run main repo for Grahmos.
 - Add `--resume` when that first authenticated comment is intentionally restarting
   work on a completed issue, so the wrapper includes `resume: true` in the
   comment payload.
+- Add `--issue-id <uuid>` when you already know the target issue and want to
+  bypass current-issue auto-resolution entirely.
 - Once auth is available, use `./scripts/paperclip-api.sh` for the common Paperclip
   operations needed during heartbeats:
   - `health`
@@ -63,6 +65,12 @@ For completed issues that need an explicit resume comment:
 
 ```bash
 ./scripts/paperclip-mark-blocked-current.sh --resume
+```
+
+For multi-issue or explicit-target cases:
+
+```bash
+./scripts/paperclip-mark-blocked-current.sh --issue-id 123e4567-e89b-12d3-a456-426614174000
 ```
 
 That wrapper performs:
