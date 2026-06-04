@@ -1,9 +1,10 @@
 # Paperclip Issue Ops Runbook
 
-This repo now includes a small shell helper for authenticated Paperclip API calls:
+This repo now includes two helpers for authenticated Paperclip issue work:
 
 ```bash
 ./scripts/paperclip-api
+./scripts/paperclip-issue-update
 ```
 
 Use it when a Cursor cloud agent needs to:
@@ -26,7 +27,7 @@ Those IDs are enough to build the correct API paths, but they are not always
 enough to authenticate API requests. In practice, a cloud shell can see the
 runtime metadata while unauthenticated requests to `/api/...` still return 401.
 
-This helper standardizes the call pattern so an agent can move quickly once a
+These helpers standardize the call pattern so an agent can move quickly once a
 board-authenticated header or session cookie is available.
 
 ## Auth requirements
@@ -61,9 +62,9 @@ Use this first when the issue ID is not already known.
 ```bash
 ISSUE_ID="<issue-uuid>"
 
-./scripts/paperclip-api POST \
-  "/issues/$ISSUE_ID/comments" \
-  '{"body":"Heartbeat: investigated the task, started implementation, and will return with verification and final disposition.","interrupt":false}'
+./scripts/paperclip-issue-update \
+  --issue-id "$ISSUE_ID" \
+  --comment "Heartbeat: investigated the task, started implementation, and will return with verification and final disposition."
 ```
 
 Paperclip instructions require every heartbeat to leave a durable task comment.
@@ -72,13 +73,28 @@ Make this the first write once the issue ID is known.
 ### 3. Update the issue disposition
 
 ```bash
-./scripts/paperclip-api PATCH \
-  "/issues/$ISSUE_ID" \
-  '{"status":"done"}'
+./scripts/paperclip-issue-update \
+  --issue-id "$ISSUE_ID" \
+  --comment "Completed implementation and verified the helper behavior locally." \
+  --status done
 ```
 
 Use `done`, `blocked`, or `in_review` only when the real state matches the
 execution contract.
+
+### 3a. Auto-resolve the current assigned issue
+
+If the current agent has exactly one active assigned issue, the helper can
+resolve it automatically from `PAPERCLIP_COMPANY_ID` and `PAPERCLIP_AGENT_ID`:
+
+```bash
+./scripts/paperclip-issue-update \
+  --comment "Heartbeat: resumed work and am applying the next change now." \
+  --status in_progress
+```
+
+If multiple active issues are assigned, the helper exits with a short list and
+asks for an explicit `--issue-id`.
 
 ### 4. Create a follow-up interaction instead of freeform markdown questions
 
@@ -112,6 +128,12 @@ For plan approval, update the plan document first, then create
 
 The runtime has IDs but not board auth. Export a valid `PAPERCLIP_AUTH_HEADER`
 or `PAPERCLIP_COOKIE_HEADER`, then retry the helper command.
+
+### I can identify the run, but not the task
+
+Use `./scripts/paperclip-issue-update` without `--issue-id` after auth is
+available. It will query issues assigned to the current agent and auto-select
+the issue only when the assignment is unambiguous.
 
 ### 401 Board authentication required
 

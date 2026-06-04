@@ -75,6 +75,7 @@ Grahmos_Company/
     paperclip-issue-ops.md   # Agent issue/update runbook
   scripts/
     paperclip-api            # Authenticated Paperclip API helper
+    paperclip-issue-update   # Comment + disposition helper for assigned issues
   skills/
     grahmmos-paperclip/
       SKILL.md       # This file - company setup documentation
@@ -87,6 +88,7 @@ agent shell, use the repo helper:
 
 ```bash
 ./scripts/paperclip-api
+./scripts/paperclip-issue-update
 ```
 
 The full workflow and auth requirements are documented in:
