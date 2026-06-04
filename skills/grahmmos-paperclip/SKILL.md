@@ -97,6 +97,9 @@ the latest plan revision.
 Use `./scripts/paperclip-api.sh issue-document-put-markdown-current plan PLAN.md ...`
 when the plan already exists as plain markdown and you do not want to build the
 JSON document body manually.
+Use `./scripts/paperclip-api.sh issue-plan-from-markdown-current ISSUE-ID PLAN.md ...`
+when you want to both save the markdown plan and create the matching
+`request_confirmation` interaction in one step.
 Use `./scripts/paperclip-api.sh build-plan-confirmation REVISION_ID ISSUE-ID` to
 generate the correct confirmation envelope with the required
 `confirmation:{issueId}:plan:{revisionId}` idempotency key.
@@ -137,6 +140,9 @@ Example authenticated flows:
 ./scripts/paperclip-api.sh issue-interactions-current
 
 ./scripts/paperclip-api.sh issue-document-put-markdown-current plan PLAN.md \
+  "Implementation plan" "Initial plan draft"
+
+./scripts/paperclip-api.sh issue-plan-from-markdown-current ISSUE-123 PLAN.md \
   "Implementation plan" "Initial plan draft"
 
 ./scripts/paperclip-api.sh sample-payload plan-document | \

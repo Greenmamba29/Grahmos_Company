@@ -36,6 +36,8 @@ Usage:
   ./scripts/paperclip-api.sh issue-document-revisions-current KEY
   ./scripts/paperclip-api.sh issue-plan-confirmation ISSUE_ID [ISSUE_REF]
   ./scripts/paperclip-api.sh issue-plan-confirmation-current [ISSUE_REF]
+  ./scripts/paperclip-api.sh issue-plan-from-markdown ISSUE_ID ISSUE_REF MARKDOWN_FILE|- [TITLE] [CHANGE_SUMMARY]
+  ./scripts/paperclip-api.sh issue-plan-from-markdown-current ISSUE_REF MARKDOWN_FILE|- [TITLE] [CHANGE_SUMMARY]
   ./scripts/paperclip-api.sh issue-interaction ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-interaction-current JSON_FILE|-
   ./scripts/paperclip-api.sh issue-interactions ISSUE_ID
@@ -77,6 +79,7 @@ Examples:
     ./scripts/paperclip-api.sh issue-document-put-current plan -
   ./scripts/paperclip-api.sh issue-document-put-markdown-current plan plan.md "Implementation plan" "Initial plan draft"
   ./scripts/paperclip-api.sh issue-plan-confirmation-current ISSUE-123
+  ./scripts/paperclip-api.sh issue-plan-from-markdown-current ISSUE-123 plan.md "Implementation plan" "Initial plan draft"
   printf '{"kind":"ask_user_questions","title":"Need board input"}\n' | \
     ./scripts/paperclip-api.sh issue-interaction-current -
   ./scripts/paperclip-api.sh issue-interactions-current
@@ -103,6 +106,7 @@ Notes:
   - `build-markdown-document` wraps plain markdown into the JSON shape expected by issue document updates.
   - `build-plan-confirmation` prints a request_confirmation payload targeting the `plan` document for a specific revision id.
   - `issue-plan-confirmation*` resolves the latest `plan` document revision and posts the matching request_confirmation interaction.
+  - `issue-plan-from-markdown*` performs the full markdown plan update + confirmation flow in one command.
   - `session` checks whether the current shell has a board-authenticated session.
   - Issue and agent commands require PAPERCLIP_API_KEY.
   - Mutating commands automatically send X-Paperclip-Run-Id when PAPERCLIP_RUN_ID is present.
@@ -513,6 +517,53 @@ PY
   rm -f "$tmp_body"
 }
 
+default_document_title() {
+  local key="${1:-}"
+  if [[ "$key" == "plan" ]]; then
+    printf '%s\n' "Implementation plan"
+  else
+    printf '%s\n' "Document"
+  fi
+}
+
+issue_plan_from_markdown() {
+  local issue_id="${1:-}"
+  local issue_ref="${2:-}"
+  local source="${3:-}"
+  local title="${4:-}"
+  local change_summary="${5:-}"
+
+  if [[ -z "$issue_id" || -z "$issue_ref" || -z "$source" ]]; then
+    echo "error: ISSUE_ID, ISSUE_REF, and MARKDOWN_FILE|- are required" >&2
+    exit 2
+  fi
+
+  require_auth
+
+  if [[ -z "$title" ]]; then
+    title="$(default_document_title "plan")"
+  fi
+
+  local body_file
+  body_file="$(mktemp)"
+  build_markdown_document "$source" "$title" "$change_summary" > "$body_file"
+
+  local encoded_key
+  encoded_key="$(url_encode "plan")"
+
+  request PUT "/api/issues/$issue_id/documents/$encoded_key" "$body_file" >/tmp/paperclip-plan-put.out
+  rm -f "$body_file"
+
+  local revision_id
+  revision_id="$(resolve_latest_document_revision_id "$issue_id" "plan")"
+
+  local confirmation_file
+  confirmation_file="$(mktemp)"
+  build_plan_confirmation "$revision_id" "$issue_ref" > "$confirmation_file"
+  request POST "/api/issues/$issue_id/interactions" "$confirmation_file"
+  rm -f "$confirmation_file"
+}
+
 request() {
   local method="$1"
   local path="$2"
@@ -879,11 +930,7 @@ case "$cmd" in
       exit 2
     fi
     if [[ -z "$title" ]]; then
-      if [[ "$key" == "plan" ]]; then
-        title="Implementation plan"
-      else
-        title="Document"
-      fi
+      title="$(default_document_title "$key")"
     fi
     body_file="$(mktemp)"
     build_markdown_document "$source" "$title" "$change_summary" > "$body_file"
@@ -902,11 +949,7 @@ case "$cmd" in
       exit 2
     fi
     if [[ -z "$title" ]]; then
-      if [[ "$key" == "plan" ]]; then
-        title="Implementation plan"
-      else
-        title="Document"
-      fi
+      title="$(default_document_title "$key")"
     fi
     issue_id="$(resolve_current_issue_id)"
     body_file="$(mktemp)"
@@ -960,6 +1003,21 @@ case "$cmd" in
     build_plan_confirmation "$revision_id" "$issue_ref" > "$body_file"
     request POST "/api/issues/$issue_id/interactions" "$body_file"
     rm -f "$body_file"
+    ;;
+  issue-plan-from-markdown)
+    issue_plan_from_markdown "${2:-}" "${3:-}" "${4:-}" "${5:-}" "${6:-}"
+    ;;
+  issue-plan-from-markdown-current)
+    issue_id="$(resolve_current_issue_id)"
+    issue_ref="${2:-}"
+    source="${3:-}"
+    title="${4:-}"
+    change_summary="${5:-}"
+    if [[ -z "$issue_ref" || -z "$source" ]]; then
+      echo "error: ISSUE_REF and MARKDOWN_FILE|- are required" >&2
+      exit 2
+    fi
+    issue_plan_from_markdown "$issue_id" "$issue_ref" "$source" "$title" "$change_summary"
     ;;
   issue-interaction)
     require_auth

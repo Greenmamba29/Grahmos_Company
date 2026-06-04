@@ -20,34 +20,34 @@ echo "Paperclip helper smoke test"
 echo "==========================="
 
 echo
-echo "[1/16] bash syntax checks"
+echo "[1/17] bash syntax checks"
 bash -n "$API_SCRIPT"
 bash -n "$RUNTIME_CHECK_SCRIPT"
 
 echo
-echo "[2/16] help surface includes current-issue helpers"
-"$API_SCRIPT" --help | rg 'build-resume-comment|build-done-update|build-markdown-document|build-plan-confirmation|issue-comment-resume-current|issue-done-current|issue-update-current|issue-document-put-current|issue-document-put-markdown-current|issue-document-revisions-current|issue-plan-confirmation-current|issue-interaction-current|issue-interactions-current|issue-interaction-accept-current|issue-interaction-respond-current' >/dev/null
+echo "[2/17] help surface includes current-issue helpers"
+"$API_SCRIPT" --help | rg 'build-resume-comment|build-done-update|build-markdown-document|build-plan-confirmation|issue-comment-resume-current|issue-done-current|issue-update-current|issue-document-put-current|issue-document-put-markdown-current|issue-document-revisions-current|issue-plan-confirmation-current|issue-plan-from-markdown-current|issue-interaction-current|issue-interactions-current|issue-interaction-accept-current|issue-interaction-respond-current' >/dev/null
 
 echo
-echo "[3/16] sample payload catalog is available"
+echo "[3/17] sample payload catalog is available"
 "$API_SCRIPT" sample-payload help | rg 'comment-resume|plan-document|plan-confirmation|update-done|request-confirmation|interaction-accept|interaction-respond' >/dev/null
 
 echo
-echo "[4/16] build-resume-comment emits the expected envelope"
+echo "[4/17] build-resume-comment emits the expected envelope"
 "$API_SCRIPT" build-resume-comment | jq -e '
   .resume == true and
   .body == "Resuming work in this heartbeat."
 ' >/dev/null
 
 echo
-echo "[5/16] build-done-update emits the expected envelope"
+echo "[5/17] build-done-update emits the expected envelope"
 "$API_SCRIPT" build-done-update | jq -e '
   .status == "done" and
   .comment == "Completed and verified."
 ' >/dev/null
 
 echo
-echo "[6/16] build-markdown-document emits the expected envelope"
+echo "[6/17] build-markdown-document emits the expected envelope"
 printf '# Plan\n\n- first step\n' > /tmp/paperclip-plan.md
 "$API_SCRIPT" build-markdown-document /tmp/paperclip-plan.md "Implementation plan" "Initial draft" | jq -e '
   .title == "Implementation plan" and
@@ -57,7 +57,7 @@ printf '# Plan\n\n- first step\n' > /tmp/paperclip-plan.md
 ' >/dev/null
 
 echo
-echo "[7/16] request_confirmation sample matches expected schema"
+echo "[7/17] request_confirmation sample matches expected schema"
 "$API_SCRIPT" sample-payload request-confirmation | jq -e '
   .kind == "request_confirmation" and
   .continuationPolicy == "wake_assignee_on_accept" and
@@ -67,7 +67,7 @@ echo "[7/16] request_confirmation sample matches expected schema"
 ' >/dev/null
 
 echo
-echo "[8/16] build-plan-confirmation emits the expected envelope"
+echo "[8/17] build-plan-confirmation emits the expected envelope"
 "$API_SCRIPT" build-plan-confirmation revision-123 ISSUE-123 | jq -e '
   .kind == "request_confirmation" and
   .idempotencyKey == "confirmation:ISSUE-123:plan:revision-123" and
@@ -76,7 +76,7 @@ echo "[8/16] build-plan-confirmation emits the expected envelope"
 ' >/dev/null
 
 echo
-echo "[9/16] plan document sample matches expected schema"
+echo "[9/17] plan document sample matches expected schema"
 "$API_SCRIPT" sample-payload plan-document | jq -e '
   .title == "Implementation plan" and
   .format == "markdown" and
@@ -85,7 +85,7 @@ echo "[9/16] plan document sample matches expected schema"
 ' >/dev/null
 
 echo
-echo "[10/16] ask_user_questions sample matches expected schema"
+echo "[10/17] ask_user_questions sample matches expected schema"
 "$API_SCRIPT" sample-payload ask-user-questions | jq -e '
   .kind == "ask_user_questions" and
   .continuationPolicy == "wake_assignee" and
@@ -95,7 +95,7 @@ echo "[10/16] ask_user_questions sample matches expected schema"
 ' >/dev/null
 
 echo
-echo "[11/16] suggest_tasks sample matches expected schema"
+echo "[11/17] suggest_tasks sample matches expected schema"
 "$API_SCRIPT" sample-payload suggest-tasks | jq -e '
   .kind == "suggest_tasks" and
   .continuationPolicy == "wake_assignee" and
@@ -105,14 +105,14 @@ echo "[11/16] suggest_tasks sample matches expected schema"
 ' >/dev/null
 
 echo
-echo "[12/16] interaction accept sample matches expected schema"
+echo "[12/17] interaction accept sample matches expected schema"
 "$API_SCRIPT" sample-payload interaction-accept | jq -e '
   (.selectedClientKeys | length) == 1 and
   .selectedClientKeys[0] == "task-1"
 ' >/dev/null
 
 echo
-echo "[13/16] interaction respond sample matches expected schema"
+echo "[13/17] interaction respond sample matches expected schema"
 "$API_SCRIPT" sample-payload interaction-respond | jq -e '
   (.answers | length) == 1 and
   .answers[0].questionId == "next-step" and
@@ -120,7 +120,7 @@ echo "[13/16] interaction respond sample matches expected schema"
 ' >/dev/null
 
 echo
-echo "[14/16] plan-confirmation shortcut fails with the expected auth gate"
+echo "[14/17] plan-confirmation shortcut fails with the expected auth gate"
 set +e
 "$API_SCRIPT" issue-plan-confirmation-current ISSUE-123 >/tmp/paperclip-plan-confirmation-current.out 2>/tmp/paperclip-plan-confirmation-current.err
 plan_confirmation_code=$?
@@ -134,7 +134,7 @@ fi
 rg 'PAPERCLIP_API_KEY is required' /tmp/paperclip-plan-confirmation-current.err >/dev/null
 
 echo
-echo "[15/16] markdown document shortcut fails with the expected auth gate"
+echo "[15/17] markdown document shortcut fails with the expected auth gate"
 set +e
 "$API_SCRIPT" issue-document-put-markdown-current plan /tmp/paperclip-plan.md "Implementation plan" "Initial draft" >/tmp/paperclip-document-put-markdown-current.out 2>/tmp/paperclip-document-put-markdown-current.err
 document_put_markdown_code=$?
@@ -148,7 +148,21 @@ fi
 rg 'PAPERCLIP_API_KEY is required' /tmp/paperclip-document-put-markdown-current.err >/dev/null
 
 echo
-echo "[16/16] unauthenticated current-issue commands fail with the expected auth gate"
+echo "[16/17] one-shot markdown plan flow fails with the expected auth gate"
+set +e
+"$API_SCRIPT" issue-plan-from-markdown-current ISSUE-123 /tmp/paperclip-plan.md "Implementation plan" "Initial draft" >/tmp/paperclip-plan-from-markdown-current.out 2>/tmp/paperclip-plan-from-markdown-current.err
+plan_from_markdown_code=$?
+set -e
+
+if [[ "$plan_from_markdown_code" -ne 3 ]]; then
+  echo "expected issue-plan-from-markdown-current to exit 3 without PAPERCLIP_API_KEY, got $plan_from_markdown_code" >&2
+  exit 1
+fi
+
+rg 'PAPERCLIP_API_KEY is required' /tmp/paperclip-plan-from-markdown-current.err >/dev/null
+
+echo
+echo "[17/17] unauthenticated current-issue commands fail with the expected auth gate"
 set +e
 "$API_SCRIPT" issue-comment-resume-current >/tmp/paperclip-comment-resume-current.out 2>/tmp/paperclip-comment-resume-current.err
 comment_resume_code=$?
