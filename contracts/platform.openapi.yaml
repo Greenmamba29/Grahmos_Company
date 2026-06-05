@@ -1,0 +1,963 @@
+openapi: 3.1.0
+info:
+  title: GrahmOS Platform API
+  version: 0.1.0
+  description: >
+    Shared platform contract for Hermes, OpenClaw, Accio Source, and JAM Media.
+servers:
+  - url: https://api.grahmos.dev
+security:
+  - bearerAuth: []
+tags:
+  - name: Tenants
+  - name: Workspaces
+  - name: Brands
+  - name: Projects
+  - name: Runs
+  - name: ContentItems
+  - name: Assets
+  - name: Subscriptions
+  - name: Analytics
+paths:
+  /v1/brands:
+    get:
+      tags: [Brands]
+      summary: List supported GrahmOS brands
+      responses:
+        '200':
+          description: Supported brands
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListBrandsResponse'
+  /v1/brands/{brandId}:
+    get:
+      tags: [Brands]
+      summary: Get a brand definition
+      parameters:
+        - $ref: '#/components/parameters/BrandId'
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Brand
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/brands/{brandId}/capabilities:
+    get:
+      tags: [Brands]
+      summary: Get capabilities enabled for a brand
+      parameters:
+        - $ref: '#/components/parameters/BrandId'
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Brand capabilities
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandCapabilitiesResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/tenants:
+    post:
+      tags: [Tenants]
+      summary: Create a tenant
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/BrandHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTenantRequest'
+      responses:
+        '201':
+          description: Tenant created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/tenants/{tenantId}:
+    get:
+      tags: [Tenants]
+      summary: Get a tenant
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/workspaces:
+    post:
+      tags: [Workspaces]
+      summary: Create a workspace
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/BrandHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceRequest'
+      responses:
+        '201':
+          description: Workspace created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/workspaces/{workspaceId}:
+    get:
+      tags: [Workspaces]
+      summary: Get a workspace
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Workspace
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/memberships:
+    post:
+      tags: [Workspaces]
+      summary: Add or update a workspace membership
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMembershipRequest'
+      responses:
+        '201':
+          description: Membership created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MembershipResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/projects:
+    get:
+      tags: [Projects]
+      summary: List projects in the current workspace
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - name: cursor
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Projects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListProjectsResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      tags: [Projects]
+      summary: Create a project
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/BrandHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/projects/{projectId}:
+    get:
+      tags: [Projects]
+      summary: Get a project
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      tags: [Projects]
+      summary: Update mutable project fields
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectRequest'
+      responses:
+        '200':
+          description: Project updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/runs:
+    get:
+      tags: [Runs]
+      summary: List automation or workflow runs
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/RunStatus'
+      responses:
+        '200':
+          description: Runs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListRunsResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      tags: [Runs]
+      summary: Start a workflow run
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/BrandHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRunRequest'
+      responses:
+        '201':
+          description: Run created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/runs/{runId}:
+    get:
+      tags: [Runs]
+      summary: Get a run
+      parameters:
+        - $ref: '#/components/parameters/RunId'
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Run
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/runs/{runId}/cancel:
+    post:
+      tags: [Runs]
+      summary: Cancel a run
+      parameters:
+        - $ref: '#/components/parameters/RunId'
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          description: Cancel accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/content-items:
+    post:
+      tags: [ContentItems]
+      summary: Create a content item
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/BrandHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateContentItemRequest'
+      responses:
+        '201':
+          description: Content item created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentItemResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/content-items/{contentItemId}:
+    get:
+      tags: [ContentItems]
+      summary: Get a content item
+      parameters:
+        - $ref: '#/components/parameters/ContentItemId'
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Content item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentItemResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      tags: [ContentItems]
+      summary: Update a content item
+      parameters:
+        - $ref: '#/components/parameters/ContentItemId'
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateContentItemRequest'
+      responses:
+        '200':
+          description: Content item updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentItemResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/assets:
+    post:
+      tags: [Assets]
+      summary: Register an uploaded asset
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/BrandHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAssetRequest'
+      responses:
+        '201':
+          description: Asset created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/assets/{assetId}:
+    get:
+      tags: [Assets]
+      summary: Get an asset
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Asset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/subscriptions:
+    get:
+      tags: [Subscriptions]
+      summary: List subscriptions
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Subscriptions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListSubscriptionsResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      tags: [Subscriptions]
+      summary: Create or upgrade a subscription
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/BrandHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubscriptionRequest'
+      responses:
+        '201':
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/analytics/summary:
+    get:
+      tags: [Analytics]
+      summary: Get a high-level analytics summary
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month, quarter]
+      responses:
+        '200':
+          description: Analytics summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsSummaryResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    RequestId:
+      name: X-Request-Id
+      in: header
+      required: true
+      schema:
+        type: string
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+    BrandHeader:
+      name: X-Brand
+      in: header
+      required: true
+      schema:
+        type: string
+        enum: [hermes, openclaw, accio-source, jam-media]
+    BrandId:
+      name: brandId
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [hermes, openclaw, accio-source, jam-media]
+    TenantId:
+      name: tenantId
+      in: path
+      required: true
+      schema:
+        type: string
+    WorkspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      schema:
+        type: string
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: string
+    RunId:
+      name: runId
+      in: path
+      required: true
+      schema:
+        type: string
+    ContentItemId:
+      name: contentItemId
+      in: path
+      required: true
+      schema:
+        type: string
+    AssetId:
+      name: assetId
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    Problem:
+      description: RFC 7807 style error response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    Page:
+      type: object
+      properties:
+        nextCursor:
+          type: string
+          nullable: true
+    Problem:
+      type: object
+      required: [type, title, status, code, detail, traceId]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        code:
+          type: string
+        detail:
+          type: string
+        traceId:
+          type: string
+    Tenant:
+      type: object
+      required: [id, name, slug, createdAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    Workspace:
+      type: object
+      required: [id, tenantId, name, slug, createdAt]
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    Membership:
+      type: object
+      required: [id, tenantId, workspaceId, userId, role, createdAt]
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        workspaceId:
+          type: string
+        userId:
+          type: string
+        role:
+          type: string
+          enum: [owner, admin, editor, viewer]
+        createdAt:
+          type: string
+          format: date-time
+    Brand:
+      type: object
+      required: [id, displayName]
+      properties:
+        id:
+          type: string
+          enum: [hermes, openclaw, accio-source, jam-media]
+        displayName:
+          type: string
+        capabilities:
+          type: array
+          items:
+            type: string
+    Project:
+      type: object
+      required: [id, tenantId, workspaceId, brandId, name, status, createdAt]
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        workspaceId:
+          type: string
+        brandId:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        status:
+          type: string
+          enum: [draft, active, archived]
+        createdAt:
+          type: string
+          format: date-time
+    RunStatus:
+      type: string
+      enum: [queued, running, completed, failed, cancelled]
+    Run:
+      type: object
+      required: [id, projectId, workflowKey, status, createdAt]
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        workflowKey:
+          type: string
+        status:
+          $ref: '#/components/schemas/RunStatus'
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+    ContentItem:
+      type: object
+      required: [id, brandId, title, state, createdAt]
+      properties:
+        id:
+          type: string
+        brandId:
+          type: string
+        title:
+          type: string
+        state:
+          type: string
+          enum: [draft, scheduled, published, archived]
+        createdAt:
+          type: string
+          format: date-time
+    Asset:
+      type: object
+      required: [id, brandId, filename, mimeType, createdAt]
+      properties:
+        id:
+          type: string
+        brandId:
+          type: string
+        filename:
+          type: string
+        mimeType:
+          type: string
+        sizeBytes:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+    Subscription:
+      type: object
+      required: [id, tenantId, brandId, planKey, status, startedAt]
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        brandId:
+          type: string
+        planKey:
+          type: string
+        status:
+          type: string
+          enum: [trialing, active, past_due, cancelled]
+        startedAt:
+          type: string
+          format: date-time
+    AnalyticsSummary:
+      type: object
+      required: [range, totals]
+      properties:
+        range:
+          type: string
+        totals:
+          type: object
+          additionalProperties:
+            type: number
+    CreateTenantRequest:
+      type: object
+      required: [name, slug]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+    CreateWorkspaceRequest:
+      type: object
+      required: [tenantId, name, slug]
+      properties:
+        tenantId:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+    CreateProjectRequest:
+      type: object
+      required: [tenantId, workspaceId, brandId, name]
+      properties:
+        tenantId:
+          type: string
+        workspaceId:
+          type: string
+        brandId:
+          type: string
+          enum: [hermes, openclaw, accio-source, jam-media]
+        name:
+          type: string
+        slug:
+          type: string
+    CreateMembershipRequest:
+      type: object
+      required: [tenantId, workspaceId, userId, role]
+      properties:
+        tenantId:
+          type: string
+        workspaceId:
+          type: string
+        userId:
+          type: string
+        role:
+          type: string
+          enum: [owner, admin, editor, viewer]
+    UpdateProjectRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+          enum: [draft, active, archived]
+    CreateRunRequest:
+      type: object
+      required: [projectId, workflowKey]
+      properties:
+        projectId:
+          type: string
+        workflowKey:
+          type: string
+        inputs:
+          type: object
+          additionalProperties: true
+    CreateContentItemRequest:
+      type: object
+      required: [brandId, title]
+      properties:
+        brandId:
+          type: string
+          enum: [hermes, openclaw, accio-source, jam-media]
+        title:
+          type: string
+        body:
+          type: string
+        locale:
+          type: string
+    UpdateContentItemRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        body:
+          type: string
+        state:
+          type: string
+          enum: [draft, scheduled, published, archived]
+    CreateAssetRequest:
+      type: object
+      required: [brandId, filename, mimeType]
+      properties:
+        brandId:
+          type: string
+          enum: [hermes, openclaw, accio-source, jam-media]
+        filename:
+          type: string
+        mimeType:
+          type: string
+        sizeBytes:
+          type: integer
+    CreateSubscriptionRequest:
+      type: object
+      required: [tenantId, brandId, planKey]
+      properties:
+        tenantId:
+          type: string
+        brandId:
+          type: string
+          enum: [hermes, openclaw, accio-source, jam-media]
+        planKey:
+          type: string
+    TenantResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Tenant'
+    WorkspaceResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Workspace'
+    MembershipResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Membership'
+    BrandResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Brand'
+    BrandCapabilitiesResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [brandId, capabilities]
+          properties:
+            brandId:
+              type: string
+              enum: [hermes, openclaw, accio-source, jam-media]
+            capabilities:
+              type: array
+              items:
+                type: string
+    ProjectResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Project'
+    RunResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Run'
+    ContentItemResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/ContentItem'
+    AssetResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Asset'
+    SubscriptionResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Subscription'
+    AnalyticsSummaryResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AnalyticsSummary'
+    ListBrandsResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Brand'
+    ListProjectsResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+        page:
+          $ref: '#/components/schemas/Page'
+    ListRunsResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Run'
+        page:
+          $ref: '#/components/schemas/Page'
+    ListSubscriptionsResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Subscription'
+        page:
+          $ref: '#/components/schemas/Page'
