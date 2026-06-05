@@ -94,9 +94,11 @@ distinguishes between:
   readable directory
 
 Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
-`me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,
-`POST /api/issues/{issueId}/interactions`, and `PATCH /api/issues/{issueId}`
-without rebuilding the curl commands each heartbeat.
+`me`, `inbox-lite`, `run-get`, `run-events`, `run-log`,
+`run-workspace-operations`, issue details, issue comments,
+`POST /api/issues/{issueId}/comments`, `POST /api/issues/{issueId}/interactions`,
+and `PATCH /api/issues/{issueId}` without rebuilding the curl commands each
+heartbeat.
 Use `./scripts/paperclip-api.sh adapter-env-template PAPERCLIP_SECRET_ID [CURSOR_SECRET_ID]`
 to print the Cursor Cloud adapter JSON needed to inject `PAPERCLIP_API_KEY`.
 When the runtime is still blocked and a Paperclip operator must update the adapter,
@@ -141,6 +143,9 @@ For the most common execution-contract flows, prefer the one-step helpers:
 - `./scripts/paperclip-api.sh issue-blocked-current-template UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]`
 Run `./scripts/test-paperclip-helpers.sh` to smoke-test the helper CLI surface
 before relying on it in a live heartbeat.
+For suspiciously silent runs, inspect the run record, event stream, log stream,
+and workspace operations first so you can distinguish a hung adapter from a
+quiet but still advancing workspace task.
 
 #### Workaround
 Add a long-lived Paperclip agent API key to the Cursor Cloud adapter environment as

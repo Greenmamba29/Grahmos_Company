@@ -8,6 +8,10 @@ Usage:
   ./scripts/paperclip-api.sh session
   ./scripts/paperclip-api.sh me
   ./scripts/paperclip-api.sh inbox-lite
+  ./scripts/paperclip-api.sh run-get [RUN_ID]
+  ./scripts/paperclip-api.sh run-events [RUN_ID] [AFTER_SEQ] [LIMIT]
+  ./scripts/paperclip-api.sh run-log [RUN_ID] [OFFSET] [LIMIT_BYTES]
+  ./scripts/paperclip-api.sh run-workspace-operations [RUN_ID]
   ./scripts/paperclip-api.sh adapter-env-template PAPERCLIP_SECRET_ID [CURSOR_SECRET_ID]
   ./scripts/paperclip-api.sh current-issue-playbook
   ./scripts/paperclip-api.sh comment-template BODY [RESUME_TRUE_OR_FALSE]
@@ -40,6 +44,10 @@ Examples:
   ./scripts/paperclip-api.sh session
   ./scripts/paperclip-api.sh me
   ./scripts/paperclip-api.sh inbox-lite
+  ./scripts/paperclip-api.sh run-get
+  ./scripts/paperclip-api.sh run-events 123e4567-e89b-12d3-a456-426614174000 0 20
+  ./scripts/paperclip-api.sh run-log 123e4567-e89b-12d3-a456-426614174000 0 8192
+  ./scripts/paperclip-api.sh run-workspace-operations
   ./scripts/paperclip-api.sh adapter-env-template \
     osiris-paperclip-agent-key-secret-id \
     cursor-api-key-secret-id
@@ -93,6 +101,8 @@ Examples:
 Notes:
   - The script expects PAPERCLIP_API_URL for all commands.
   - `session` checks whether the current shell has a board-authenticated session.
+  - `run-get`, `run-events`, `run-log`, and `run-workspace-operations` default to
+    `PAPERCLIP_RUN_ID` and are useful when reviewing suspiciously silent runs.
   - Issue and agent commands require PAPERCLIP_API_KEY.
   - Mutating commands automatically send X-Paperclip-Run-Id when PAPERCLIP_RUN_ID is present.
   - `adapter-env-template` prints the JSON shape needed to inject PAPERCLIP_API_KEY
@@ -123,6 +133,15 @@ require_auth() {
     echo "error: PAPERCLIP_API_KEY is required for this command" >&2
     exit 3
   fi
+}
+
+default_run_id() {
+  local run_id="${1:-${PAPERCLIP_RUN_ID:-}}"
+  if [[ -z "$run_id" ]]; then
+    echo "error: RUN_ID is required (or set PAPERCLIP_RUN_ID)" >&2
+    exit 2
+  fi
+  printf '%s\n' "$run_id"
 }
 
 print_json() {
@@ -493,6 +512,26 @@ case "$cmd" in
   inbox-lite)
     require_auth
     request GET /api/agents/me/inbox-lite
+    ;;
+  run-get)
+    run_id="$(default_run_id "${2:-}")"
+    request GET "/api/heartbeat-runs/$run_id"
+    ;;
+  run-events)
+    run_id="$(default_run_id "${2:-}")"
+    after_seq="${3:-0}"
+    limit="${4:-20}"
+    request GET "/api/heartbeat-runs/$run_id/events?afterSeq=$after_seq&limit=$limit"
+    ;;
+  run-log)
+    run_id="$(default_run_id "${2:-}")"
+    offset="${3:-0}"
+    limit_bytes="${4:-8192}"
+    request GET "/api/heartbeat-runs/$run_id/log?offset=$offset&limitBytes=$limit_bytes"
+    ;;
+  run-workspace-operations)
+    run_id="$(default_run_id "${2:-}")"
+    request GET "/api/heartbeat-runs/$run_id/workspace-operations"
     ;;
   adapter-env-template)
     print_adapter_env_template "${2:-}" "${3:-}"

@@ -70,6 +70,7 @@ run_expect 0 ./scripts/paperclip-api.sh help
 assert_stdout_contains "issue-interaction-current"
 assert_stdout_contains "request-confirmation-template TITLE [JSON_FILE|-]"
 assert_stdout_contains "issue-blocked-current-template UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]"
+assert_stdout_contains "run-log [RUN_ID] [OFFSET] [LIMIT_BYTES]"
 pass "paperclip-api help advertises template and current-issue commands"
 cleanup_last
 
@@ -81,6 +82,11 @@ cleanup_last
 run_expect 3 env -u PAPERCLIP_API_KEY PAPERCLIP_API_URL="https://example.invalid" ./scripts/paperclip-api.sh me
 assert_stderr_contains "error: PAPERCLIP_API_KEY is required for this command"
 pass "paperclip-api me fails fast without API key"
+cleanup_last
+
+run_expect 2 env -u PAPERCLIP_RUN_ID ./scripts/paperclip-api.sh run-get
+assert_stderr_contains "error: RUN_ID is required (or set PAPERCLIP_RUN_ID)"
+pass "paperclip-api run-get requires a run id or PAPERCLIP_RUN_ID"
 cleanup_last
 
 run_expect 0 env PAPERCLIP_TASK_ID="issue-123" ./scripts/paperclip-api.sh current-issue-id

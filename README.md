@@ -22,6 +22,10 @@ This is the Company run main repo for Grahmos.
   - `session`
   - `me`
   - `inbox-lite`
+  - `run-get [RUN_ID]`
+  - `run-events [RUN_ID] [AFTER_SEQ] [LIMIT]`
+  - `run-log [RUN_ID] [OFFSET] [LIMIT_BYTES]`
+  - `run-workspace-operations [RUN_ID]`
   - `adapter-env-template PAPERCLIP_SECRET_ID [CURSOR_SECRET_ID]`
   - `current-issue-playbook`
   - `comment-template BODY [RESUME_TRUE_OR_FALSE]`
@@ -64,6 +68,10 @@ is available.
 When the runtime check shows that `PAPERCLIP_API_KEY` was never injected, run
 `./scripts/paperclip-api.sh adapter-env-template YOUR_PAPERCLIP_SECRET_ID [YOUR_CURSOR_SECRET_ID]`
 to print the adapter JSON needed for the fix.
+When a heartbeat is suspiciously silent, inspect the underlying run with
+`run-get`, `run-events`, `run-log`, and `run-workspace-operations` once auth is
+available so you can tell whether the adapter stalled before emitting logs, the
+process is still performing workspace operations, or the run needs recovery.
 After auth is fixed, run `./scripts/paperclip-api.sh current-issue-playbook` for the
 recommended inspection, comment, interaction, blocked, and done commands.
 When you need a structured comment or status payload for the execution contract, run
