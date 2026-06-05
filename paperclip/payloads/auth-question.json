@@ -1,0 +1,16 @@
+{
+  "kind": "ask_user_questions",
+  "title": "Paperclip auth path unavailable in Cursor Cloud",
+  "summary": "The shell can modify the Git repo but cannot update the assigned Paperclip issue without control-plane auth.",
+  "continuationPolicy": "wake_assignee",
+  "payload": {
+    "title": "Which auth path should Osiris Hermes use for Paperclip issue updates?",
+    "questions": [
+      {
+        "id": "paperclip-auth-path",
+        "label": "Choose the unblock path",
+        "helpText": "Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env, or provide another supported control-plane auth path."
+      }
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "status": "blocked",
+  "comment": "Blocked.\n\nUnblock owner: Echo adapter operator / Osiris Hermes\nRequired action: Change Echo's opencode_local model from openai/gpt-5.1-codex-mini to a currently available OpenCode model, then rerun the recovery heartbeat.\n\nDetails: GRA-39 wake payload captured run 23128b5f-044e-442a-9788-a0a2b98fd93f failing immediately with `Configured OpenCode model is unavailable: openai/gpt-5.1-codex-mini`. Available models reported by OpenCode were: opencode/big-pickle, opencode/deepseek-v4-flash-free, opencode/mimo-v2.5-free, opencode/minimax-m3-free, and opencode/nemotron-3-ultra-free."
+}

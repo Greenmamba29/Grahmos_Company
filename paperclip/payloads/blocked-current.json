@@ -1,0 +1,4 @@
+{
+  "status": "blocked",
+  "comment": "Blocked.\n\nUnblock owner: Paperclip operator / Osiris Hermes\nRequired action: Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter environment and rerun the heartbeat.\n\nDetails: Verified in Cursor Cloud with ./scripts/paperclip-runtime-check.sh. The runtime can reach the private Paperclip deployment, but /api/auth/get-session returns 401 and /api/heartbeat-runs/{runId}/issues returns 401 because the shell has neither a board-authenticated session nor PAPERCLIP_API_KEY."
+}
