@@ -205,6 +205,22 @@ assert_stdout_contains "./scripts/paperclip-runtime-check.sh"
 pass "paperclip-operator-unblock prints the operator handoff package"
 cleanup_last
 
+report_path="$(mktemp)"
+run_expect 0 ./scripts/paperclip-write-runtime-report.sh "$report_path" paperclip-secret cursor-secret
+assert_stdout_contains "Wrote $report_path"
+if ! grep -Fq "# Osiris Hermes Paperclip Runtime Report" "$report_path"; then
+  fail "runtime report missing title"
+fi
+if ! grep -Fq "## Runtime check output" "$report_path"; then
+  fail "runtime report missing runtime section"
+fi
+if ! grep -Fq "## Operator unblock handoff" "$report_path"; then
+  fail "runtime report missing unblock section"
+fi
+rm -f "$report_path"
+pass "paperclip-write-runtime-report writes a markdown handoff report"
+cleanup_last
+
 run_mock_runtime_check "degraded-health-auth-blocked"
 assert_stdout_contains "\"health_status\": 503"
 assert_stdout_contains "Health check did not return 200, but auth signals are sufficient to diagnose the blocker."

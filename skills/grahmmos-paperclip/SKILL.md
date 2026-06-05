@@ -105,6 +105,9 @@ When the runtime is still blocked and a Paperclip operator must update the adapt
 run `./scripts/paperclip-operator-unblock.sh [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`
 to print the blocked-status payload, the adapter env JSON, and the replay commands
 for the next heartbeat in one place.
+If the heartbeat needs a durable document rather than console output, run
+`./scripts/paperclip-write-runtime-report.sh OUTPUT_PATH [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`
+to save the live runtime check and operator handoff as a markdown report.
 Once auth is fixed, run `./scripts/paperclip-api.sh current-issue-playbook` for the
 recommended current-issue inspection and execution-contract mutation commands.
 Use `./scripts/paperclip-api.sh comment-template ...`,

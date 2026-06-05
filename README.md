@@ -56,6 +56,10 @@ This is the Company run main repo for Grahmos.
   to print a complete operator handoff: the blocked-status payload, the adapter env
   JSON needed to inject `PAPERCLIP_API_KEY`, and the replay commands for the next
   heartbeat.
+- If you need a durable file artifact for manual escalation or review, run
+  `./scripts/paperclip-write-runtime-report.sh OUTPUT_PATH [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`
+  to write the current runtime check output and operator handoff into a markdown
+  report.
 
 The comment helper accepts the raw JSON body expected by `POST /api/issues/{issueId}/comments`,
 so it can carry structured fields such as `resume`, `reopen`, or `interrupt` when
@@ -84,5 +88,7 @@ one step, use `issue-comment-current-template`, `issue-update-current-template`,
 If the blocker lives outside the shell and must be handed to a Paperclip operator,
 use `paperclip-operator-unblock.sh` to print the exact status payload, adapter JSON,
 and replay commands without rebuilding them by hand.
+If you need that same information as a checked-in or shareable document,
+use `paperclip-write-runtime-report.sh` to write a markdown report file.
 Run `./scripts/test-paperclip-helpers.sh` to smoke-test the helper CLI surface
 before relying on it in a live heartbeat.
