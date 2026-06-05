@@ -1,0 +1,239 @@
+{
+  "version": 1,
+  "generatedForIssue": "GRA-30",
+  "activationStatus": "ready_for_secret_injection_and_roster_confirmation",
+  "knownBlockers": [
+    "Telegram bot token is not stored in this repository.",
+    "Real Telegram chat and thread identifiers have not been populated.",
+    "The final four agent seats for the 15-agent roster still need board confirmation."
+  ],
+  "routeGroups": {
+    "leadership": {
+      "chatId": "REQUIRED_LEADERSHIP_CHAT_ID",
+      "threadId": "REQUIRED_LEADERSHIP_THREAD_ID",
+      "fallbackOwner": "Paperclip operator"
+    },
+    "product-revenue": {
+      "chatId": "REQUIRED_PRODUCT_REVENUE_CHAT_ID",
+      "threadId": "REQUIRED_PRODUCT_REVENUE_THREAD_ID",
+      "fallbackOwner": "Osiris Hermes"
+    },
+    "creative-growth": {
+      "chatId": "REQUIRED_CREATIVE_GROWTH_CHAT_ID",
+      "threadId": "REQUIRED_CREATIVE_GROWTH_THREAD_ID",
+      "fallbackOwner": "Apollo"
+    },
+    "engineering": {
+      "chatId": "REQUIRED_ENGINEERING_CHAT_ID",
+      "threadId": "REQUIRED_ENGINEERING_THREAD_ID",
+      "fallbackOwner": "Casius Nexus"
+    },
+    "platform": {
+      "chatId": "REQUIRED_PLATFORM_CHAT_ID",
+      "threadId": "REQUIRED_PLATFORM_THREAD_ID",
+      "fallbackOwner": "Prometheus"
+    },
+    "operator-on-call": {
+      "chatId": "REQUIRED_OPERATOR_CHAT_ID",
+      "threadId": "REQUIRED_OPERATOR_THREAD_ID",
+      "fallbackOwner": "Osiris Hermes"
+    }
+  },
+  "agents": [
+    {
+      "slot": "01",
+      "agentName": "Osiris Hermes",
+      "role": "CEO - Chief Executive Officer",
+      "confirmationSource": "skills/grahmmos-paperclip/SKILL.md",
+      "activationState": "needs_chat_and_thread_ids",
+      "routeGroup": "leadership",
+      "threadAlias": "leadership-osiris",
+      "fallbackEscalation": [
+        "Casius Nexus",
+        "Paperclip operator"
+      ]
+    },
+    {
+      "slot": "02",
+      "agentName": "Casius Nexus",
+      "role": "CTO - Chief Technology Officer",
+      "confirmationSource": "skills/grahmmos-paperclip/SKILL.md",
+      "activationState": "needs_chat_and_thread_ids",
+      "routeGroup": "engineering",
+      "threadAlias": "engineering-casius",
+      "fallbackEscalation": [
+        "Osiris Hermes",
+        "Prometheus"
+      ]
+    },
+    {
+      "slot": "03",
+      "agentName": "Apollo",
+      "role": "CMO - Chief Marketing Officer",
+      "confirmationSource": "skills/grahmmos-paperclip/SKILL.md",
+      "activationState": "needs_chat_and_thread_ids",
+      "routeGroup": "creative-growth",
+      "threadAlias": "growth-apollo",
+      "fallbackEscalation": [
+        "Osiris Hermes",
+        "Echo"
+      ]
+    },
+    {
+      "slot": "04",
+      "agentName": "Athena",
+      "role": "PM - Head of Product",
+      "confirmationSource": "skills/grahmmos-paperclip/SKILL.md",
+      "activationState": "needs_chat_and_thread_ids",
+      "routeGroup": "product-revenue",
+      "threadAlias": "product-athena",
+      "fallbackEscalation": [
+        "Osiris Hermes",
+        "Midas"
+      ]
+    },
+    {
+      "slot": "05",
+      "agentName": "Midas",
+      "role": "CFO - Head of Revenue",
+      "confirmationSource": "skills/grahmmos-paperclip/SKILL.md",
+      "activationState": "needs_chat_and_thread_ids",
+      "routeGroup": "product-revenue",
+      "threadAlias": "revenue-midas",
+      "fallbackEscalation": [
+        "Osiris Hermes",
+        "Athena"
+      ]
+    },
+    {
+      "slot": "06",
+      "agentName": "Echo",
+      "role": "General - Content and Media Lead",
+      "confirmationSource": "skills/grahmmos-paperclip/SKILL.md",
+      "activationState": "needs_chat_and_thread_ids",
+      "routeGroup": "creative-growth",
+      "threadAlias": "content-echo",
+      "fallbackEscalation": [
+        "Apollo",
+        "Osiris Hermes"
+      ]
+    },
+    {
+      "slot": "07",
+      "agentName": "Hermes-GTM",
+      "role": "General - Sales and GTM Lead",
+      "confirmationSource": "skills/grahmmos-paperclip/SKILL.md",
+      "activationState": "needs_chat_and_thread_ids",
+      "routeGroup": "product-revenue",
+      "threadAlias": "gtm-hermes",
+      "fallbackEscalation": [
+        "Apollo",
+        "Midas"
+      ]
+    },
+    {
+      "slot": "08",
+      "agentName": "Daedalus",
+      "role": "General - UX/UI Lead",
+      "confirmationSource": "skills/grahmmos-paperclip/SKILL.md",
+      "activationState": "needs_chat_and_thread_ids",
+      "routeGroup": "creative-growth",
+      "threadAlias": "design-daedalus",
+      "fallbackEscalation": [
+        "Athena",
+        "Apollo"
+      ]
+    },
+    {
+      "slot": "09",
+      "agentName": "Lyra",
+      "role": "General - AI/ML Engineer",
+      "confirmationSource": "skills/grahmmos-paperclip/SKILL.md",
+      "activationState": "needs_chat_and_thread_ids",
+      "routeGroup": "engineering",
+      "threadAlias": "ml-lyra",
+      "fallbackEscalation": [
+        "Casius Nexus",
+        "Prometheus"
+      ]
+    },
+    {
+      "slot": "10",
+      "agentName": "Prometheus",
+      "role": "General - Platform and Infrastructure",
+      "confirmationSource": "skills/grahmmos-paperclip/SKILL.md",
+      "activationState": "needs_chat_and_thread_ids",
+      "routeGroup": "platform",
+      "threadAlias": "platform-prometheus",
+      "fallbackEscalation": [
+        "Casius Nexus",
+        "Osiris Hermes"
+      ]
+    },
+    {
+      "slot": "11",
+      "agentName": "Minerva",
+      "role": "Implementation specialist seat observed in issue continuation history",
+      "confirmationSource": "PAPERCLIP_WAKE_PAYLOAD_JSON continuationSummary",
+      "activationState": "needs_role_confirmation_and_chat_ids",
+      "routeGroup": "engineering",
+      "threadAlias": "implementation-minerva",
+      "fallbackEscalation": [
+        "Casius Nexus",
+        "Osiris Hermes"
+      ]
+    },
+    {
+      "slot": "12",
+      "agentName": null,
+      "role": "Reserved specialist seat 12",
+      "confirmationSource": "pending_board_confirmation",
+      "activationState": "pending_roster_confirmation",
+      "routeGroup": "operator-on-call",
+      "threadAlias": "reserved-seat-12",
+      "fallbackEscalation": [
+        "Osiris Hermes",
+        "Paperclip operator"
+      ]
+    },
+    {
+      "slot": "13",
+      "agentName": null,
+      "role": "Reserved specialist seat 13",
+      "confirmationSource": "pending_board_confirmation",
+      "activationState": "pending_roster_confirmation",
+      "routeGroup": "operator-on-call",
+      "threadAlias": "reserved-seat-13",
+      "fallbackEscalation": [
+        "Osiris Hermes",
+        "Paperclip operator"
+      ]
+    },
+    {
+      "slot": "14",
+      "agentName": null,
+      "role": "Reserved specialist seat 14",
+      "confirmationSource": "pending_board_confirmation",
+      "activationState": "pending_roster_confirmation",
+      "routeGroup": "operator-on-call",
+      "threadAlias": "reserved-seat-14",
+      "fallbackEscalation": [
+        "Osiris Hermes",
+        "Paperclip operator"
+      ]
+    },
+    {
+      "slot": "15",
+      "agentName": null,
+      "role": "Reserved specialist seat 15",
+      "confirmationSource": "pending_board_confirmation",
+      "activationState": "pending_roster_confirmation",
+      "routeGroup": "operator-on-call",
+      "threadAlias": "reserved-seat-15",
+      "fallbackEscalation": [
+        "Osiris Hermes",
+        "Paperclip operator"
+      ]
+    }
+  ]
+}
