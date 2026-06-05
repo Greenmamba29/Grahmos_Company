@@ -110,6 +110,8 @@ scenario = sys.argv[2]
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         run_issue_match = re.fullmatch(r"/api/heartbeat-runs/[^/]+/issues", self.path)
+        run_log_match = re.fullmatch(r"/api/heartbeat-runs/[^/]+/log\?offset=0&limitBytes=4096", self.path)
+        workspace_ops_match = re.fullmatch(r"/api/heartbeat-runs/[^/]+/workspace-operations", self.path)
         if scenario == "degraded-health-auth-blocked":
             if self.path == "/api/health":
                 self.send_response(503)
@@ -124,6 +126,12 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": "Board authentication required"}).encode())
                 return
             if run_issue_match:
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Board authentication required"}).encode())
+                return
+            if run_log_match or workspace_ops_match:
                 self.send_response(401)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
@@ -184,6 +192,8 @@ scenario = sys.argv[2]
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         run_issue_match = re.fullmatch(r"/api/heartbeat-runs/[^/]+/issues", self.path)
+        run_log_match = re.fullmatch(r"/api/heartbeat-runs/[^/]+/log\?offset=0&limitBytes=4096", self.path)
+        workspace_ops_match = re.fullmatch(r"/api/heartbeat-runs/[^/]+/workspace-operations", self.path)
         if scenario == "degraded-health-auth-blocked":
             if self.path == "/api/health":
                 self.send_response(503)
@@ -198,6 +208,12 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": "Board authentication required"}).encode())
                 return
             if run_issue_match:
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Board authentication required"}).encode())
+                return
+            if run_log_match or workspace_ops_match:
                 self.send_response(401)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
@@ -304,6 +320,9 @@ assert_stdout_json_value "issue_operations_blocked" "true"
 assert_stdout_json_value "summary.paperclip_api_key_injected" "false"
 assert_stdout_json_value "summary.run_issues_with_run_header_status" "401"
 assert_stdout_json_value "run_id_header_read_access" "false"
+assert_stdout_json_value "summary.run_log_with_run_header_status" "401"
+assert_stdout_json_value "summary.workspace_operations_with_run_header_status" "401"
+assert_stdout_json_value "run_scoped_debug_read_access" "false"
 pass "paperclip-runtime-check emits structured JSON diagnosis"
 cleanup_last
 
@@ -345,6 +364,7 @@ assert_stdout_contains "\"health_status\": 503"
 assert_stdout_contains "Health check did not return 200, but auth signals are sufficient to diagnose the blocker."
 assert_stdout_contains "Board authentication is not available in this shell session."
 assert_stdout_contains "Adding X-Paperclip-Run-Id to the run issue lookup did not unlock read access in this shell."
+assert_stdout_contains "Heartbeat-run log and workspace-operation reads also remain locked in this shell."
 assert_stdout_contains "Required action: inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env."
 pass "paperclip-runtime-check preserves auth guidance when health is degraded"
 cleanup_last

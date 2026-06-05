@@ -99,6 +99,8 @@ When another helper or automation step needs structured data instead of prose, r
 `./scripts/paperclip-runtime-check.sh --json`.
 The diagnostic also checks whether `X-Paperclip-Run-Id` unlocks run issue reads; in
 this Cursor Cloud environment, it does not bypass Paperclip auth on its own.
+It also checks whether heartbeat-run log and workspace-operation reads are unlocked;
+those run-scoped debug endpoints remain blocked here as well.
 
 Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 `me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,

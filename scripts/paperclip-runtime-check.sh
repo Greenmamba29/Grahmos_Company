@@ -102,6 +102,14 @@ run_issues_with_header_status, run_issues_with_header_body = request(
     f"/api/heartbeat-runs/{run_id}/issues",
     {"X-Paperclip-Run-Id": run_id},
 )
+run_log_with_header_status, run_log_with_header_body = request(
+    f"/api/heartbeat-runs/{run_id}/log?offset=0&limitBytes=4096",
+    {"X-Paperclip-Run-Id": run_id},
+)
+workspace_ops_with_header_status, workspace_ops_with_header_body = request(
+    f"/api/heartbeat-runs/{run_id}/workspace-operations",
+    {"X-Paperclip-Run-Id": run_id},
+)
 
 health_json = parse_json(health_body) if health_status == 200 else None
 session_json = parse_json(session_body)
@@ -128,6 +136,13 @@ summary = {
     "run_issues_accessible": run_issues_status == 200,
     "run_issues_with_run_header_status": run_issues_with_header_status,
     "run_id_header_read_access": run_issues_with_header_status == 200,
+    "run_log_with_run_header_status": run_log_with_header_status,
+    "workspace_operations_with_run_header_status": workspace_ops_with_header_status,
+    "run_scoped_debug_read_access": (
+        run_issues_with_header_status == 200
+        or run_log_with_header_status == 200
+        or workspace_ops_with_header_status == 200
+    ),
     "api_key_present": bool(api_key),
     "paperclip_api_key_injected": "PAPERCLIP_API_KEY" in injected_secret_names,
     "gh_token_present": bool(gh_token),
@@ -239,6 +254,11 @@ if session_status == 401:
                 "aux_home_warning": bool(aux_home) and not os.path.isdir(aux_home),
                 "paperclip_api_key_injected": "PAPERCLIP_API_KEY" in injected_secret_names,
                 "run_id_header_read_access": run_issues_with_header_status == 200,
+                "run_scoped_debug_read_access": (
+                    run_issues_with_header_status == 200
+                    or run_log_with_header_status == 200
+                    or workspace_ops_with_header_status == 200
+                ),
                 "unblock_owner": unblock_owner,
                 "required_action": required_action,
                 "next_helper_commands": next_helper_commands,
@@ -259,6 +279,8 @@ if session_status == 401:
         print("Do not rely on that env var as a fallback source for current issue or comment context here.")
     if run_issues_with_header_status != 200:
         print("Adding X-Paperclip-Run-Id to the run issue lookup did not unlock read access in this shell.")
+    if run_log_with_header_status != 200 or workspace_ops_with_header_status != 200:
+        print("Heartbeat-run log and workspace-operation reads also remain locked in this shell.")
     if "PAPERCLIP_API_KEY" not in injected_secret_names:
         print(
             "The runtime metadata shows that PAPERCLIP_API_KEY was not injected into this cloud shell."

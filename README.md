@@ -19,6 +19,8 @@ This is the Company run main repo for Grahmos.
 - The runtime check now also tells you whether adding `X-Paperclip-Run-Id` to the
   run issue lookup changed anything; in this environment it does not provide a read
   bypass by itself.
+- It also reports whether heartbeat-run log and workspace-operation reads are still
+  locked; in this environment those run-scoped debug endpoints remain blocked too.
 - `GH_TOKEN` may be present for repository operations, but it does not authenticate
   Paperclip issue/comment/interaction endpoints.
 - An auxiliary agent-home env var may also be present in runtime metadata; if it is
