@@ -8,6 +8,8 @@ Usage:
   ./scripts/paperclip-api.sh session
   ./scripts/paperclip-api.sh me
   ./scripts/paperclip-api.sh inbox-lite
+  ./scripts/paperclip-api.sh current-agent-id
+  ./scripts/paperclip-api.sh current-company-id
   ./scripts/paperclip-api.sh adapter-env-template PAPERCLIP_SECRET_ID [CURSOR_SECRET_ID]
   ./scripts/paperclip-api.sh current-issue-playbook
   ./scripts/paperclip-api.sh comment-template BODY [RESUME_TRUE_OR_FALSE]
@@ -17,6 +19,18 @@ Usage:
   ./scripts/paperclip-api.sh ask-user-questions-template TITLE [JSON_FILE|-]
   ./scripts/paperclip-api.sh suggest-tasks-template TITLE [JSON_FILE|-]
   ./scripts/paperclip-api.sh request-confirmation-template TITLE [JSON_FILE|-]
+  ./scripts/paperclip-api.sh agent-get AGENT_ID [COMPANY_ID]
+  ./scripts/paperclip-api.sh agent-get-current
+  ./scripts/paperclip-api.sh agent-config AGENT_ID [COMPANY_ID]
+  ./scripts/paperclip-api.sh agent-config-current
+  ./scripts/paperclip-api.sh agent-update AGENT_ID JSON_FILE|- [COMPANY_ID]
+  ./scripts/paperclip-api.sh agent-update-current JSON_FILE|-
+  ./scripts/paperclip-api.sh agent-env-patch-template AGENT_JSON_FILE|- ENV_NAME SECRET_ID [VERSION]
+  ./scripts/paperclip-api.sh agent-paperclip-key-patch-template AGENT_JSON_FILE|- PAPERCLIP_SECRET_ID [VERSION]
+  ./scripts/paperclip-api.sh agent-inject-secret-ref AGENT_ID ENV_NAME SECRET_ID [VERSION] [COMPANY_ID]
+  ./scripts/paperclip-api.sh agent-inject-secret-ref-current ENV_NAME SECRET_ID [VERSION]
+  ./scripts/paperclip-api.sh agent-inject-paperclip-key AGENT_ID PAPERCLIP_SECRET_ID [VERSION] [COMPANY_ID]
+  ./scripts/paperclip-api.sh agent-inject-paperclip-key-current PAPERCLIP_SECRET_ID [VERSION]
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get ISSUE_ID
   ./scripts/paperclip-api.sh issue-get-current
@@ -40,6 +54,8 @@ Examples:
   ./scripts/paperclip-api.sh session
   ./scripts/paperclip-api.sh me
   ./scripts/paperclip-api.sh inbox-lite
+  ./scripts/paperclip-api.sh current-agent-id
+  ./scripts/paperclip-api.sh current-company-id
   ./scripts/paperclip-api.sh adapter-env-template \
     osiris-paperclip-agent-key-secret-id \
     cursor-api-key-secret-id
@@ -58,6 +74,25 @@ Examples:
     ./scripts/paperclip-api.sh suggest-tasks-template "Suggested follow-ups" -
   printf '{"idempotencyKey":"confirmation:issue-id:plan:revision-id","supersedeOnUserComment":true}\n' | \
     ./scripts/paperclip-api.sh request-confirmation-template "Approve latest plan" -
+  ./scripts/paperclip-api.sh agent-get-current
+  ./scripts/paperclip-api.sh agent-config-current
+  ./scripts/paperclip-api.sh agent-update \
+    123e4567-e89b-12d3-a456-426614174000 \
+    payload.json \
+    company-id
+  ./scripts/paperclip-api.sh agent-update-current payload.json
+  ./scripts/paperclip-api.sh agent-env-patch-template \
+    agent.json \
+    PAPERCLIP_API_KEY \
+    osiris-paperclip-agent-key-secret-id
+  ./scripts/paperclip-api.sh agent-paperclip-key-patch-template \
+    agent.json \
+    osiris-paperclip-agent-key-secret-id
+  ./scripts/paperclip-api.sh agent-inject-secret-ref-current \
+    PAPERCLIP_API_KEY \
+    osiris-paperclip-agent-key-secret-id
+  ./scripts/paperclip-api.sh agent-inject-paperclip-key-current \
+    osiris-paperclip-agent-key-secret-id
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get 123e4567-e89b-12d3-a456-426614174000
   ./scripts/paperclip-api.sh issue-get-current
@@ -97,6 +132,12 @@ Notes:
   - Mutating commands automatically send X-Paperclip-Run-Id when PAPERCLIP_RUN_ID is present.
   - `adapter-env-template` prints the JSON shape needed to inject PAPERCLIP_API_KEY
     into the Cursor Cloud adapter environment.
+  - `current-agent-id` and `current-company-id` read the currently running agent
+    context from PAPERCLIP_AGENT_ID and PAPERCLIP_COMPANY_ID.
+  - `agent-env-patch-template` merges a secret-ref env binding into an existing agent
+    JSON document and prints the PATCH payload expected by `PATCH /api/agents/{id}`.
+  - `agent-inject-paperclip-key-current` is the one-command path for updating the
+    current Cursor Cloud agent to inject `PAPERCLIP_API_KEY` once auth is available.
   - `current-issue-playbook` prints the recommended commands to inspect, comment on,
     interact with, block, or complete the current issue once auth is available.
   - `comment-template`, `update-template`, and `blocked-template` print JSON payloads
@@ -337,6 +378,32 @@ print_kind_template() {
   print_interaction_template "$kind" "$title" "$source"
 }
 
+resolve_current_agent_id() {
+  if [[ -z "${PAPERCLIP_AGENT_ID:-}" ]]; then
+    echo "error: PAPERCLIP_AGENT_ID is required" >&2
+    exit 2
+  fi
+
+  printf '%s\n' "$PAPERCLIP_AGENT_ID"
+}
+
+resolve_current_company_id() {
+  if [[ -z "${PAPERCLIP_COMPANY_ID:-}" ]]; then
+    echo "error: PAPERCLIP_COMPANY_ID is required" >&2
+    exit 2
+  fi
+
+  printf '%s\n' "$PAPERCLIP_COMPANY_ID"
+}
+
+agent_path() {
+  local agent_id="$1"
+  local company_id="$2"
+  local suffix="${3:-}"
+
+  printf '/api/agents/%s%s?companyId=%s\n' "$agent_id" "$suffix" "$company_id"
+}
+
 request() {
   local method="$1"
   local path="$2"
@@ -386,6 +453,75 @@ read_body_file() {
     cp "$source" "$tmp_body"
   fi
 
+  printf '%s\n' "$tmp_body"
+}
+
+write_agent_env_patch_from_agent_json() {
+  local source="$1"
+  local env_name="$2"
+  local secret_id="$3"
+  local version="${4:-latest}"
+  local source_file tmp_body
+
+  source_file="$(read_body_file "$source")"
+  tmp_body="$(mktemp)"
+
+  python3 - "$source_file" "$env_name" "$secret_id" "$version" > "$tmp_body" <<'PY'
+import json
+import re
+import sys
+from pathlib import Path
+
+agent = json.loads(Path(sys.argv[1]).read_text())
+env_name = sys.argv[2].strip()
+secret_id = sys.argv[3].strip()
+version_raw = sys.argv[4].strip() or "latest"
+
+if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", env_name):
+    print("error: ENV_NAME must be a valid shell variable name", file=sys.stderr)
+    raise SystemExit(2)
+
+if not secret_id:
+    print("error: SECRET_ID is required", file=sys.stderr)
+    raise SystemExit(2)
+
+adapter_config = agent.get("adapterConfig") or {}
+if not isinstance(adapter_config, dict):
+    print("error: agent JSON did not include an object adapterConfig", file=sys.stderr)
+    raise SystemExit(2)
+
+env = adapter_config.get("env") or {}
+if not isinstance(env, dict):
+    print("error: agent JSON adapterConfig.env was not an object", file=sys.stderr)
+    raise SystemExit(2)
+
+if version_raw == "latest":
+    version = "latest"
+elif version_raw.isdigit() and int(version_raw) > 0:
+    version = int(version_raw)
+else:
+    print("error: VERSION must be 'latest' or a positive integer", file=sys.stderr)
+    raise SystemExit(2)
+
+env[env_name] = {
+    "type": "secret_ref",
+    "secretId": secret_id,
+    "version": version,
+}
+adapter_config["env"] = env
+
+json.dump(
+    {
+        "adapterConfig": adapter_config,
+        "replaceAdapterConfig": True,
+    },
+    sys.stdout,
+    indent=2,
+)
+sys.stdout.write("\n")
+PY
+
+  rm -f "$source_file"
   printf '%s\n' "$tmp_body"
 }
 
@@ -494,6 +630,12 @@ case "$cmd" in
     require_auth
     request GET /api/agents/me/inbox-lite
     ;;
+  current-agent-id)
+    resolve_current_agent_id
+    ;;
+  current-company-id)
+    resolve_current_company_id
+    ;;
   adapter-env-template)
     print_adapter_env_template "${2:-}" "${3:-}"
     ;;
@@ -520,6 +662,155 @@ case "$cmd" in
     ;;
   request-confirmation-template)
     print_kind_template request_confirmation "${2:-}" "${3:-}"
+    ;;
+  agent-get)
+    require_auth
+    agent_id="${2:-}"
+    company_id="${3:-${PAPERCLIP_COMPANY_ID:-}}"
+    if [[ -z "$agent_id" || -z "$company_id" ]]; then
+      echo "error: AGENT_ID and COMPANY_ID are required" >&2
+      exit 2
+    fi
+    request GET "$(agent_path "$agent_id" "$company_id")"
+    ;;
+  agent-get-current)
+    require_auth
+    agent_id="$(resolve_current_agent_id)"
+    company_id="$(resolve_current_company_id)"
+    request GET "$(agent_path "$agent_id" "$company_id")"
+    ;;
+  agent-config)
+    require_auth
+    agent_id="${2:-}"
+    company_id="${3:-${PAPERCLIP_COMPANY_ID:-}}"
+    if [[ -z "$agent_id" || -z "$company_id" ]]; then
+      echo "error: AGENT_ID and COMPANY_ID are required" >&2
+      exit 2
+    fi
+    request GET "$(agent_path "$agent_id" "$company_id" "/configuration")"
+    ;;
+  agent-config-current)
+    require_auth
+    agent_id="$(resolve_current_agent_id)"
+    company_id="$(resolve_current_company_id)"
+    request GET "$(agent_path "$agent_id" "$company_id" "/configuration")"
+    ;;
+  agent-update)
+    require_auth
+    agent_id="${2:-}"
+    source="${3:-}"
+    company_id="${4:-${PAPERCLIP_COMPANY_ID:-}}"
+    if [[ -z "$agent_id" || -z "$source" || -z "$company_id" ]]; then
+      echo "error: AGENT_ID, JSON_FILE|-, and COMPANY_ID are required" >&2
+      exit 2
+    fi
+    body_file="$(read_body_file "$source")"
+    request PATCH "$(agent_path "$agent_id" "$company_id")" "$body_file"
+    rm -f "$body_file"
+    ;;
+  agent-update-current)
+    require_auth
+    source="${2:-}"
+    if [[ -z "$source" ]]; then
+      echo "error: JSON_FILE|- is required" >&2
+      exit 2
+    fi
+    agent_id="$(resolve_current_agent_id)"
+    company_id="$(resolve_current_company_id)"
+    body_file="$(read_body_file "$source")"
+    request PATCH "$(agent_path "$agent_id" "$company_id")" "$body_file"
+    rm -f "$body_file"
+    ;;
+  agent-env-patch-template)
+    source="${2:-}"
+    env_name="${3:-}"
+    secret_id="${4:-}"
+    version="${5:-latest}"
+    if [[ -z "$source" || -z "$env_name" || -z "$secret_id" ]]; then
+      echo "error: AGENT_JSON_FILE|-, ENV_NAME, and SECRET_ID are required" >&2
+      exit 2
+    fi
+    body_file="$(write_agent_env_patch_from_agent_json "$source" "$env_name" "$secret_id" "$version")"
+    print_json < "$body_file"
+    rm -f "$body_file"
+    ;;
+  agent-paperclip-key-patch-template)
+    source="${2:-}"
+    secret_id="${3:-}"
+    version="${4:-latest}"
+    if [[ -z "$source" || -z "$secret_id" ]]; then
+      echo "error: AGENT_JSON_FILE|- and PAPERCLIP_SECRET_ID are required" >&2
+      exit 2
+    fi
+    body_file="$(write_agent_env_patch_from_agent_json "$source" "PAPERCLIP_API_KEY" "$secret_id" "$version")"
+    print_json < "$body_file"
+    rm -f "$body_file"
+    ;;
+  agent-inject-secret-ref)
+    require_auth
+    agent_id="${2:-}"
+    env_name="${3:-}"
+    secret_id="${4:-}"
+    version="${5:-latest}"
+    company_id="${6:-${PAPERCLIP_COMPANY_ID:-}}"
+    if [[ -z "$agent_id" || -z "$env_name" || -z "$secret_id" || -z "$company_id" ]]; then
+      echo "error: AGENT_ID, ENV_NAME, SECRET_ID, and COMPANY_ID are required" >&2
+      exit 2
+    fi
+    current_agent_file="$(mktemp)"
+    request GET "$(agent_path "$agent_id" "$company_id")" > "$current_agent_file"
+    body_file="$(write_agent_env_patch_from_agent_json "$current_agent_file" "$env_name" "$secret_id" "$version")"
+    request PATCH "$(agent_path "$agent_id" "$company_id")" "$body_file"
+    rm -f "$current_agent_file" "$body_file"
+    ;;
+  agent-inject-secret-ref-current)
+    require_auth
+    env_name="${2:-}"
+    secret_id="${3:-}"
+    version="${4:-latest}"
+    if [[ -z "$env_name" || -z "$secret_id" ]]; then
+      echo "error: ENV_NAME and SECRET_ID are required" >&2
+      exit 2
+    fi
+    agent_id="$(resolve_current_agent_id)"
+    company_id="$(resolve_current_company_id)"
+    current_agent_file="$(mktemp)"
+    request GET "$(agent_path "$agent_id" "$company_id")" > "$current_agent_file"
+    body_file="$(write_agent_env_patch_from_agent_json "$current_agent_file" "$env_name" "$secret_id" "$version")"
+    request PATCH "$(agent_path "$agent_id" "$company_id")" "$body_file"
+    rm -f "$current_agent_file" "$body_file"
+    ;;
+  agent-inject-paperclip-key)
+    require_auth
+    agent_id="${2:-}"
+    secret_id="${3:-}"
+    version="${4:-latest}"
+    company_id="${5:-${PAPERCLIP_COMPANY_ID:-}}"
+    if [[ -z "$agent_id" || -z "$secret_id" || -z "$company_id" ]]; then
+      echo "error: AGENT_ID, PAPERCLIP_SECRET_ID, and COMPANY_ID are required" >&2
+      exit 2
+    fi
+    current_agent_file="$(mktemp)"
+    request GET "$(agent_path "$agent_id" "$company_id")" > "$current_agent_file"
+    body_file="$(write_agent_env_patch_from_agent_json "$current_agent_file" "PAPERCLIP_API_KEY" "$secret_id" "$version")"
+    request PATCH "$(agent_path "$agent_id" "$company_id")" "$body_file"
+    rm -f "$current_agent_file" "$body_file"
+    ;;
+  agent-inject-paperclip-key-current)
+    require_auth
+    secret_id="${2:-}"
+    version="${3:-latest}"
+    if [[ -z "$secret_id" ]]; then
+      echo "error: PAPERCLIP_SECRET_ID is required" >&2
+      exit 2
+    fi
+    agent_id="$(resolve_current_agent_id)"
+    company_id="$(resolve_current_company_id)"
+    current_agent_file="$(mktemp)"
+    request GET "$(agent_path "$agent_id" "$company_id")" > "$current_agent_file"
+    body_file="$(write_agent_env_patch_from_agent_json "$current_agent_file" "PAPERCLIP_API_KEY" "$secret_id" "$version")"
+    request PATCH "$(agent_path "$agent_id" "$company_id")" "$body_file"
+    rm -f "$current_agent_file" "$body_file"
     ;;
   current-issue-id)
     resolve_current_issue_id

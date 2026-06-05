@@ -172,6 +172,17 @@ Once this is set, agent code should authenticate with:
 - `Authorization: Bearer $PAPERCLIP_API_KEY`
 - `X-Paperclip-Run-Id: $PAPERCLIP_RUN_ID` on mutating requests
 
+If the shell already has Paperclip bearer auth and only needs to update the current
+Cursor Cloud adapter config, use:
+
+```bash
+./scripts/paperclip-api.sh agent-inject-paperclip-key-current YOUR_PAPERCLIP_SECRET_ID
+```
+
+This fetches the current agent record, merges `PAPERCLIP_API_KEY` into
+`adapterConfig.env`, and sends the corresponding `PATCH /api/agents/{id}` update with
+`replaceAdapterConfig=true`.
+
 Next action for Osiris Hermes: update the Cursor Cloud agent configuration to inject
 `PAPERCLIP_API_KEY`, then rerun the heartbeat so the CEO agent can check inbox items
 and update the assigned issue disposition directly.

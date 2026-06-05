@@ -22,7 +22,21 @@ This is the Company run main repo for Grahmos.
   - `session`
   - `me`
   - `inbox-lite`
+  - `current-agent-id`
+  - `current-company-id`
   - `adapter-env-template PAPERCLIP_SECRET_ID [CURSOR_SECRET_ID]`
+  - `agent-get AGENT_ID [COMPANY_ID]`
+  - `agent-get-current`
+  - `agent-config AGENT_ID [COMPANY_ID]`
+  - `agent-config-current`
+  - `agent-update AGENT_ID JSON_FILE|- [COMPANY_ID]`
+  - `agent-update-current JSON_FILE|-`
+  - `agent-env-patch-template AGENT_JSON_FILE|- ENV_NAME SECRET_ID [VERSION]`
+  - `agent-paperclip-key-patch-template AGENT_JSON_FILE|- PAPERCLIP_SECRET_ID [VERSION]`
+  - `agent-inject-secret-ref AGENT_ID ENV_NAME SECRET_ID [VERSION] [COMPANY_ID]`
+  - `agent-inject-secret-ref-current ENV_NAME SECRET_ID [VERSION]`
+  - `agent-inject-paperclip-key AGENT_ID PAPERCLIP_SECRET_ID [VERSION] [COMPANY_ID]`
+  - `agent-inject-paperclip-key-current PAPERCLIP_SECRET_ID [VERSION]`
   - `current-issue-playbook`
   - `comment-template BODY [RESUME_TRUE_OR_FALSE]`
   - `update-template STATUS COMMENT [RESUME_TRUE_OR_FALSE]`
@@ -64,6 +78,11 @@ is available.
 When the runtime check shows that `PAPERCLIP_API_KEY` was never injected, run
 `./scripts/paperclip-api.sh adapter-env-template YOUR_PAPERCLIP_SECRET_ID [YOUR_CURSOR_SECRET_ID]`
 to print the adapter JSON needed for the fix.
+If the shell already has Paperclip bearer auth and just needs to update the current
+agent configuration, run
+`./scripts/paperclip-api.sh agent-inject-paperclip-key-current YOUR_PAPERCLIP_SECRET_ID`
+to merge `PAPERCLIP_API_KEY` into the current Cursor Cloud adapter env and send the
+`PATCH /api/agents/{id}` request directly.
 After auth is fixed, run `./scripts/paperclip-api.sh current-issue-playbook` for the
 recommended inspection, comment, interaction, blocked, and done commands.
 When you need a structured comment or status payload for the execution contract, run

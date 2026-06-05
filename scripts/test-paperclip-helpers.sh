@@ -70,6 +70,7 @@ run_expect 0 ./scripts/paperclip-api.sh help
 assert_stdout_contains "issue-interaction-current"
 assert_stdout_contains "request-confirmation-template TITLE [JSON_FILE|-]"
 assert_stdout_contains "issue-blocked-current-template UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]"
+assert_stdout_contains "agent-inject-paperclip-key-current PAPERCLIP_SECRET_ID [VERSION]"
 pass "paperclip-api help advertises template and current-issue commands"
 cleanup_last
 
@@ -86,6 +87,16 @@ cleanup_last
 run_expect 0 env PAPERCLIP_TASK_ID="issue-123" ./scripts/paperclip-api.sh current-issue-id
 assert_stdout_contains "issue-123"
 pass "paperclip-api current-issue-id prefers PAPERCLIP_TASK_ID"
+cleanup_last
+
+run_expect 0 env PAPERCLIP_AGENT_ID="agent-123" ./scripts/paperclip-api.sh current-agent-id
+assert_stdout_contains "agent-123"
+pass "paperclip-api current-agent-id prefers PAPERCLIP_AGENT_ID"
+cleanup_last
+
+run_expect 0 env PAPERCLIP_COMPANY_ID="company-123" ./scripts/paperclip-api.sh current-company-id
+assert_stdout_contains "company-123"
+pass "paperclip-api current-company-id prefers PAPERCLIP_COMPANY_ID"
 cleanup_last
 
 run_expect 0 ./scripts/paperclip-api.sh adapter-env-template paperclip-secret cursor-secret
@@ -121,6 +132,40 @@ assert_stdout_contains "\"kind\": \"ask_user_questions\""
 assert_stdout_contains "\"title\": \"Need input\""
 pass "ask-user-questions-template emits interaction payload"
 cleanup_last
+
+agent_json_file="$(mktemp)"
+cat >"$agent_json_file" <<'EOF'
+{
+  "id": "agent-123",
+  "adapterType": "cursor_cloud",
+  "adapterConfig": {
+    "repoUrl": "https://github.com/example/repo",
+    "env": {
+      "CURSOR_API_KEY": {
+        "type": "secret_ref",
+        "secretId": "cursor-secret",
+        "version": "latest"
+      }
+    }
+  }
+}
+EOF
+
+run_expect 0 ./scripts/paperclip-api.sh agent-env-patch-template "$agent_json_file" PAPERCLIP_API_KEY paperclip-secret
+assert_stdout_contains "\"replaceAdapterConfig\": true"
+assert_stdout_contains "\"PAPERCLIP_API_KEY\""
+assert_stdout_contains "\"secretId\": \"paperclip-secret\""
+assert_stdout_contains "\"CURSOR_API_KEY\""
+pass "agent-env-patch-template merges a secret ref into adapterConfig.env"
+cleanup_last
+
+run_expect 0 ./scripts/paperclip-api.sh agent-paperclip-key-patch-template "$agent_json_file" paperclip-secret 7
+assert_stdout_contains "\"PAPERCLIP_API_KEY\""
+assert_stdout_contains "\"version\": 7"
+pass "agent-paperclip-key-patch-template supports explicit secret versions"
+cleanup_last
+
+rm -f "$agent_json_file"
 
 run_expect 0 ./scripts/paperclip-operator-unblock.sh paperclip-secret cursor-secret
 assert_stdout_contains "Paperclip Cursor Cloud unblock handoff"
