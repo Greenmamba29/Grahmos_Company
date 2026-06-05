@@ -261,6 +261,23 @@ task_id_output="$(PAPERCLIP_API_URL="$BASE_URL" PAPERCLIP_TASK_ID="task-from-env
 assert_eq "task-from-env" "$task_id_output" "PAPERCLIP_TASK_ID should override network lookups"
 assert_eq "0" "$(request_count)" "PAPERCLIP_TASK_ID resolution should not hit the API"
 
+clear_requests
+resume_payload="$(PAPERCLIP_API_URL="$BASE_URL" "$API_SCRIPT" issue-resume-payload "Resuming after the auth fix.")"
+assert_contains "$resume_payload" "\"resume\": true" "issue-resume-payload should print a resume payload"
+assert_eq "0" "$(request_count)" "payload-only commands should not hit the API"
+
+clear_requests
+blocked_payload="$(PAPERCLIP_API_URL="$BASE_URL" "$API_SCRIPT" issue-blocked-payload "Paperclip operator" "Inject PAPERCLIP_API_KEY" "Current shell has no control-plane auth")"
+assert_contains "$blocked_payload" "\"status\": \"blocked\"" "issue-blocked-payload should print a blocked payload"
+assert_contains "$blocked_payload" "Unblock owner: Paperclip operator" "issue-blocked-payload should include the unblock owner"
+assert_eq "0" "$(request_count)" "blocked payload generation should not hit the API"
+
+clear_requests
+confirm_plan_payload="$(PAPERCLIP_API_URL="$BASE_URL" "$API_SCRIPT" issue-confirm-plan-payload run-issue-id "Approve plan revision" "Please approve the latest plan revision." revision-123)"
+assert_contains "$confirm_plan_payload" "\"kind\": \"request_confirmation\"" "issue-confirm-plan-payload should print a confirmation payload"
+assert_contains "$confirm_plan_payload" "\"idempotencyKey\": \"confirmation:run-issue-id:plan:revision-123\"" "issue-confirm-plan-payload should include the plan idempotency key"
+assert_eq "0" "$(request_count)" "plan confirmation payload generation should not hit the API"
+
 write_state "success"
 clear_requests
 run_issue_output="$(run_api current-issue-id)"

@@ -3,11 +3,15 @@
 Use these examples with `./scripts/paperclip-api.sh` once the shell has either a
 board-authenticated session or `PAPERCLIP_API_KEY`.
 
+If you only need to inspect the generated JSON without sending a request, prefer
+the `*-payload` commands shown below.
+
 ## Resume comment on the current issue
 
 Use the built-in helper for the most common resume flow:
 
 ```bash
+./scripts/paperclip-api.sh issue-resume-payload "Resuming the task after the runtime auth fix."
 ./scripts/paperclip-api.sh issue-resume-current "Resuming the task after the runtime auth fix."
 ```
 
@@ -25,6 +29,7 @@ printf '%s\n' '{
 Use the built-in helper when the issue needs a reopen signal and a resume signal:
 
 ```bash
+./scripts/paperclip-api.sh issue-reopen-payload "Reopening this issue for follow-up work."
 ./scripts/paperclip-api.sh issue-reopen-current "Reopening this issue for follow-up work."
 ```
 
@@ -43,6 +48,7 @@ printf '%s\n' '{
 Use the built-in helper when the issue should record an interrupt:
 
 ```bash
+./scripts/paperclip-api.sh issue-interrupt-payload "Interrupting current execution pending external input."
 ./scripts/paperclip-api.sh issue-interrupt-current "Interrupting current execution pending external input."
 ```
 
@@ -60,6 +66,7 @@ printf '%s\n' '{
 Use the built-in helper for the most common done flow:
 
 ```bash
+./scripts/paperclip-api.sh issue-done-payload "Completed and verified in the cloud workspace."
 ./scripts/paperclip-api.sh issue-done-current "Completed and verified in the cloud workspace."
 ```
 
@@ -78,6 +85,10 @@ Use the built-in helper when the issue must name an unblock owner and required
 action:
 
 ```bash
+./scripts/paperclip-api.sh issue-blocked-payload \
+  "Paperclip operator" \
+  "Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env" \
+  "The shell can reach the private deployment but cannot mutate issue state."
 ./scripts/paperclip-api.sh issue-blocked-current \
   "Paperclip operator" \
   "Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env" \
@@ -89,6 +100,9 @@ action:
 Use the built-in helper for the most common single-question flow:
 
 ```bash
+./scripts/paperclip-api.sh issue-ask-user-question-payload \
+  runtime-auth \
+  "Which Paperclip secret should back PAPERCLIP_API_KEY for this agent?"
 ./scripts/paperclip-api.sh issue-ask-user-question-current \
   runtime-auth \
   "Which Paperclip secret should back PAPERCLIP_API_KEY for this agent?"
@@ -114,6 +128,10 @@ printf '%s\n' '{
 Use the built-in helper for the common single-task suggestion flow:
 
 ```bash
+./scripts/paperclip-api.sh issue-suggest-task-payload \
+  "Suggested follow-up tasks" \
+  "Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env" \
+  "Add the agent API key as a secret-backed env var so the cloud shell can comment on and update issues."
 ./scripts/paperclip-api.sh issue-suggest-task-current \
   "Suggested follow-up tasks" \
   "Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env" \
@@ -149,6 +167,11 @@ revision. Replace the placeholder values before sending:
 Use the built-in helper when you only need the standard plan-confirmation shape:
 
 ```bash
+./scripts/paperclip-api.sh issue-confirm-plan-payload \
+  run-issue-id \
+  "Approve plan revision" \
+  "Please approve the latest plan revision before implementation starts." \
+  revision-123
 ./scripts/paperclip-api.sh issue-confirm-plan-current \
   "Approve plan revision" \
   "Please approve the latest plan revision before implementation starts." \
@@ -188,6 +211,7 @@ printf '%s\n' "{
 Use the built-in helper for the most common in-review flow:
 
 ```bash
+./scripts/paperclip-api.sh issue-in-review-payload "Work is ready for a named reviewer."
 ./scripts/paperclip-api.sh issue-in-review-current "Work is ready for a named reviewer."
 ```
 

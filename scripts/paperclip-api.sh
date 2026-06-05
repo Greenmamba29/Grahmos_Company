@@ -16,26 +16,35 @@ Usage:
   ./scripts/paperclip-api.sh issue-comments-current [AFTER_COMMENT_ID]
   ./scripts/paperclip-api.sh issue-comment ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-comment-current JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-resume-payload BODY
   ./scripts/paperclip-api.sh issue-resume ISSUE_ID BODY
   ./scripts/paperclip-api.sh issue-resume-current BODY
+  ./scripts/paperclip-api.sh issue-reopen-payload BODY
   ./scripts/paperclip-api.sh issue-reopen ISSUE_ID BODY
   ./scripts/paperclip-api.sh issue-reopen-current BODY
+  ./scripts/paperclip-api.sh issue-interrupt-payload BODY
   ./scripts/paperclip-api.sh issue-interrupt ISSUE_ID BODY
   ./scripts/paperclip-api.sh issue-interrupt-current BODY
   ./scripts/paperclip-api.sh issue-interaction ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-interaction-current JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-ask-user-question-payload QUESTION_ID PROMPT
   ./scripts/paperclip-api.sh issue-ask-user-question ISSUE_ID QUESTION_ID PROMPT
   ./scripts/paperclip-api.sh issue-ask-user-question-current QUESTION_ID PROMPT
+  ./scripts/paperclip-api.sh issue-suggest-task-payload TITLE TASK_TITLE TASK_BODY [BODY]
   ./scripts/paperclip-api.sh issue-suggest-task ISSUE_ID TITLE TASK_TITLE TASK_BODY [BODY]
   ./scripts/paperclip-api.sh issue-suggest-task-current TITLE TASK_TITLE TASK_BODY [BODY]
+  ./scripts/paperclip-api.sh issue-confirm-plan-payload ISSUE_ID TITLE BODY REVISION_ID
   ./scripts/paperclip-api.sh issue-confirm-plan ISSUE_ID TITLE BODY REVISION_ID
   ./scripts/paperclip-api.sh issue-confirm-plan-current TITLE BODY REVISION_ID
   ./scripts/paperclip-api.sh issue-update ISSUE_ID JSON_FILE|-
   ./scripts/paperclip-api.sh issue-update-current JSON_FILE|-
+  ./scripts/paperclip-api.sh issue-done-payload COMMENT
   ./scripts/paperclip-api.sh issue-done ISSUE_ID COMMENT
   ./scripts/paperclip-api.sh issue-done-current COMMENT
+  ./scripts/paperclip-api.sh issue-in-review-payload COMMENT
   ./scripts/paperclip-api.sh issue-in-review ISSUE_ID COMMENT
   ./scripts/paperclip-api.sh issue-in-review-current COMMENT
+  ./scripts/paperclip-api.sh issue-blocked-payload UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
   ./scripts/paperclip-api.sh issue-blocked ISSUE_ID UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
   ./scripts/paperclip-api.sh issue-blocked-current UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
 
@@ -50,19 +59,28 @@ Examples:
   ./scripts/paperclip-api.sh issue-get-current
   ./scripts/paperclip-api.sh issue-comments 123e4567-e89b-12d3-a456-426614174000
   ./scripts/paperclip-api.sh issue-comments-current
+  ./scripts/paperclip-api.sh issue-resume-payload "Resuming after the auth fix."
   ./scripts/paperclip-api.sh issue-resume-current "Resuming after the auth fix."
+  ./scripts/paperclip-api.sh issue-reopen-payload "Reopening this issue for follow-up work."
   ./scripts/paperclip-api.sh issue-reopen-current "Reopening this issue for follow-up work."
+  ./scripts/paperclip-api.sh issue-interrupt-payload "Interrupting current execution pending external input."
   ./scripts/paperclip-api.sh issue-interrupt-current "Interrupting current execution pending external input."
   printf '{"body":"Work started.","resume":true}\n' | \
     ./scripts/paperclip-api.sh issue-comment 123e4567-e89b-12d3-a456-426614174000 -
+  ./scripts/paperclip-api.sh issue-ask-user-question-payload runtime-auth "Which Paperclip secret should back PAPERCLIP_API_KEY?"
   ./scripts/paperclip-api.sh issue-ask-user-question-current runtime-auth "Which Paperclip secret should back PAPERCLIP_API_KEY?"
+  ./scripts/paperclip-api.sh issue-suggest-task-payload "Suggested follow-up" "Inject PAPERCLIP_API_KEY" "Add the agent key as a secret-backed env var."
   ./scripts/paperclip-api.sh issue-suggest-task-current "Suggested follow-up" "Inject PAPERCLIP_API_KEY" "Add the agent key as a secret-backed env var."
+  ./scripts/paperclip-api.sh issue-confirm-plan-payload run-issue-id "Approve plan revision" "Please approve the latest plan revision." revision-123
   ./scripts/paperclip-api.sh issue-confirm-plan-current "Approve plan revision" "Please approve the latest plan revision." revision-123
   ./scripts/paperclip-api.sh issue-interaction 123e4567-e89b-12d3-a456-426614174000 interaction.json
   ./scripts/paperclip-api.sh issue-update 123e4567-e89b-12d3-a456-426614174000 payload.json
   ./scripts/paperclip-api.sh issue-update-current payload.json
+  ./scripts/paperclip-api.sh issue-done-payload "Completed and verified."
   ./scripts/paperclip-api.sh issue-done-current "Completed and verified."
+  ./scripts/paperclip-api.sh issue-in-review-payload "Ready for a named reviewer."
   ./scripts/paperclip-api.sh issue-in-review-current "Ready for a named reviewer."
+  ./scripts/paperclip-api.sh issue-blocked-payload "Paperclip operator" "Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env" "The runtime currently cannot mutate issue state."
   ./scripts/paperclip-api.sh issue-blocked \
     123e4567-e89b-12d3-a456-426614174000 \
     "Paperclip operator" \
@@ -80,6 +98,7 @@ Notes:
   - `session` checks whether the current shell has a board-authenticated session.
   - `current-run-issues` uses `PAPERCLIP_RUN_ID` to query the run-bound issue list.
   - Issue and agent commands require PAPERCLIP_API_KEY.
+  - `*-payload` commands print generated JSON without requiring auth or issuing network requests.
   - Comment and interaction helpers accept the raw JSON body expected by the API.
   - `issue-resume*`, `issue-reopen*`, `issue-interrupt*`, `issue-done*`, and `issue-in-review*` generate JSON payloads for common issue actions.
   - `issue-ask-user-question*`, `issue-suggest-task*`, and `issue-confirm-plan*` generate JSON payloads for common interaction flows.
@@ -630,6 +649,13 @@ case "$cmd" in
     require_value "$source" "JSON_FILE|- is required"
     request_current_issue_with_source POST "/comments" "$source"
     ;;
+  issue-resume-payload)
+    body="${2:-}"
+    require_value "$body" "BODY is required"
+    body_file="$(write_comment_payload "$body" true)"
+    print_json < "$body_file"
+    rm -f "$body_file"
+    ;;
   issue-resume)
     require_auth
     issue_id="${2:-}"
@@ -644,6 +670,13 @@ case "$cmd" in
     require_value "$body" "BODY is required"
     request_current_issue_generated_comment "$body" true
     ;;
+  issue-reopen-payload)
+    body="${2:-}"
+    require_value "$body" "BODY is required"
+    body_file="$(write_comment_payload "$body" true true)"
+    print_json < "$body_file"
+    rm -f "$body_file"
+    ;;
   issue-reopen)
     require_auth
     issue_id="${2:-}"
@@ -657,6 +690,13 @@ case "$cmd" in
     body="${2:-}"
     require_value "$body" "BODY is required"
     request_current_issue_generated_comment "$body" true true
+    ;;
+  issue-interrupt-payload)
+    body="${2:-}"
+    require_value "$body" "BODY is required"
+    body_file="$(write_comment_payload "$body" false false true)"
+    print_json < "$body_file"
+    rm -f "$body_file"
     ;;
   issue-interrupt)
     require_auth
@@ -686,6 +726,15 @@ case "$cmd" in
     require_value "$source" "JSON_FILE|- is required"
     request_current_issue_with_source POST "/interactions" "$source"
     ;;
+  issue-ask-user-question-payload)
+    question_id="${2:-}"
+    prompt="${3:-}"
+    require_value "$question_id" "QUESTION_ID and PROMPT are required"
+    require_value "$prompt" "QUESTION_ID and PROMPT are required"
+    body_file="$(write_ask_user_question_payload "$question_id" "$prompt")"
+    print_json < "$body_file"
+    rm -f "$body_file"
+    ;;
   issue-ask-user-question)
     require_auth
     issue_id="${2:-}"
@@ -705,6 +754,18 @@ case "$cmd" in
     require_value "$prompt" "QUESTION_ID and PROMPT are required"
     body_file="$(write_ask_user_question_payload "$question_id" "$prompt")"
     request_current_issue_generated_interaction "$body_file"
+    ;;
+  issue-suggest-task-payload)
+    title="${2:-}"
+    task_title="${3:-}"
+    task_body="${4:-}"
+    body="${5:-Choose the suggested follow-up task.}"
+    require_value "$title" "TITLE, TASK_TITLE, and TASK_BODY are required"
+    require_value "$task_title" "TITLE, TASK_TITLE, and TASK_BODY are required"
+    require_value "$task_body" "TITLE, TASK_TITLE, and TASK_BODY are required"
+    body_file="$(write_suggest_task_payload "$title" "$task_title" "$task_body" "$body")"
+    print_json < "$body_file"
+    rm -f "$body_file"
     ;;
   issue-suggest-task)
     require_auth
@@ -731,6 +792,19 @@ case "$cmd" in
     require_value "$task_body" "TITLE, TASK_TITLE, and TASK_BODY are required"
     body_file="$(write_suggest_task_payload "$title" "$task_title" "$task_body" "$body")"
     request_current_issue_generated_interaction "$body_file"
+    ;;
+  issue-confirm-plan-payload)
+    issue_id="${2:-}"
+    title="${3:-}"
+    body="${4:-}"
+    revision_id="${5:-}"
+    require_value "$issue_id" "ISSUE_ID, TITLE, BODY, and REVISION_ID are required"
+    require_value "$title" "ISSUE_ID, TITLE, BODY, and REVISION_ID are required"
+    require_value "$body" "ISSUE_ID, TITLE, BODY, and REVISION_ID are required"
+    require_value "$revision_id" "ISSUE_ID, TITLE, BODY, and REVISION_ID are required"
+    body_file="$(write_confirm_plan_payload "$issue_id" "$title" "$body" "$revision_id")"
+    print_json < "$body_file"
+    rm -f "$body_file"
     ;;
   issue-confirm-plan)
     require_auth
@@ -771,6 +845,13 @@ case "$cmd" in
     require_value "$source" "JSON_FILE|- is required"
     request_current_issue_with_source PATCH "" "$source"
     ;;
+  issue-done-payload)
+    comment="${2:-}"
+    require_value "$comment" "COMMENT is required"
+    body_file="$(write_status_payload "done" "$comment")"
+    print_json < "$body_file"
+    rm -f "$body_file"
+    ;;
   issue-done)
     require_auth
     issue_id="${2:-}"
@@ -785,6 +866,13 @@ case "$cmd" in
     require_value "$comment" "COMMENT is required"
     request_current_issue_generated_status "done" "$comment"
     ;;
+  issue-in-review-payload)
+    comment="${2:-}"
+    require_value "$comment" "COMMENT is required"
+    body_file="$(write_status_payload "in_review" "$comment")"
+    print_json < "$body_file"
+    rm -f "$body_file"
+    ;;
   issue-in-review)
     require_auth
     issue_id="${2:-}"
@@ -798,6 +886,16 @@ case "$cmd" in
     comment="${2:-}"
     require_value "$comment" "COMMENT is required"
     request_current_issue_generated_status "in_review" "$comment"
+    ;;
+  issue-blocked-payload)
+    unblock_owner="${2:-}"
+    required_action="${3:-}"
+    details="${4:-}"
+    require_value "$unblock_owner" "UNBLOCK_OWNER and REQUIRED_ACTION are required"
+    require_value "$required_action" "UNBLOCK_OWNER and REQUIRED_ACTION are required"
+    body_file="$(write_blocked_payload "$unblock_owner" "$required_action" "$details")"
+    print_json < "$body_file"
+    rm -f "$body_file"
     ;;
   issue-blocked)
     require_auth

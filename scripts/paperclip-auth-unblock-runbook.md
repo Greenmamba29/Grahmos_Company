@@ -68,12 +68,17 @@ Expected result:
 ### Resume the current issue
 
 ```bash
+./scripts/paperclip-api.sh issue-resume-payload "Resuming after PAPERCLIP_API_KEY injection."
 ./scripts/paperclip-api.sh issue-resume-current "Resuming after PAPERCLIP_API_KEY injection."
 ```
 
 ### If the issue is still externally blocked
 
 ```bash
+./scripts/paperclip-api.sh issue-blocked-payload \
+  "Paperclip operator" \
+  "Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env" \
+  "The runtime still cannot mutate issue state after the latest heartbeat."
 ./scripts/paperclip-api.sh issue-blocked-current \
   "Paperclip operator" \
   "Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env" \
@@ -83,12 +88,14 @@ Expected result:
 ### If the issue is ready for review
 
 ```bash
+./scripts/paperclip-api.sh issue-in-review-payload "Work is ready for a named reviewer."
 ./scripts/paperclip-api.sh issue-in-review-current "Work is ready for a named reviewer."
 ```
 
 ### If the issue is complete
 
 ```bash
+./scripts/paperclip-api.sh issue-done-payload "Completed and verified in the cloud workspace."
 ./scripts/paperclip-api.sh issue-done-current "Completed and verified in the cloud workspace."
 ```
 
@@ -97,6 +104,9 @@ Expected result:
 ### Ask a structured question
 
 ```bash
+./scripts/paperclip-api.sh issue-ask-user-question-payload \
+  runtime-auth \
+  "Which Paperclip secret should back PAPERCLIP_API_KEY for this agent?"
 ./scripts/paperclip-api.sh issue-ask-user-question-current \
   runtime-auth \
   "Which Paperclip secret should back PAPERCLIP_API_KEY for this agent?"
@@ -105,6 +115,10 @@ Expected result:
 ### Suggest a follow-up task
 
 ```bash
+./scripts/paperclip-api.sh issue-suggest-task-payload \
+  "Suggested follow-up tasks" \
+  "Verify authenticated heartbeat end-to-end" \
+  "Run the helper suite, then leave a task comment and final disposition from the shell."
 ./scripts/paperclip-api.sh issue-suggest-task-current \
   "Suggested follow-up tasks" \
   "Verify authenticated heartbeat end-to-end" \
@@ -114,6 +128,11 @@ Expected result:
 ### Request plan confirmation
 
 ```bash
+./scripts/paperclip-api.sh issue-confirm-plan-payload \
+  run-issue-id \
+  "Approve plan revision" \
+  "Please approve the latest plan revision before implementation starts." \
+  revision-123
 ./scripts/paperclip-api.sh issue-confirm-plan-current \
   "Approve plan revision" \
   "Please approve the latest plan revision before implementation starts." \
