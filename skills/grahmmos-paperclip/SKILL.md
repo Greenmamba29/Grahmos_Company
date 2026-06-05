@@ -46,6 +46,95 @@ The CEO agent uses the Cursor Cloud adapter which runs in Cursor's hosted cloud 
 - CURSOR_API_KEY: Cursor background agent API key (crsr_...)
 - GH_TOKEN: GitHub fine-grained PAT (github_pat_...) with all-repos access
 
+### Control-Plane Auth Caveat
+Cursor Cloud runs get Cursor/GitHub credentials for repository work, but the shell
+does not automatically inherit a private Paperclip board session. In practice, the
+cloud runtime may expose:
+- PAPERCLIP_AGENT_ID
+- PAPERCLIP_COMPANY_ID
+- PAPERCLIP_API_URL
+- PAPERCLIP_RUN_ID
+- PAPERCLIP_WAKE_REASON
+
+...while still omitting:
+- PAPERCLIP_API_KEY
+- PAPERCLIP_TASK_ID
+- PAPERCLIP_WAKE_COMMENT_ID
+
+Without a board-authenticated session or `PAPERCLIP_API_KEY`, the agent cannot call
+endpoints such as:
+- `GET /api/heartbeat-runs/{runId}/issues`
+- `GET /api/agents/me/inbox-lite`
+- `POST /api/issues/{issueId}/comments`
+- `PATCH /api/issues/{issueId}`
+- `POST /api/issues/{issueId}/interactions`
+
+This means a Cursor Cloud agent can work on the Git repo, but it cannot read or
+update Paperclip issues unless you explicitly provide a Paperclip auth path.
+Run `./scripts/paperclip-runtime-check.sh` in the cloud workspace to confirm the
+current runtime state before attempting issue operations. The runtime check
+distinguishes between:
+- a board-authenticated shell session that can resolve `/api/heartbeat-runs/{runId}/issues`
+- bearer-token access through `PAPERCLIP_API_KEY`
+
+Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
+`me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,
+and `PATCH /api/issues/{issueId}` without rebuilding the curl commands each heartbeat.
+Use `./scripts/paperclip-api.sh issue-comment ...` when the execution contract
+requires a task comment, including structured fields like `resume`, `reopen`, or
+`interrupt`.
+Use `./scripts/paperclip-api.sh issue-update-current ...` when the run needs to
+set the current issue disposition without first resolving the issue ID manually.
+Use `./scripts/paperclip-api.sh issue-interaction ...` /
+`./scripts/paperclip-api.sh issue-interaction-current ...` when the board or user
+must respond through `suggest_tasks`, `ask_user_questions`, or
+`request_confirmation`.
+Use `./scripts/paperclip-api.sh interaction-accept ...`,
+`interaction-reject ...`, `interaction-cancel ...`, and
+`interaction-respond ...` to complete the follow-up interaction lifecycle once a
+board/user response exists.
+Use `./scripts/paperclip-api.sh issue-blocked ...` when the correct disposition is
+`blocked` and the issue must name an unblock owner and required action.
+Use `./scripts/paperclip-api.sh current-issue-id` or
+`./scripts/paperclip-api.sh issue-comment-current ...` /
+`./scripts/paperclip-api.sh issue-blocked-current ...` when the run should target
+the current task automatically. The helper prefers `PAPERCLIP_TASK_ID`; otherwise
+it only auto-selects when `inbox-lite` returns exactly one issue.
+
+#### Workaround
+Add a long-lived Paperclip agent API key to the Cursor Cloud adapter environment as
+`PAPERCLIP_API_KEY` using a Paperclip secret reference. This gives the shell a
+bearer-token path even when the private Paperclip web session is unavailable. The
+request shape is:
+
+```json
+{
+  "adapterType": "cursor_cloud",
+  "adapterConfig": {
+    "env": {
+      "CURSOR_API_KEY": {
+        "type": "secret_ref",
+        "secretId": "cursor-api-key-secret-id",
+        "version": "latest"
+      },
+      "PAPERCLIP_API_KEY": {
+        "type": "secret_ref",
+        "secretId": "osiris-paperclip-agent-key-secret-id",
+        "version": "latest"
+      }
+    }
+  }
+}
+```
+
+Once this is set, agent code should authenticate with:
+- `Authorization: Bearer $PAPERCLIP_API_KEY`
+- `X-Paperclip-Run-Id: $PAPERCLIP_RUN_ID` on mutating requests
+
+Next action for Osiris Hermes: update the Cursor Cloud agent configuration to inject
+`PAPERCLIP_API_KEY`, then rerun the heartbeat so the CEO agent can check inbox items
+and update the assigned issue disposition directly.
+
 ### Critical Setup Requirement
 The Cursor Cloud adapter uses Cursor's GitHub App (NOT the GH_TOKEN) to clone repos.
 You MUST connect your GitHub account to Cursor in:
@@ -71,6 +160,9 @@ Grahmos_Company/
   README.md          # Repository readme
   LICENSE            # MIT License
   .gitignore         # Git ignore
+  scripts/
+    paperclip-api.sh           # Paperclip API helper for issue operations
+    paperclip-runtime-check.sh # Runtime auth diagnostic helper
   skills/
     grahmmos-paperclip/
       SKILL.md       # This file - company setup documentation
@@ -98,6 +190,34 @@ Grahmos_Company/
 **Cause:** Hermes Agent (local) workspace not initialized
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
+
+### Error: `{"error":"Unauthorized"}` from `/api/agents/me` or `/api/issues/...`
+**Cause:** Cursor Cloud runtime is missing `PAPERCLIP_API_KEY`, so the agent has
+metadata about its run but no Paperclip bearer token for control-plane calls.
+**Fix:** Add `PAPERCLIP_API_KEY` to the Cursor Cloud adapter `env` as a Paperclip
+agent key secret, then retry the heartbeat. Include `X-Paperclip-Run-Id` on
+mutating requests for issue updates, comments, and interactions.
+
+### Error: `401 {"error":"Board authentication required"}`
+**Cause:** The shell can reach the private Paperclip deployment, but it does not
+have a board-authenticated session cookie. This is common in Cursor Cloud shells.
+**Fix:**
+1. Run `./scripts/paperclip-runtime-check.sh` to confirm the failure mode.
+2. If issue operations must happen from the shell, inject `PAPERCLIP_API_KEY` into
+   the Cursor Cloud adapter environment and retry.
+3. Use `./scripts/paperclip-api.sh issue-comment ...` once auth is available so the
+   agent can satisfy the execution contract requirement to leave a task comment.
+
+### Error: `Configured OpenCode model is unavailable: openai/gpt-5.1-codex-mini`
+**Cause:** A local OpenCode-backed Paperclip agent is pinned to a model slug that is
+no longer offered by the configured OpenCode backend.
+**Fix:**
+1. Update the affected agent's adapter model to one of the currently reported
+   available models.
+2. Rerun the failed heartbeat or recovery action after saving the adapter change.
+3. If the recovery task is already open, use the checked-in blocker payload
+   `paperclip/payloads/gra-39-echo-model-blocked.json` once Paperclip auth is
+   restored so the issue records the exact stale-model failure and unblock owner.
 
 ## Heartbeat Schedule
 - Heartbeat on interval: ON

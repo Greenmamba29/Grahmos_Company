@@ -1,0 +1,4 @@
+{
+  "body": "Resuming after Paperclip control-plane auth was restored. Repo-side helpers, diagnostics, and task-update workflows are implemented on branch cursor/echo-run-recovery-9c83 and verified locally.",
+  "resume": true
+}
