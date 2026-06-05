@@ -189,6 +189,11 @@ if run_issues_status == 200:
                 "access_path": "board_session",
                 "issue_count": issue_count,
                 "api_helper_ready": bearer_me_status == 200 and bearer_inbox_status == 200,
+                "heartbeat_next_action_state": (
+                    "current_issue_playbook"
+                    if (bearer_me_status == 200 and bearer_inbox_status == 200)
+                    else "warn_session_only"
+                ),
             },
             0,
         )
@@ -206,6 +211,7 @@ if api_key:
                     "issue_operations_blocked": True,
                     "access_path": "paperclip_api_key",
                     "bearer_me_body": bearer_me_body,
+                    "heartbeat_next_action_state": "refresh_blocked_artifacts",
                 },
                 3,
             )
@@ -222,6 +228,7 @@ if api_key:
                     "issue_operations_blocked": True,
                     "access_path": "paperclip_api_key",
                     "bearer_inbox_body": bearer_inbox_body,
+                    "heartbeat_next_action_state": "refresh_blocked_artifacts",
                 },
                 3,
             )
@@ -240,6 +247,7 @@ if api_key:
                 "access_path": "paperclip_api_key",
                 "issue_count": issue_count,
                 "api_helper_ready": True,
+                "heartbeat_next_action_state": "current_issue_playbook",
             },
             0,
         )
@@ -264,6 +272,7 @@ if session_status == 401:
                     or run_log_with_header_status == 200
                     or workspace_ops_with_header_status == 200
                 ),
+                "heartbeat_next_action_state": "refresh_blocked_artifacts",
                 "unblock_owner": unblock_owner,
                 "required_action": required_action,
                 "next_helper_commands": next_helper_commands,
@@ -313,6 +322,7 @@ if health_status != 200:
                 "diagnosis": "health_unavailable",
                 "issue_operations_blocked": True,
                 "health_probe_detail": health_body,
+                "heartbeat_next_action_state": "refresh_blocked_artifacts",
             },
             1,
         )
@@ -328,6 +338,7 @@ if session_status != 200:
                 "diagnosis": "unexpected_session_status",
                 "issue_operations_blocked": True,
                 "session_body": session_body,
+                "heartbeat_next_action_state": "refresh_blocked_artifacts",
             },
             1,
         )
@@ -341,6 +352,7 @@ if json_mode:
             "diagnosis": "run_issue_lookup_failed",
             "issue_operations_blocked": True,
             "run_issues_body": run_issues_body,
+            "heartbeat_next_action_state": "refresh_blocked_artifacts",
         },
         1,
     )

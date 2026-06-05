@@ -248,6 +248,7 @@ PY
 
 run_mock_runtime_check_json() {
   local scenario="$1"
+  local expected_exit="${2:-2}"
   local port server_pid
   port="$(python3 - <<'PY'
 import socket
@@ -392,13 +393,14 @@ PY
   server_pid=$!
 
   trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' RETURN
-  run_expect 2 env \
+  run_expect "$expected_exit" env \
     PAPERCLIP_API_URL="http://127.0.0.1:$port" \
     PAPERCLIP_AGENT_ID="agent-123" \
     PAPERCLIP_COMPANY_ID="company-123" \
     PAPERCLIP_RUN_ID="run-123" \
     PAPERCLIP_WORKSPACE_CWD="/workspace" \
     PAPERCLIP_WORKSPACE_SOURCE="agent-run" \
+    PAPERCLIP_API_KEY="${PAPERCLIP_API_KEY:-}" \
     GH_TOKEN="gh-test-token" \
     CLOUD_AGENT_INJECTED_SECRET_NAMES="GH_TOKEN" \
     ./scripts/paperclip-runtime-check.sh --json
@@ -633,7 +635,22 @@ assert_stdout_json_value "run_id_header_read_access" "false"
 assert_stdout_json_value "summary.run_log_with_run_header_status" "401"
 assert_stdout_json_value "summary.workspace_operations_with_run_header_status" "401"
 assert_stdout_json_value "run_scoped_debug_read_access" "false"
+assert_stdout_json_value "heartbeat_next_action_state" "refresh_blocked_artifacts"
 pass "paperclip-runtime-check emits structured JSON diagnosis"
+cleanup_last
+
+run_mock_runtime_check_json "board-session-ok" 0
+assert_stdout_json_value "diagnosis" "board_session_ok"
+assert_stdout_json_value "api_helper_ready" "false"
+assert_stdout_json_value "heartbeat_next_action_state" "warn_session_only"
+pass "paperclip-runtime-check reports session-only next action state"
+cleanup_last
+
+PAPERCLIP_API_KEY="paperclip-test-token" run_mock_runtime_check_json "api-key-ok" 0
+assert_stdout_json_value "diagnosis" "paperclip_api_key_ok"
+assert_stdout_json_value "api_helper_ready" "true"
+assert_stdout_json_value "heartbeat_next_action_state" "current_issue_playbook"
+pass "paperclip-runtime-check reports API-helper-ready next action state"
 cleanup_last
 
 report_path="$(mktemp)"

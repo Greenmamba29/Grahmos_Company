@@ -9,6 +9,9 @@ This is the Company run main repo for Grahmos.
   session or a `PAPERCLIP_API_KEY` bearer token.
 - Add `--json` when you need the same diagnosis as structured machine-readable data
   for another script or report generator.
+- The JSON output includes `heartbeat_next_action_state`, which tells automation
+  whether the next step is to refresh blocked artifacts, warn on session-only
+  visibility, or switch to the current-issue playbook.
 - If the script exits with `2`, the agent can still work on the Git repository but
   cannot read or mutate Paperclip issues from the shell yet.
 - Even if `/api/health` is degraded or returns a non-200 status, the runtime check

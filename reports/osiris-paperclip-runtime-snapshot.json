@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-06-05T23:49:07Z",
+  "generated_at": "2026-06-05T23:57:52Z",
   "git": {
     "branch": "cursor/paperclip-runtime-tooling-82aa",
-    "commit": "5edb203a4e556cb4b555f8f0b25c2aab074b31d8"
+    "commit": "137cebe812727aef9a2a7b42be08127caa37d972"
   },
   "runtime_check_exit_code": 2,
   "runtime": {
@@ -38,6 +38,7 @@
     "paperclip_api_key_injected": false,
     "run_id_header_read_access": false,
     "run_scoped_debug_read_access": false,
+    "heartbeat_next_action_state": "refresh_blocked_artifacts",
     "unblock_owner": "Paperclip operator",
     "required_action": "inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env.",
     "next_helper_commands": [

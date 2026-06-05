@@ -82,18 +82,18 @@ print("true" if data.get("issue_operations_blocked") else "false")
 PY
 )"
 
-api_helper_ready="$(python3 - "$diagnosis_file" <<'PY'
+next_action_state="$(python3 - "$diagnosis_file" <<'PY'
 import json
 import sys
 
 data = json.load(open(sys.argv[1]))
-print("true" if data.get("api_helper_ready") or data.get("summary", {}).get("api_helper_ready") else "false")
+print(data.get("heartbeat_next_action_state", "refresh_blocked_artifacts"))
 PY
 )"
 
 printf 'Runtime diagnosis: %s (exit %s)\n' "$diagnosis" "$runtime_status"
 
-if [[ "$blocked_flag" == "true" ]]; then
+if [[ "$next_action_state" == "refresh_blocked_artifacts" || "$blocked_flag" == "true" ]]; then
   "$REFRESH_ARTIFACTS" "$output_dir" "$paperclip_secret_id" "$cursor_secret_id"
   cat <<EOF
 Heartbeat disposition: blocked on Paperclip auth.
@@ -108,7 +108,7 @@ EOF
   exit 0
 fi
 
-if [[ "$api_helper_ready" != "true" ]]; then
+if [[ "$next_action_state" == "warn_session_only" ]]; then
   cat <<EOF
 Heartbeat disposition: run visibility available, but Paperclip API helper is not ready.
 Run-scoped reads succeeded, but shell issue helpers still require PAPERCLIP_API_KEY.
