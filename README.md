@@ -72,6 +72,9 @@ What we verified from a cloud-agent runtime:
   return `401 Unauthorized` or `403 Board access required` without a Paperclip session
 - the frontend uses cookie-backed auth (`credentials: include`) rather than a
   simple bearer token flow exposed to the runtime
+- the shipped web app uses POST auth endpoints such as `/api/auth/sign-in/email`
+  and `/api/auth/sign-up/email`, but those only establish user sessions; they do
+  not grant company membership or board access by themselves
 
 If a cloud agent must update issue state directly, the board/runtime needs to
 provide one of the following:

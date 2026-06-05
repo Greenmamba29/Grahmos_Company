@@ -109,6 +109,9 @@ and agent runtime state require an authenticated Paperclip session.
   `GET /api/heartbeat-runs/.../issues` fail without a Paperclip-authenticated session
 - the shipped Paperclip frontend uses cookie-backed auth (`credentials: include`),
   so GH_TOKEN alone is not sufficient for these endpoints
+- the web auth flow does expose POST endpoints such as `/api/auth/sign-in/email`
+  and `/api/auth/sign-up/email`, which validate credentials and create user
+  sessions, but they still do not provide board/company access on their own
 
 **Fix:** Provide one of the following before expecting cloud agents to update
 Paperclip issue state directly:
