@@ -1,0 +1,4 @@
+scenario,team_customers,growth_customers,agency_pro_customers,subscription_mrr,subscription_arr,annual_setup_revenue,total_projected_annual_revenue
+Conservative,8,3,1,8688,104256,18000,122256
+Base,18,7,2,19173,230076,48000,278076
+Aggressive,35,14,5,40446,485352,105000,590352
