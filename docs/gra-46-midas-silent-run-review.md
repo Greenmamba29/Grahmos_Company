@@ -52,10 +52,10 @@ that occurs before normal logging begins.
      confirm whether startup failed before the run logger attached.
 
 3. **Stale repository metadata**
-   - The repo still says Midas is `Hermes Agent (local)`, but the live run says
-     `opencode_local`.
-   - After resolving the active run, update the repo metadata or docs so future
-     reviews do not start from the wrong adapter assumption.
+   - This was present at the start of the review: the repo said Midas was
+     `Hermes Agent (local)` while the live run said `opencode_local`.
+   - The repo metadata was corrected in this heartbeat so future reviews start
+     from the live adapter type.
 
 ## Operator unblock
 
@@ -76,6 +76,4 @@ that occurs before normal logging begins.
    - inspect Paperclip-host adapter logs for pre-log startup failure inside
      `opencode_local`
    - repair that startup issue and rerun the heartbeat
-4. After recovery, update the Midas adapter documentation in the repo so the
-   recorded adapter type matches the live Paperclip configuration.
-5. Resume GRA-46 with a structured Paperclip issue update once auth is available.
+4. Resume GRA-46 with a structured Paperclip issue update once auth is available.

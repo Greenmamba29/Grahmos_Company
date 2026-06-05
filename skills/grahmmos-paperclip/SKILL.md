@@ -18,7 +18,7 @@ GrahmOS runs on a self-hosted Paperclip instance at: paperclip-agra.srv1675664.h
 | Casius Nexus | CTO - Chief Technology Officer | Hermes Agent (local) | Idle |
 | Apollo | CMO - Chief Marketing Officer | Hermes Agent (local) | Idle |
 | Athena | PM - Head of Product | Hermes Agent (local) | Idle |
-| Midas | CFO - Head of Revenue | Hermes Agent (local) | Idle |
+| Midas | CFO - Head of Revenue | opencode_local | Idle |
 | Echo | General - Content and Media Lead | Claude Code (local) | Idle |
 | Hermes-GTM | General - Sales and GTM Lead | Claude Code (local) | Idle |
 | Daedalus | General - UX/UI Lead | Claude Code (local) | Idle |
@@ -30,6 +30,11 @@ GrahmOS runs on a self-hosted Paperclip instance at: paperclip-agra.srv1675664.h
 - OpenClaw
 - Accio Source
 - JAM Media
+
+Midas is currently tracked from GRA-46 as `opencode_local` based on the live
+Paperclip continuation payload. If the Paperclip agent config changes again,
+update this table from the live run or board record instead of relying on stale
+repo memory.
 
 ## Cursor Cloud Adapter Setup (Osiris Hermes)
 
