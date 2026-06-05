@@ -70,6 +70,8 @@ This is the Company run main repo for Grahmos.
 - If you need the same handoff as structured JSON, run
   `./scripts/paperclip-write-runtime-snapshot.sh OUTPUT_PATH [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`
   to write a machine-readable runtime snapshot plus unblock payloads.
+- If you want the standard markdown and JSON artifacts refreshed together, run
+  `./scripts/paperclip-refresh-runtime-artifacts.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
 
 The comment helper accepts the raw JSON body expected by `POST /api/issues/{issueId}/comments`,
 so it can carry structured fields such as `resume`, `reopen`, or `interrupt` when
@@ -102,5 +104,7 @@ If you need that same information as a checked-in or shareable document,
 use `paperclip-write-runtime-report.sh` to write a markdown report file.
 If you need it for automation or downstream tooling, use
 `paperclip-runtime-check.sh --json` or `paperclip-write-runtime-snapshot.sh`.
+If you want to refresh both canonical runtime artifacts in one step, use
+`paperclip-refresh-runtime-artifacts.sh`.
 Run `./scripts/test-paperclip-helpers.sh` to smoke-test the helper CLI surface
 before relying on it in a live heartbeat.

@@ -359,6 +359,19 @@ rm -f "$snapshot_path"
 pass "paperclip-write-runtime-snapshot writes a JSON handoff snapshot"
 cleanup_last
 
+refresh_dir="$(mktemp -d)"
+run_expect 0 ./scripts/paperclip-refresh-runtime-artifacts.sh "$refresh_dir" paperclip-secret cursor-secret
+assert_stdout_contains "Refreshed runtime artifacts in $refresh_dir"
+if [[ ! -f "$refresh_dir/osiris-paperclip-runtime-report.md" ]]; then
+  fail "refresh helper did not write markdown report"
+fi
+if [[ ! -f "$refresh_dir/osiris-paperclip-runtime-snapshot.json" ]]; then
+  fail "refresh helper did not write json snapshot"
+fi
+rm -rf "$refresh_dir"
+pass "paperclip-refresh-runtime-artifacts refreshes both runtime artifacts"
+cleanup_last
+
 run_mock_runtime_check "degraded-health-auth-blocked"
 assert_stdout_contains "\"health_status\": 503"
 assert_stdout_contains "Health check did not return 200, but auth signals are sufficient to diagnose the blocker."
