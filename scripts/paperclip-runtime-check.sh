@@ -152,6 +152,12 @@ if session_status == 401:
             "Unblock owner: Paperclip operator\n"
             "Required action: inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env."
         )
+        print(
+            "Next helper commands:\n"
+            "  ./scripts/paperclip-api.sh adapter-env-template YOUR_PAPERCLIP_SECRET_ID [YOUR_CURSOR_SECRET_ID]\n"
+            "  ./scripts/paperclip-runtime-check.sh\n"
+            "  ./scripts/paperclip-api.sh current-issue-playbook"
+        )
     print(
         "Issue reads, comments, interactions, and disposition updates will fail "
         "until a board-authenticated session or PAPERCLIP_API_KEY is available."
