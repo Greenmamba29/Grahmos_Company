@@ -86,6 +86,35 @@ That means the correct operational outcome is to block the review rather than ma
    - a checked-in report or deliverable, or
    - an issue identifier in commit or PR metadata.
 
+## Heartbeat continuation note
+
+This continuation heartbeat did not change the underlying review outcome: the
+review is still blocked on Paperclip control-plane authentication. It did,
+however, add durable operator tooling to this repository so the blocker is now
+explicitly diagnosable and the correct blocked disposition can be prepared or
+submitted immediately once auth is restored.
+
+Added in this heartbeat:
+
+- `scripts/paperclip-runtime-check.sh` to distinguish healthy runtime,
+  board-authenticated session access, and missing `PAPERCLIP_API_KEY`
+  injection.
+- `scripts/paperclip-blocked-payload.sh` to generate a blocked status payload
+  with current runtime evidence.
+- `scripts/paperclip-api.sh` to wrap the common read and update endpoints used
+  during Paperclip heartbeats.
+- `scripts/paperclip-mark-blocked-current.sh` to resolve the current issue id,
+  build the blocked comment and status payloads, and submit them when auth is
+  available.
+
+Verification completed in this heartbeat:
+
+- `./scripts/paperclip-runtime-check.sh` exits `2`, confirming the runtime is
+  healthy but not authenticated to mutate issue state.
+- `./scripts/paperclip-mark-blocked-current.sh --dry-run` successfully resolves
+  the current issue via `PAPERCLIP_TASK_ID` and prints the exact comment and
+  status payloads that should be sent once auth is restored.
+
 ## Minimal command log
 
 The assessment above is based on these lightweight checks:

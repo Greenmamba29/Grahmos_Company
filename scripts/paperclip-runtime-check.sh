@@ -1,0 +1,173 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+required_vars=(
+  PAPERCLIP_API_URL
+  PAPERCLIP_AGENT_ID
+  PAPERCLIP_COMPANY_ID
+  PAPERCLIP_RUN_ID
+  PAPERCLIP_WORKSPACE_CWD
+  PAPERCLIP_WORKSPACE_SOURCE
+)
+
+missing=()
+for name in "${required_vars[@]}"; do
+  if [[ -z "${!name:-}" ]]; then
+    missing+=("$name")
+  fi
+done
+
+if (( ${#missing[@]} > 0 )); then
+  printf 'Missing required environment variables: %s\n' "${missing[*]}" >&2
+  exit 1
+fi
+
+python3 - <<'PY'
+import json
+import os
+import subprocess
+import sys
+import tempfile
+
+base = os.environ["PAPERCLIP_API_URL"].rstrip("/")
+run_id = os.environ["PAPERCLIP_RUN_ID"]
+api_key = os.environ.get("PAPERCLIP_API_KEY", "").strip()
+all_secret_names = [
+    item.strip()
+    for item in os.environ.get("CLOUD_AGENT_ALL_SECRET_NAMES", "").split(",")
+    if item.strip()
+]
+injected_secret_names = [
+    item.strip()
+    for item in os.environ.get("CLOUD_AGENT_INJECTED_SECRET_NAMES", "").split(",")
+    if item.strip()
+]
+
+
+def request(path: str, headers: dict[str, str] | None = None):
+    with tempfile.NamedTemporaryFile() as body_file:
+        command = [
+            "curl",
+            "-sSL",
+            "-H",
+            "Accept: application/json",
+        ]
+        for key, value in (headers or {}).items():
+            command.extend(["-H", f"{key}: {value}"])
+        command.extend(["-o", body_file.name, "-w", "%{http_code}", f"{base}{path}"])
+        result = subprocess.run(command, capture_output=True, text=True, check=False)
+        stdout = result.stdout.strip()
+        body = body_file.read().decode("utf-8", "replace")
+    if result.returncode != 0:
+        error_text = (result.stderr or stdout or "curl request failed").strip()
+        return None, error_text
+    try:
+        return int(stdout), body
+    except ValueError:
+        return None, body or stdout or "unable to parse HTTP status"
+
+
+def parse_json(text: str):
+    try:
+        return json.loads(text)
+    except Exception:
+        return None
+
+
+health_status, health_body = request("/api/health")
+session_status, session_body = request("/api/auth/get-session")
+run_issues_status, run_issues_body = request(f"/api/heartbeat-runs/{run_id}/issues")
+
+health_json = parse_json(health_body) if health_status == 200 else None
+session_json = parse_json(session_body)
+run_issues_json = parse_json(run_issues_body)
+
+bearer_me_status = None
+bearer_me_body = None
+bearer_inbox_status = None
+bearer_inbox_body = None
+if api_key:
+    bearer_headers = {"Authorization": f"Bearer {api_key}"}
+    bearer_me_status, bearer_me_body = request("/api/agents/me", bearer_headers)
+    bearer_inbox_status, bearer_inbox_body = request(
+        "/api/agents/me/inbox-lite", bearer_headers
+    )
+
+summary = {
+    "health_status": health_status,
+    "deployment_mode": None if not isinstance(health_json, dict) else health_json.get("deploymentMode"),
+    "deployment_exposure": None if not isinstance(health_json, dict) else health_json.get("deploymentExposure"),
+    "session_status": session_status,
+    "session_authenticated": session_status == 200,
+    "run_issues_status": run_issues_status,
+    "run_issues_accessible": run_issues_status == 200,
+    "api_key_present": bool(api_key),
+    "api_key_listed_in_all_secrets": "PAPERCLIP_API_KEY" in all_secret_names,
+    "api_key_listed_in_injected_secrets": "PAPERCLIP_API_KEY" in injected_secret_names,
+    "bearer_me_status": bearer_me_status,
+    "bearer_inbox_status": bearer_inbox_status,
+}
+
+print("Paperclip runtime check")
+print("=======================")
+print(json.dumps(summary, indent=2))
+print()
+
+if health_status != 200:
+    print("Health check failed, so the runtime is not ready for issue operations.", file=sys.stderr)
+    sys.exit(1)
+
+if run_issues_status == 200:
+    issue_count = len(run_issues_json) if isinstance(run_issues_json, list) else "unknown"
+    print(f"Current run issue lookup succeeded via board session ({issue_count} issue entries).")
+    sys.exit(0)
+
+if api_key:
+    if bearer_me_status != 200:
+        print("A bearer token is present, but Paperclip rejected agent authentication.", file=sys.stderr)
+        if bearer_me_body:
+            print(bearer_me_body, file=sys.stderr)
+        sys.exit(3)
+
+    if bearer_inbox_status != 200:
+        print("Bearer auth succeeded for /api/agents/me, but inbox lookup still failed.", file=sys.stderr)
+        if bearer_inbox_body:
+            print(bearer_inbox_body, file=sys.stderr)
+        sys.exit(3)
+
+    inbox_json = parse_json(bearer_inbox_body)
+    issue_count = len(inbox_json) if isinstance(inbox_json, list) else len((inbox_json or {}).get("items", []))
+    print(f"Current issue lookup succeeded via PAPERCLIP_API_KEY ({issue_count} issue entries).")
+    sys.exit(0)
+
+if session_status == 401:
+    error = None if not isinstance(session_json, dict) else session_json.get("error")
+    print("Board authentication is not available in this shell session.")
+    if error:
+        print(f"Server response: {error}")
+    if not api_key and injected_secret_names:
+        if "PAPERCLIP_API_KEY" not in injected_secret_names:
+            print(
+                "The cloud runtime did not inject PAPERCLIP_API_KEY. "
+                "CLOUD_AGENT_INJECTED_SECRET_NAMES is missing that secret."
+            )
+    elif not api_key:
+        print("No PAPERCLIP_API_KEY is available in the current environment.")
+    print(
+        "Issue reads, comments, interactions, and disposition updates will fail "
+        "until a board-authenticated session or PAPERCLIP_API_KEY is available."
+    )
+    sys.exit(2)
+
+if session_status != 200:
+    print("Session check returned an unexpected status.", file=sys.stderr)
+    print(session_body, file=sys.stderr)
+    sys.exit(1)
+
+print("The shell is authenticated, but current-run issue lookup still failed.", file=sys.stderr)
+if isinstance(run_issues_json, dict) and run_issues_json.get("error"):
+    print(run_issues_json["error"], file=sys.stderr)
+else:
+    print(run_issues_body, file=sys.stderr)
+sys.exit(1)
+PY
