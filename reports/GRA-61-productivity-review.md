@@ -9,20 +9,22 @@
 ## Review outcome
 `GRA-61` is currently **blocked** from producing a grounded productivity review for `GRA-33`.
 
-There is no traceable repository or GitHub artifact for `GRA-33` in this runtime, and the Paperclip deployment is private with board-authenticated issue APIs that are not available from this shell session. Without either source of evidence, any productivity judgment would be speculative.
+There is no traceable repository or GitHub artifact for `GRA-33` in this runtime, and the Paperclip deployment is private with authenticated issue APIs that this shell cannot access because the required Paperclip API credential is not injected. Without either source of evidence, any productivity judgment would be speculative.
 
 ## Evidence collected
 
-### 1. Paperclip deployment is reachable but issue state is not readable
+### 1. Paperclip deployment is reachable but this runtime is missing API credentials
 - `GET /api/health` returned `200 OK` after following the deployment redirect.
 - Health response confirmed:
   - `deploymentMode: authenticated`
   - `deploymentExposure: private`
   - `bootstrapStatus: ready`
+- Public Paperclip agent docs state that authenticated API access requires `Authorization: Bearer $PAPERCLIP_API_KEY`.
+- This Cursor Cloud runtime does **not** have `PAPERCLIP_API_KEY` set.
 - `GET /api/auth/get-session` returned `401 {"error":"Board authentication required"}`.
-- `GET /api/heartbeat-runs/{runId}` returned `401 {"error":"Unauthorized"}`.
+- `GET /api/companies/{companyId}/issues?query=GRA-61` returned `401 {"error":"Unauthorized"}`.
 
-These responses confirm the runtime can reach the Paperclip instance but cannot read authenticated board data or mutate issue state from this environment.
+These checks confirm the runtime can reach the Paperclip instance, but it cannot read authenticated board data or mutate issue state because the adapter session is missing the API key expected by the Paperclip deployment.
 
 ### 2. No repository-traceable GRA-33 artifact was found
 The following searches returned no matches for `GRA-33`:
@@ -42,9 +44,9 @@ The missing evidence is not a minor gap; it removes access to both:
 
 ## Named blocker and unblock path
 - **Blocker owner:** Paperclip operator / runtime configuration owner
-- **Unblock action:** rerun this heartbeat in a board-authenticated environment, or inject the Paperclip board/API credentials required to access issue endpoints from Cursor Cloud.
+- **Unblock action:** inject `PAPERCLIP_API_KEY` into the Cursor Cloud adapter (or rerun the heartbeat in an equivalent board-authenticated environment) so the agent can call `/api/issues/{issueId}` and related endpoints.
 
-Once board-authenticated access is available, the next review pass should:
+Once authenticated API access is available, the next review pass should:
 1. read the full `GRA-33` issue and comment history,
 2. identify the linked implementation artifacts or execution logs,
 3. compare delivered output against requested scope, and
