@@ -110,6 +110,10 @@ Use `./scripts/paperclip-api.sh interaction-template KIND TITLE [JSON_FILE|-]`
 to merge the interaction `kind` and `title` with extra JSON fields such as
 `questions`, `continuationPolicy`, `idempotencyKey`, or
 `supersedeOnUserComment`.
+For the contract-specific interaction kinds, you can also use:
+- `./scripts/paperclip-api.sh ask-user-questions-template TITLE [JSON_FILE|-]`
+- `./scripts/paperclip-api.sh suggest-tasks-template TITLE [JSON_FILE|-]`
+- `./scripts/paperclip-api.sh request-confirmation-template TITLE [JSON_FILE|-]`
 Use `./scripts/paperclip-api.sh issue-comment ...` when the execution contract
 requires a task comment, including structured fields like `resume`, `reopen`, or
 `interrupt`.

@@ -28,6 +28,9 @@ This is the Company run main repo for Grahmos.
   - `update-template STATUS COMMENT [RESUME_TRUE_OR_FALSE]`
   - `blocked-template UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]`
   - `interaction-template KIND TITLE [JSON_FILE|-]`
+  - `ask-user-questions-template TITLE [JSON_FILE|-]`
+  - `suggest-tasks-template TITLE [JSON_FILE|-]`
+  - `request-confirmation-template TITLE [JSON_FILE|-]`
   - `current-issue-id`
   - `issue-get ISSUE_ID`
   - `issue-get-current`
@@ -64,6 +67,9 @@ the matching `*-current` helper once auth is available.
 When you need an interaction payload, run `interaction-template` with a kind/title
 plus extra JSON for fields like `questions`, `continuationPolicy`,
 `idempotencyKey`, or `supersedeOnUserComment`.
+For the three contract-specific interaction kinds, you can also use
+`ask-user-questions-template`, `suggest-tasks-template`, or
+`request-confirmation-template`.
 If you want the helper to generate the payload and apply it to the current issue in
 one step, use `issue-comment-current-template`, `issue-update-current-template`, or
 `issue-interaction-current-template`, or `issue-blocked-current-template`.

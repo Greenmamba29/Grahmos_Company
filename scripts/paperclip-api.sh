@@ -14,6 +14,9 @@ Usage:
   ./scripts/paperclip-api.sh update-template STATUS COMMENT [RESUME_TRUE_OR_FALSE]
   ./scripts/paperclip-api.sh blocked-template UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]
   ./scripts/paperclip-api.sh interaction-template KIND TITLE [JSON_FILE|-]
+  ./scripts/paperclip-api.sh ask-user-questions-template TITLE [JSON_FILE|-]
+  ./scripts/paperclip-api.sh suggest-tasks-template TITLE [JSON_FILE|-]
+  ./scripts/paperclip-api.sh request-confirmation-template TITLE [JSON_FILE|-]
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get ISSUE_ID
   ./scripts/paperclip-api.sh issue-get-current
@@ -49,6 +52,12 @@ Examples:
     "The runtime currently cannot mutate issue state."
   printf '{"questions":[{"id":"auth","label":"Should I inject PAPERCLIP_API_KEY next?"}],"continuationPolicy":"wake_assignee"}\n' | \
     ./scripts/paperclip-api.sh interaction-template ask_user_questions "Need input" -
+  printf '{"questions":[{"id":"auth","label":"Should I inject PAPERCLIP_API_KEY next?"}],"continuationPolicy":"wake_assignee"}\n' | \
+    ./scripts/paperclip-api.sh ask-user-questions-template "Need input" -
+  printf '{"choices":[{"title":"Create auth secret","description":"Inject PAPERCLIP_API_KEY into Cursor Cloud env."}]}\n' | \
+    ./scripts/paperclip-api.sh suggest-tasks-template "Suggested follow-ups" -
+  printf '{"idempotencyKey":"confirmation:issue-id:plan:revision-id","supersedeOnUserComment":true}\n' | \
+    ./scripts/paperclip-api.sh request-confirmation-template "Approve latest plan" -
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get 123e4567-e89b-12d3-a456-426614174000
   ./scripts/paperclip-api.sh issue-get-current
@@ -94,6 +103,9 @@ Notes:
     that can be piped into the current-issue mutation helpers.
   - `interaction-template` merges `kind` and `title` with optional extra JSON for
     ask_user_questions, suggest_tasks, or request_confirmation payloads.
+  - `ask-user-questions-template`, `suggest-tasks-template`, and
+    `request-confirmation-template` are convenience wrappers for the three primary
+    interaction kinds in the execution contract.
   - `issue-*-current-template` commands generate the payload and immediately apply it
     to the current issue once auth is available.
 EOF
@@ -312,6 +324,19 @@ PY
   rm -f "$body_file"
 }
 
+print_kind_template() {
+  local kind="${1:-}"
+  local title="${2:-}"
+  local source="${3:-}"
+
+  if [[ -z "$kind" || -z "$title" ]]; then
+    echo "error: KIND and TITLE are required" >&2
+    exit 2
+  fi
+
+  print_interaction_template "$kind" "$title" "$source"
+}
+
 request() {
   local method="$1"
   local path="$2"
@@ -486,6 +511,15 @@ case "$cmd" in
     ;;
   interaction-template)
     print_interaction_template "${2:-}" "${3:-}" "${4:-}"
+    ;;
+  ask-user-questions-template)
+    print_kind_template ask_user_questions "${2:-}" "${3:-}"
+    ;;
+  suggest-tasks-template)
+    print_kind_template suggest_tasks "${2:-}" "${3:-}"
+    ;;
+  request-confirmation-template)
+    print_kind_template request_confirmation "${2:-}" "${3:-}"
     ;;
   current-issue-id)
     resolve_current_issue_id
