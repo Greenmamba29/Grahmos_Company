@@ -302,6 +302,8 @@ run_mock_runtime_check_json "degraded-health-auth-blocked"
 assert_stdout_json_value "diagnosis" "missing_paperclip_auth"
 assert_stdout_json_value "issue_operations_blocked" "true"
 assert_stdout_json_value "summary.paperclip_api_key_injected" "false"
+assert_stdout_json_value "summary.run_issues_with_run_header_status" "401"
+assert_stdout_json_value "run_id_header_read_access" "false"
 pass "paperclip-runtime-check emits structured JSON diagnosis"
 cleanup_last
 
@@ -342,6 +344,7 @@ run_mock_runtime_check "degraded-health-auth-blocked"
 assert_stdout_contains "\"health_status\": 503"
 assert_stdout_contains "Health check did not return 200, but auth signals are sufficient to diagnose the blocker."
 assert_stdout_contains "Board authentication is not available in this shell session."
+assert_stdout_contains "Adding X-Paperclip-Run-Id to the run issue lookup did not unlock read access in this shell."
 assert_stdout_contains "Required action: inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env."
 pass "paperclip-runtime-check preserves auth guidance when health is degraded"
 cleanup_last

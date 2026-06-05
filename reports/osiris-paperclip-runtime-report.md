@@ -1,8 +1,8 @@
 # Osiris Hermes Paperclip Runtime Report
 
-- Generated at: 2026-06-05T21:54:15Z
+- Generated at: 2026-06-05T22:51:46Z
 - Git branch: cursor/paperclip-runtime-tooling-82aa
-- Git commit: b604ff85413ac9c69544fdf667a7d31b92274df3
+- Git commit: a75a8c3ed1628e829e9f0b8bac33ef19686d8c9a
 - Runtime check exit code: 2
 - Operator handoff exit code: 0
 
@@ -19,6 +19,8 @@ Paperclip runtime check
   "session_authenticated": false,
   "run_issues_status": 401,
   "run_issues_accessible": false,
+  "run_issues_with_run_header_status": 401,
+  "run_id_header_read_access": false,
   "api_key_present": false,
   "paperclip_api_key_injected": false,
   "gh_token_present": true,
@@ -33,6 +35,7 @@ Server response: Board authentication required
 GH_TOKEN is present for GitHub operations, but it cannot authenticate Paperclip issue endpoints.
 An auxiliary agent-home env var is present in runtime metadata, but it is not a readable directory in this shell.
 Do not rely on that env var as a fallback source for current issue or comment context here.
+Adding X-Paperclip-Run-Id to the run issue lookup did not unlock read access in this shell.
 The runtime metadata shows that PAPERCLIP_API_KEY was not injected into this cloud shell.
 Unblock owner: Paperclip operator
 Required action: inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env.

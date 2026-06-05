@@ -16,6 +16,9 @@ This is the Company run main repo for Grahmos.
   clearly show a missing Paperclip auth path.
 - The runtime check also inspects `CLOUD_AGENT_INJECTED_SECRET_NAMES` so it can say
   whether `PAPERCLIP_API_KEY` was ever injected into the cloud shell at all.
+- The runtime check now also tells you whether adding `X-Paperclip-Run-Id` to the
+  run issue lookup changed anything; in this environment it does not provide a read
+  bypass by itself.
 - `GH_TOKEN` may be present for repository operations, but it does not authenticate
   Paperclip issue/comment/interaction endpoints.
 - An auxiliary agent-home env var may also be present in runtime metadata; if it is
