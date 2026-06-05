@@ -92,6 +92,8 @@ distinguishes between:
   include `PAPERCLIP_API_KEY` at all
 - a shell where an auxiliary agent-home env var exists in metadata but is not a
   readable directory
+- a degraded `/api/health` endpoint where the stronger auth signals still prove the
+  shell is blocked on missing Paperclip auth
 
 Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 `me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,

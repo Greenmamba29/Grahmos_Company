@@ -107,10 +107,6 @@ print("=======================")
 print(json.dumps(summary, indent=2))
 print()
 
-if health_status != 200:
-    print("Health check failed, so the runtime is not ready for issue operations.", file=sys.stderr)
-    sys.exit(1)
-
 if run_issues_status == 200:
     issue_count = len(run_issues_json) if isinstance(run_issues_json, list) else "unknown"
     print(f"Current run issue lookup succeeded via board session ({issue_count} issue entries).")
@@ -136,6 +132,10 @@ if api_key:
 
 if session_status == 401:
     error = None if not isinstance(session_json, dict) else session_json.get("error")
+    if health_status != 200:
+        print("Health check did not return 200, but auth signals are sufficient to diagnose the blocker.")
+        if health_body:
+            print(f"Health probe detail: {health_body}")
     print("Board authentication is not available in this shell session.")
     if error:
         print(f"Server response: {error}")
@@ -163,6 +163,12 @@ if session_status == 401:
         "until a board-authenticated session or PAPERCLIP_API_KEY is available."
     )
     sys.exit(2)
+
+if health_status != 200:
+    print("Health check failed, so the runtime is not ready for issue operations.", file=sys.stderr)
+    if health_body:
+        print(health_body, file=sys.stderr)
+    sys.exit(1)
 
 if session_status != 200:
     print("Session check returned an unexpected status.", file=sys.stderr)

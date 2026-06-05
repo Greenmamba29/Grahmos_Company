@@ -9,6 +9,9 @@ This is the Company run main repo for Grahmos.
   session or a `PAPERCLIP_API_KEY` bearer token.
 - If the script exits with `2`, the agent can still work on the Git repository but
   cannot read or mutate Paperclip issues from the shell yet.
+- Even if `/api/health` is degraded or returns a non-200 status, the runtime check
+  still preserves the stronger auth diagnosis when session and issue endpoints
+  clearly show a missing Paperclip auth path.
 - The runtime check also inspects `CLOUD_AGENT_INJECTED_SECRET_NAMES` so it can say
   whether `PAPERCLIP_API_KEY` was ever injected into the cloud shell at all.
 - `GH_TOKEN` may be present for repository operations, but it does not authenticate
