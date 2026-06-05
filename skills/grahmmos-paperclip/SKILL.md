@@ -71,6 +71,8 @@ Grahmos_Company/
   README.md          # Repository readme
   LICENSE            # MIT License
   .gitignore         # Git ignore
+  docs/
+    gra-46-midas-silent-run-review.md  # Issue-specific ops review note
   skills/
     grahmmos-paperclip/
       SKILL.md       # This file - company setup documentation
@@ -98,6 +100,14 @@ Grahmos_Company/
 **Cause:** Hermes Agent (local) workspace not initialized
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
+
+### Review path: "silent active run" for Midas
+**Current repo signal:** Midas is documented here as `Hermes Agent (local)`.
+**Review order:**
+1. Confirm whether the live Paperclip agent still matches that adapter type.
+2. If yes, treat `hermes` startup or workspace resolution as the first silent-run suspect.
+3. If no, inspect the actual adapter error. An OpenCode adapter pinned to a retired model slug can also fail before normal logs begin.
+**Reference:** see `docs/gra-46-midas-silent-run-review.md` for the current GRA-46 review and unblock path.
 
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
