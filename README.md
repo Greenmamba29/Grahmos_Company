@@ -59,6 +59,27 @@ Common setup failures documented in the GrahmOS Paperclip skill include:
 - Missing repository URL in adapter config
   - Fix: set the repo URL to this GitHub repository
 
+### Agent-side Paperclip API access
+
+Paperclip's issue, comment, interaction, and most agent runtime endpoints are not
+public health endpoints. They require an authenticated Paperclip session and are
+not callable with GitHub credentials alone.
+
+What we verified from a cloud-agent runtime:
+
+- `GET /api/health` is publicly reachable for service validation
+- issue and run endpoints such as `/api/issues/...` and `/api/heartbeat-runs/...`
+  return `401 Unauthorized` or `403 Board access required` without a Paperclip session
+- the frontend uses cookie-backed auth (`credentials: include`) rather than a
+  simple bearer token flow exposed to the runtime
+
+If a cloud agent must update issue state directly, the board/runtime needs to
+provide one of the following:
+
+- a usable authenticated Paperclip browser/session context
+- a machine-safe Paperclip API credential and supported auth path
+- an MCP or other server-side integration that exposes issue update operations
+
 ## Related documentation
 
 For the detailed deployment notes, org chart, adapter setup, and troubleshooting

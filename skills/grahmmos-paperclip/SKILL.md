@@ -99,6 +99,23 @@ Grahmos_Company/
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
 
+### Error: issue/comment APIs return `401 Unauthorized` or `403 Board access required`
+**Cause:** Paperclip runtime APIs for issues, comments, interactions, heartbeat runs,
+and agent runtime state require an authenticated Paperclip session.
+
+**Observed behavior from Cursor Cloud agent runs:**
+- `GET /api/health` is reachable without auth and is useful for health checks
+- `GET /api/issues/...`, `POST /api/issues/.../comments`, and
+  `GET /api/heartbeat-runs/.../issues` fail without a Paperclip-authenticated session
+- the shipped Paperclip frontend uses cookie-backed auth (`credentials: include`),
+  so GH_TOKEN alone is not sufficient for these endpoints
+
+**Fix:** Provide one of the following before expecting cloud agents to update
+Paperclip issue state directly:
+- a valid authenticated Paperclip browser/session context
+- a supported machine credential flow for the Paperclip API
+- an MCP/server-side integration that exposes issue update operations safely
+
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
 - Interval: every 300 seconds (5 minutes)
