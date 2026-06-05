@@ -97,6 +97,37 @@ token-based service auth path for agent heartbeats. Without that auth, cloud age
 can only rely on the inline wake payload and repository work products, and cannot
 read/update issue threads or statuses directly from the shell.
 
+### Reviewing suspiciously silent heartbeat runs
+When Paperclip raises a "silent active run" issue, the board UI uses dedicated
+heartbeat-run endpoints rather than generic issue comments alone.
+
+Useful read endpoints:
+- `GET /api/issues/{issueId}/active-run`
+- `GET /api/issues/{issueId}/live-runs`
+- `GET /api/heartbeat-runs/{runId}`
+- `GET /api/heartbeat-runs/{runId}/events?afterSeq=0&limit=200`
+- `GET /api/heartbeat-runs/{runId}/log?offset=0&limitBytes=262144`
+- `GET /api/heartbeat-runs/{runId}/workspace-operations`
+
+Watchdog actions exposed in the issue run ledger:
+- `decision: "continue"` -> "Continue monitoring"
+- `decision: "snooze"` with `snoozedUntil` -> "Snooze 1h"
+- `decision: "dismissed_false_positive"` -> "Mark false positive"
+- `POST /api/heartbeat-runs/{runId}/cancel` to stop a stale run after preserving logs/artifacts
+
+Observed auth behavior from Cursor Cloud:
+- unauthenticated `GET /api/heartbeat-runs/{runId}`, `/events`, `/log`, and
+  `/workspace-operations` requests return `401 Unauthorized`
+- unauthenticated `POST /api/heartbeat-runs/{runId}/cancel` returns
+  `403 {"error":"Board access required"}`
+
+Review order:
+1. Read the run summary from the wake payload first.
+2. If board auth is available, inspect run events/logs/workspace operations.
+3. Preserve useful output before any cancellation.
+4. Record a watchdog decision (`continue`, `snooze`, or `dismissed_false_positive`)
+   or cancel the run explicitly when it is stale.
+
 ### Error: "could not read agent instructions file .../AGENTS.md: ENOENT"
 **Cause:** Paperclip managed instructions bundle not initialized
 **Fix:** Go to Paperclip -> Osiris Hermes -> Instructions -> click AGENTS.md -> add content -> Save
