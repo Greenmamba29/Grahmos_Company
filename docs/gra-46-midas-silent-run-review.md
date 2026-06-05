@@ -12,34 +12,50 @@ This note captures the outcome of the Cursor Cloud heartbeat for GRA-46.
   - `GET /api/auth/get-session` -> `401`
   - `GET /api/heartbeat-runs/{runId}/issues` -> `401`
 - Runtime secrets in this shell include `GH_TOKEN`, but not `PAPERCLIP_API_KEY`.
-- The repo metadata still lists **Midas** as a **Hermes Agent (local)** adapter.
+- The continuation payload identifies the silent run as:
+  - agent: **Midas**
+  - adapter: **`opencode_local`**
+  - started: `2026-06-05T19:37:51.071Z`
+  - process started: `2026-06-05T19:37:54.774Z`
+  - last output: **none recorded**
+  - silence window: **1h**
+- The repo metadata still lists **Midas** as a **Hermes Agent (local)** adapter, so
+  the repo is stale for this issue and the continuation payload should be treated
+  as the source of truth.
 
 ## Review conclusion
 
-This heartbeat could not inspect the live Midas run or mutate the Paperclip issue
-directly because the shell lacks both:
+This heartbeat could not inspect the live Midas run in the Paperclip board or
+mutate the Paperclip issue directly because the shell lacks both:
 
 1. a board-authenticated Paperclip session, and
 2. an injected `PAPERCLIP_API_KEY`.
 
-Because the repo metadata lists Midas as `Hermes Agent (local)`, the first
-review path for a "silent active run" should be the local Hermes bootstrap,
-not the Cursor Cloud adapter.
+Because the live continuation payload confirms Midas is running on
+`opencode_local`, the primary review path is now an OpenCode adapter failure
+that occurs before normal logging begins.
 
 ## Most likely causes to check in order
 
-1. **Hermes local adapter bootstrap failure**
-   - Symptom: the run appears active or stuck but emits little to no progress.
-   - First check: whether the Paperclip host can launch `hermes` and whether the
-     Midas working directory still exists.
-   - Relevant known error: `Failed to start command hermes in .`
+1. **Retired or unavailable OpenCode model slug**
+   - Symptom: the run is launched, but the adapter fails before it emits normal
+     progress logs, leaving a suspiciously silent active run.
+   - Closest known pattern: GRA-41, where an OpenCode-backed agent failed before
+     logging because the configured model slug was no longer available.
+   - First check: open the run or adapter config in Paperclip and compare the
+     configured model slug against the currently supported OpenCode models.
 
-2. **Adapter drift from repo metadata**
-   - If the live Midas agent was changed from `Hermes Agent (local)` to an
-     OpenCode-backed adapter in Paperclip, a retired model slug can also look
-     like a silent run because the adapter fails before normal logs begin.
-   - In that case, review the actual run error and replace the retired model
-     slug with a currently supported OpenCode model.
+2. **Broader `opencode_local` adapter startup failure**
+   - Symptom: the process starts and remains tracked, but no log tail is ever
+     captured because the adapter exits or wedges before the log stream starts.
+   - First check: inspect the Paperclip-host logs for the adapter subprocess and
+     confirm whether startup failed before the run logger attached.
+
+3. **Stale repository metadata**
+   - The repo still says Midas is `Hermes Agent (local)`, but the live run says
+     `opencode_local`.
+   - After resolving the active run, update the repo metadata or docs so future
+     reviews do not start from the wrong adapter assumption.
 
 ## Operator unblock
 
@@ -51,12 +67,15 @@ not the Cursor Cloud adapter.
 
 ## Recommended next steps after unblock
 
-1. Open the Midas run and inspect the first error emitted by the adapter.
-2. If Midas is still `Hermes Agent (local)`:
-   - verify `hermes` is installed on the Paperclip host
-   - verify the configured working directory exists and is readable
-   - rerun after fixing the local runtime
-3. If Midas is actually using OpenCode:
-   - replace any retired model slug with a currently available one
-   - rerun the heartbeat
-4. Resume GRA-46 with a structured Paperclip issue update once auth is available.
+1. Open run `7c9f971b-199c-439a-a702-a5031907a84b` and inspect the first adapter
+   error or configuration attached to the `opencode_local` invocation.
+2. If the configured model slug is unavailable:
+   - replace it with a currently supported OpenCode model
+   - rerun the heartbeat and confirm output begins streaming normally
+3. If the model slug is valid:
+   - inspect Paperclip-host adapter logs for pre-log startup failure inside
+     `opencode_local`
+   - repair that startup issue and rerun the heartbeat
+4. After recovery, update the Midas adapter documentation in the repo so the
+   recorded adapter type matches the live Paperclip configuration.
+5. Resume GRA-46 with a structured Paperclip issue update once auth is available.

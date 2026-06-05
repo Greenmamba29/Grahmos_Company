@@ -102,12 +102,20 @@ Grahmos_Company/
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
 
 ### Review path: "silent active run" for Midas
-**Current repo signal:** Midas is documented here as `Hermes Agent (local)`.
+**Current repo signal:** this file may lag behind the live Paperclip agent config.
 **Review order:**
-1. Confirm whether the live Paperclip agent still matches that adapter type.
-2. If yes, treat `hermes` startup or workspace resolution as the first silent-run suspect.
-3. If no, inspect the actual adapter error. An OpenCode adapter pinned to a retired model slug can also fail before normal logs begin.
+1. Use the live run payload or board record as the source of truth for the adapter type.
+2. If the run is `opencode_local` and there is no output at all, inspect model-slug availability first. A retired OpenCode model can fail before normal logs begin.
+3. If the model slug is valid, inspect the adapter host logs for a pre-log startup failure.
+4. Only use the Hermes-local bootstrap path when the live run actually confirms `Hermes Agent (local)`.
 **Reference:** see `docs/gra-46-midas-silent-run-review.md` for the current GRA-46 review and unblock path.
+
+### Error pattern: `opencode_local` run starts but records no output
+**Cause:** The adapter can fail before its normal logging path starts, often because the
+configured OpenCode model slug is no longer available to the runtime.
+**Fix:** Open the live run or adapter config in Paperclip, replace the retired model slug
+with a currently supported OpenCode model, then rerun the heartbeat. If the model is
+already valid, inspect host-side adapter startup logs for failures before log attachment.
 
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
