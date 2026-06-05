@@ -66,6 +66,25 @@ cleanup_last() {
   unset LAST_STDOUT_FILE LAST_STDERR_FILE
 }
 
+assert_stdout_json_value() {
+  local path="$1"
+  local expected="$2"
+  python3 - "$LAST_STDOUT_FILE" "$path" "$expected" <<'PY'
+import json
+import sys
+
+data = json.load(open(sys.argv[1]))
+path = sys.argv[2].split(".")
+expected = sys.argv[3]
+cur = data
+for part in path:
+    cur = cur[part]
+actual = "true" if cur is True else "false" if cur is False else "null" if cur is None else str(cur)
+if actual != expected:
+    raise SystemExit(f"expected {sys.argv[2]}={expected!r}, got {actual!r}")
+PY
+}
+
 run_mock_runtime_check() {
   local scenario="$1"
   local port server_pid
@@ -140,6 +159,80 @@ PY
   trap - RETURN
 }
 
+run_mock_runtime_check_json() {
+  local scenario="$1"
+  local port server_pid
+  port="$(python3 - <<'PY'
+import socket
+s = socket.socket()
+s.bind(("127.0.0.1", 0))
+print(s.getsockname()[1])
+s.close()
+PY
+)"
+
+  python3 - "$port" "$scenario" <<'PY' &
+import json
+import re
+import sys
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+port = int(sys.argv[1])
+scenario = sys.argv[2]
+
+
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        run_issue_match = re.fullmatch(r"/api/heartbeat-runs/[^/]+/issues", self.path)
+        if scenario == "degraded-health-auth-blocked":
+            if self.path == "/api/health":
+                self.send_response(503)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "health unavailable"}).encode())
+                return
+            if self.path == "/api/auth/get-session":
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Board authentication required"}).encode())
+                return
+            if run_issue_match:
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Board authentication required"}).encode())
+                return
+
+        self.send_response(404)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps({"error": "not found"}).encode())
+
+    def log_message(self, format, *args):
+        return
+
+
+HTTPServer(("127.0.0.1", port), Handler).serve_forever()
+PY
+  server_pid=$!
+
+  trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' RETURN
+  run_expect 2 env \
+    PAPERCLIP_API_URL="http://127.0.0.1:$port" \
+    PAPERCLIP_AGENT_ID="agent-123" \
+    PAPERCLIP_COMPANY_ID="company-123" \
+    PAPERCLIP_RUN_ID="run-123" \
+    PAPERCLIP_WORKSPACE_CWD="/workspace" \
+    PAPERCLIP_WORKSPACE_SOURCE="agent-run" \
+    GH_TOKEN="gh-test-token" \
+    CLOUD_AGENT_INJECTED_SECRET_NAMES="GH_TOKEN" \
+    ./scripts/paperclip-runtime-check.sh --json
+  kill "$server_pid" 2>/dev/null || true
+  wait "$server_pid" 2>/dev/null || true
+  trap - RETURN
+}
+
 run_expect 0 ./scripts/paperclip-api.sh help
 assert_stdout_contains "issue-interaction-current"
 assert_stdout_contains "request-confirmation-template TITLE [JSON_FILE|-]"
@@ -205,6 +298,13 @@ assert_stdout_contains "./scripts/paperclip-runtime-check.sh"
 pass "paperclip-operator-unblock prints the operator handoff package"
 cleanup_last
 
+run_mock_runtime_check_json "degraded-health-auth-blocked"
+assert_stdout_json_value "diagnosis" "missing_paperclip_auth"
+assert_stdout_json_value "issue_operations_blocked" "true"
+assert_stdout_json_value "summary.paperclip_api_key_injected" "false"
+pass "paperclip-runtime-check emits structured JSON diagnosis"
+cleanup_last
+
 report_path="$(mktemp)"
 run_expect 0 ./scripts/paperclip-write-runtime-report.sh "$report_path" paperclip-secret cursor-secret
 assert_stdout_contains "Wrote $report_path"
@@ -219,6 +319,23 @@ if ! grep -Fq "## Operator unblock handoff" "$report_path"; then
 fi
 rm -f "$report_path"
 pass "paperclip-write-runtime-report writes a markdown handoff report"
+cleanup_last
+
+snapshot_path="$(mktemp)"
+run_expect 0 ./scripts/paperclip-write-runtime-snapshot.sh "$snapshot_path" paperclip-secret cursor-secret
+assert_stdout_contains "Wrote $snapshot_path"
+python3 - "$snapshot_path" <<'PY'
+import json
+import sys
+
+data = json.load(open(sys.argv[1]))
+assert data["runtime"]["diagnosis"] in {"missing_paperclip_auth", "health_unavailable", "unexpected_session_status", "board_session_ok", "paperclip_api_key_ok", "paperclip_api_key_rejected", "paperclip_api_key_inbox_lookup_failed", "run_issue_lookup_failed"}
+assert "blocked_issue_payload" in data["unblock"]
+assert "adapter_env_payload" in data["unblock"]
+assert data["unblock"]["owner"] == "Paperclip operator"
+PY
+rm -f "$snapshot_path"
+pass "paperclip-write-runtime-snapshot writes a JSON handoff snapshot"
 cleanup_last
 
 run_mock_runtime_check "degraded-health-auth-blocked"

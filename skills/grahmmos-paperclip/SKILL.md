@@ -95,6 +95,9 @@ distinguishes between:
 - a degraded `/api/health` endpoint where the stronger auth signals still prove the
   shell is blocked on missing Paperclip auth
 
+When another helper or automation step needs structured data instead of prose, run
+`./scripts/paperclip-runtime-check.sh --json`.
+
 Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 `me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,
 `POST /api/issues/{issueId}/interactions`, and `PATCH /api/issues/{issueId}`
@@ -108,6 +111,8 @@ for the next heartbeat in one place.
 If the heartbeat needs a durable document rather than console output, run
 `./scripts/paperclip-write-runtime-report.sh OUTPUT_PATH [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`
 to save the live runtime check and operator handoff as a markdown report.
+If the heartbeat needs the same handoff as structured JSON, run
+`./scripts/paperclip-write-runtime-snapshot.sh OUTPUT_PATH [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
 Once auth is fixed, run `./scripts/paperclip-api.sh current-issue-playbook` for the
 recommended current-issue inspection and execution-contract mutation commands.
 Use `./scripts/paperclip-api.sh comment-template ...`,

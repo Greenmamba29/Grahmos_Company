@@ -1,6 +1,34 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+usage() {
+  cat <<'EOF'
+Usage:
+  ./scripts/paperclip-runtime-check.sh [--json]
+
+Options:
+  --json   Print a machine-readable JSON diagnosis payload instead of prose.
+EOF
+}
+
+json_mode=0
+case "${1:-}" in
+  "")
+    ;;
+  --json)
+    json_mode=1
+    ;;
+  -h|--help|help)
+    usage
+    exit 0
+    ;;
+  *)
+    echo "error: unknown argument: ${1:-}" >&2
+    usage >&2
+    exit 2
+    ;;
+esac
+
 required_vars=(
   PAPERCLIP_API_URL
   PAPERCLIP_AGENT_ID
@@ -22,13 +50,14 @@ if (( ${#missing[@]} > 0 )); then
   exit 1
 fi
 
-python3 - <<'PY'
+python3 - "$json_mode" <<'PY'
 import json
 import os
 import sys
 import urllib.error
 import urllib.request
 
+json_mode = sys.argv[1] == "1"
 base = os.environ["PAPERCLIP_API_URL"].rstrip("/")
 run_id = os.environ["PAPERCLIP_RUN_ID"]
 api_key = os.environ.get("PAPERCLIP_API_KEY", "").strip()
@@ -102,24 +131,75 @@ summary = {
     "bearer_inbox_status": bearer_inbox_status,
 }
 
-print("Paperclip runtime check")
-print("=======================")
-print(json.dumps(summary, indent=2))
-print()
+unblock_owner = "Paperclip operator"
+required_action = "inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env."
+next_helper_commands = [
+    "./scripts/paperclip-api.sh adapter-env-template YOUR_PAPERCLIP_SECRET_ID [YOUR_CURSOR_SECRET_ID]",
+    "./scripts/paperclip-runtime-check.sh",
+    "./scripts/paperclip-api.sh current-issue-playbook",
+]
+
+
+def emit_json(payload: dict, exit_code: int):
+    payload = {
+        "summary": summary,
+        "exit_code": exit_code,
+        **payload,
+    }
+    json.dump(payload, sys.stdout, indent=2)
+    sys.stdout.write("\n")
+    raise SystemExit(exit_code)
+
+
+if not json_mode:
+    print("Paperclip runtime check")
+    print("=======================")
+    print(json.dumps(summary, indent=2))
+    print()
 
 if run_issues_status == 200:
     issue_count = len(run_issues_json) if isinstance(run_issues_json, list) else "unknown"
+    if json_mode:
+        emit_json(
+            {
+                "diagnosis": "board_session_ok",
+                "issue_operations_blocked": False,
+                "access_path": "board_session",
+                "issue_count": issue_count,
+            },
+            0,
+        )
     print(f"Current run issue lookup succeeded via board session ({issue_count} issue entries).")
     sys.exit(0)
 
 if api_key:
     if bearer_me_status != 200:
+        if json_mode:
+            emit_json(
+                {
+                    "diagnosis": "paperclip_api_key_rejected",
+                    "issue_operations_blocked": True,
+                    "access_path": "paperclip_api_key",
+                    "bearer_me_body": bearer_me_body,
+                },
+                3,
+            )
         print("A bearer token is present, but Paperclip rejected agent authentication.", file=sys.stderr)
         if bearer_me_body:
             print(bearer_me_body, file=sys.stderr)
         sys.exit(3)
 
     if bearer_inbox_status != 200:
+        if json_mode:
+            emit_json(
+                {
+                    "diagnosis": "paperclip_api_key_inbox_lookup_failed",
+                    "issue_operations_blocked": True,
+                    "access_path": "paperclip_api_key",
+                    "bearer_inbox_body": bearer_inbox_body,
+                },
+                3,
+            )
         print("Bearer auth succeeded for /api/agents/me, but inbox lookup still failed.", file=sys.stderr)
         if bearer_inbox_body:
             print(bearer_inbox_body, file=sys.stderr)
@@ -127,11 +207,37 @@ if api_key:
 
     inbox_json = parse_json(bearer_inbox_body)
     issue_count = len(inbox_json) if isinstance(inbox_json, list) else len((inbox_json or {}).get("items", []))
+    if json_mode:
+        emit_json(
+            {
+                "diagnosis": "paperclip_api_key_ok",
+                "issue_operations_blocked": False,
+                "access_path": "paperclip_api_key",
+                "issue_count": issue_count,
+            },
+            0,
+        )
     print(f"Current issue lookup succeeded via PAPERCLIP_API_KEY ({issue_count} issue entries).")
     sys.exit(0)
 
 if session_status == 401:
     error = None if not isinstance(session_json, dict) else session_json.get("error")
+    if json_mode:
+        emit_json(
+            {
+                "diagnosis": "missing_paperclip_auth",
+                "issue_operations_blocked": True,
+                "server_response": error,
+                "health_probe_detail": health_body if health_status != 200 else None,
+                "gh_token_warning": bool(gh_token),
+                "aux_home_warning": bool(aux_home) and not os.path.isdir(aux_home),
+                "paperclip_api_key_injected": "PAPERCLIP_API_KEY" in injected_secret_names,
+                "unblock_owner": unblock_owner,
+                "required_action": required_action,
+                "next_helper_commands": next_helper_commands,
+            },
+            2,
+        )
     if health_status != 200:
         print("Health check did not return 200, but auth signals are sufficient to diagnose the blocker.")
         if health_body:
@@ -165,15 +271,43 @@ if session_status == 401:
     sys.exit(2)
 
 if health_status != 200:
+    if json_mode:
+        emit_json(
+            {
+                "diagnosis": "health_unavailable",
+                "issue_operations_blocked": True,
+                "health_probe_detail": health_body,
+            },
+            1,
+        )
     print("Health check failed, so the runtime is not ready for issue operations.", file=sys.stderr)
     if health_body:
         print(health_body, file=sys.stderr)
     sys.exit(1)
 
 if session_status != 200:
+    if json_mode:
+        emit_json(
+            {
+                "diagnosis": "unexpected_session_status",
+                "issue_operations_blocked": True,
+                "session_body": session_body,
+            },
+            1,
+        )
     print("Session check returned an unexpected status.", file=sys.stderr)
     print(session_body, file=sys.stderr)
     sys.exit(1)
+
+if json_mode:
+    emit_json(
+        {
+            "diagnosis": "run_issue_lookup_failed",
+            "issue_operations_blocked": True,
+            "run_issues_body": run_issues_body,
+        },
+        1,
+    )
 
 print("The shell is authenticated, but current-run issue lookup still failed.", file=sys.stderr)
 if isinstance(run_issues_json, dict) and run_issues_json.get("error"):

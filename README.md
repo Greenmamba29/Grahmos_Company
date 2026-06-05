@@ -7,6 +7,8 @@ This is the Company run main repo for Grahmos.
 - Run `./scripts/paperclip-runtime-check.sh` inside a Paperclip-managed runtime to
   verify whether the shell can access issue state through a board-authenticated
   session or a `PAPERCLIP_API_KEY` bearer token.
+- Add `--json` when you need the same diagnosis as structured machine-readable data
+  for another script or report generator.
 - If the script exits with `2`, the agent can still work on the Git repository but
   cannot read or mutate Paperclip issues from the shell yet.
 - Even if `/api/health` is degraded or returns a non-200 status, the runtime check
@@ -60,6 +62,9 @@ This is the Company run main repo for Grahmos.
   `./scripts/paperclip-write-runtime-report.sh OUTPUT_PATH [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`
   to write the current runtime check output and operator handoff into a markdown
   report.
+- If you need the same handoff as structured JSON, run
+  `./scripts/paperclip-write-runtime-snapshot.sh OUTPUT_PATH [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`
+  to write a machine-readable runtime snapshot plus unblock payloads.
 
 The comment helper accepts the raw JSON body expected by `POST /api/issues/{issueId}/comments`,
 so it can carry structured fields such as `resume`, `reopen`, or `interrupt` when
@@ -90,5 +95,7 @@ use `paperclip-operator-unblock.sh` to print the exact status payload, adapter J
 and replay commands without rebuilding them by hand.
 If you need that same information as a checked-in or shareable document,
 use `paperclip-write-runtime-report.sh` to write a markdown report file.
+If you need it for automation or downstream tooling, use
+`paperclip-runtime-check.sh --json` or `paperclip-write-runtime-snapshot.sh`.
 Run `./scripts/test-paperclip-helpers.sh` to smoke-test the helper CLI surface
 before relying on it in a live heartbeat.

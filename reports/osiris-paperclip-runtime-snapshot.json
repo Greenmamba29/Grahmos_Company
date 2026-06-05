@@ -1,0 +1,71 @@
+{
+  "generated_at": "2026-06-05T22:27:19Z",
+  "git": {
+    "branch": "cursor/paperclip-runtime-tooling-82aa",
+    "commit": "c4c02253f71485f1ff87912d040f9fe754b41a74"
+  },
+  "runtime_check_exit_code": 2,
+  "runtime": {
+    "summary": {
+      "health_status": 200,
+      "deployment_mode": "authenticated",
+      "deployment_exposure": "private",
+      "session_status": 401,
+      "session_authenticated": false,
+      "run_issues_status": 401,
+      "run_issues_accessible": false,
+      "api_key_present": false,
+      "paperclip_api_key_injected": false,
+      "gh_token_present": true,
+      "aux_home_env_present": true,
+      "aux_home_is_directory": false,
+      "bearer_me_status": null,
+      "bearer_inbox_status": null
+    },
+    "exit_code": 2,
+    "diagnosis": "missing_paperclip_auth",
+    "issue_operations_blocked": true,
+    "server_response": "Board authentication required",
+    "health_probe_detail": null,
+    "gh_token_warning": true,
+    "aux_home_warning": true,
+    "paperclip_api_key_injected": false,
+    "unblock_owner": "Paperclip operator",
+    "required_action": "inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env.",
+    "next_helper_commands": [
+      "./scripts/paperclip-api.sh adapter-env-template YOUR_PAPERCLIP_SECRET_ID [YOUR_CURSOR_SECRET_ID]",
+      "./scripts/paperclip-runtime-check.sh",
+      "./scripts/paperclip-api.sh current-issue-playbook"
+    ]
+  },
+  "unblock": {
+    "owner": "Paperclip operator",
+    "required_action": "Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env",
+    "blocked_issue_payload": {
+      "status": "blocked",
+      "comment": "Blocked.\n\nUnblock owner: Paperclip operator\nRequired action: Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env\n\nDetails: Current Cursor Cloud shell has no board-authenticated Paperclip session and no injected PAPERCLIP_API_KEY. After the env change, rerun the heartbeat and continue the current issue with resume=true."
+    },
+    "adapter_env_payload": {
+      "adapterConfig": {
+        "env": {
+          "CURSOR_API_KEY": {
+            "secretId": "cursor-api-key-secret-id",
+            "type": "secret_ref",
+            "version": "latest"
+          },
+          "PAPERCLIP_API_KEY": {
+            "secretId": "osiris-paperclip-agent-key-secret-id",
+            "type": "secret_ref",
+            "version": "latest"
+          }
+        }
+      },
+      "adapterType": "cursor_cloud"
+    },
+    "replay_commands": [
+      "./scripts/paperclip-runtime-check.sh",
+      "./scripts/paperclip-api.sh current-issue-playbook",
+      "./scripts/paperclip-api.sh issue-comment-current-template \"Resuming with Cursor Cloud Paperclip auth fixed.\" true"
+    ]
+  }
+}
