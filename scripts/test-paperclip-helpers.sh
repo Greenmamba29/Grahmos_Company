@@ -372,6 +372,20 @@ rm -rf "$refresh_dir"
 pass "paperclip-refresh-runtime-artifacts refreshes both runtime artifacts"
 cleanup_last
 
+next_action_dir="$(mktemp -d)"
+run_expect 0 ./scripts/paperclip-heartbeat-next-action.sh "$next_action_dir" paperclip-secret cursor-secret
+assert_stdout_contains "Runtime diagnosis: missing_paperclip_auth"
+assert_stdout_contains "Heartbeat disposition: blocked on Paperclip auth."
+if [[ ! -f "$next_action_dir/osiris-paperclip-runtime-report.md" ]]; then
+  fail "next-action helper did not write markdown report"
+fi
+if [[ ! -f "$next_action_dir/osiris-paperclip-runtime-snapshot.json" ]]; then
+  fail "next-action helper did not write json snapshot"
+fi
+rm -rf "$next_action_dir"
+pass "paperclip-heartbeat-next-action handles blocked heartbeats"
+cleanup_last
+
 run_mock_runtime_check "degraded-health-auth-blocked"
 assert_stdout_contains "\"health_status\": 503"
 assert_stdout_contains "Health check did not return 200, but auth signals are sufficient to diagnose the blocker."

@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-06-05T23:17:36Z",
+  "generated_at": "2026-06-05T23:25:15Z",
   "git": {
     "branch": "cursor/paperclip-runtime-tooling-82aa",
-    "commit": "4259a9c6420b484bb883c81f4ca6cf9879606444"
+    "commit": "e321f86e3773868317a100b507a92d34bb2ae70d"
   },
   "runtime_check_exit_code": 2,
   "runtime": {
