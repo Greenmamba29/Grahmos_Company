@@ -137,6 +137,45 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": "Board authentication required"}).encode())
                 return
+        if scenario == "board-session-ok":
+            if self.path == "/api/health":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps(
+                        {
+                            "status": "ok",
+                            "deploymentMode": "authenticated",
+                            "deploymentExposure": "private",
+                        }
+                    ).encode()
+                )
+                return
+            if self.path == "/api/auth/get-session":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"user": {"id": "user-123"}}).encode())
+                return
+            if run_issue_match:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps([{"id": "issue-1"}]).encode())
+                return
+            if run_log_match:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"lines": []}).encode())
+                return
+            if workspace_ops_match:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"items": []}).encode())
+                return
 
         self.send_response(404)
         self.send_header("Content-Type", "application/json")
@@ -219,6 +258,45 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": "Board authentication required"}).encode())
                 return
+        if scenario == "board-session-ok":
+            if self.path == "/api/health":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps(
+                        {
+                            "status": "ok",
+                            "deploymentMode": "authenticated",
+                            "deploymentExposure": "private",
+                        }
+                    ).encode()
+                )
+                return
+            if self.path == "/api/auth/get-session":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"user": {"id": "user-123"}}).encode())
+                return
+            if run_issue_match:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps([{"id": "issue-1"}]).encode())
+                return
+            if run_log_match:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"lines": []}).encode())
+                return
+            if workspace_ops_match:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"items": []}).encode())
+                return
 
         self.send_response(404)
         self.send_header("Content-Type", "application/json")
@@ -244,6 +322,104 @@ PY
     GH_TOKEN="gh-test-token" \
     CLOUD_AGENT_INJECTED_SECRET_NAMES="GH_TOKEN" \
     ./scripts/paperclip-runtime-check.sh --json
+  kill "$server_pid" 2>/dev/null || true
+  wait "$server_pid" 2>/dev/null || true
+  trap - RETURN
+}
+
+run_mock_heartbeat_next_action() {
+  local scenario="$1"
+  local port server_pid output_dir
+  port="$(python3 - <<'PY'
+import socket
+s = socket.socket()
+s.bind(("127.0.0.1", 0))
+print(s.getsockname()[1])
+s.close()
+PY
+)"
+  output_dir="$(mktemp -d)"
+
+  python3 - "$port" "$scenario" <<'PY' &
+import json
+import re
+import sys
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+port = int(sys.argv[1])
+scenario = sys.argv[2]
+
+
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        run_issue_match = re.fullmatch(r"/api/heartbeat-runs/[^/]+/issues", self.path)
+        run_log_match = re.fullmatch(r"/api/heartbeat-runs/[^/]+/log\?offset=0&limitBytes=4096", self.path)
+        workspace_ops_match = re.fullmatch(r"/api/heartbeat-runs/[^/]+/workspace-operations", self.path)
+        if scenario == "board-session-ok":
+            if self.path == "/api/health":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps(
+                        {
+                            "status": "ok",
+                            "deploymentMode": "authenticated",
+                            "deploymentExposure": "private",
+                        }
+                    ).encode()
+                )
+                return
+            if self.path == "/api/auth/get-session":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"user": {"id": "user-123"}}).encode())
+                return
+            if run_issue_match:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps([{"id": "issue-1"}]).encode())
+                return
+            if run_log_match:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"lines": []}).encode())
+                return
+            if workspace_ops_match:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"items": []}).encode())
+                return
+
+        self.send_response(404)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps({"error": "not found"}).encode())
+
+    def log_message(self, format, *args):
+        return
+
+
+HTTPServer(("127.0.0.1", port), Handler).serve_forever()
+PY
+  server_pid=$!
+
+  trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true; rm -rf "$output_dir"' RETURN
+  run_expect 0 env \
+    PAPERCLIP_API_URL="http://127.0.0.1:$port" \
+    PAPERCLIP_AGENT_ID="agent-123" \
+    PAPERCLIP_COMPANY_ID="company-123" \
+    PAPERCLIP_RUN_ID="run-123" \
+    PAPERCLIP_WORKSPACE_CWD="/workspace" \
+    PAPERCLIP_WORKSPACE_SOURCE="agent-run" \
+    GH_TOKEN="gh-test-token" \
+    CLOUD_AGENT_INJECTED_SECRET_NAMES="GH_TOKEN" \
+    ./scripts/paperclip-heartbeat-next-action.sh "$output_dir" paperclip-secret cursor-secret
+  LAST_HEARTBEAT_OUTPUT_DIR="$output_dir"
   kill "$server_pid" 2>/dev/null || true
   wait "$server_pid" 2>/dev/null || true
   trap - RETURN
@@ -384,6 +560,18 @@ if [[ ! -f "$next_action_dir/osiris-paperclip-runtime-snapshot.json" ]]; then
 fi
 rm -rf "$next_action_dir"
 pass "paperclip-heartbeat-next-action handles blocked heartbeats"
+cleanup_last
+
+run_mock_heartbeat_next_action "board-session-ok"
+assert_stdout_contains "Runtime diagnosis: board_session_ok"
+assert_stdout_contains "Heartbeat disposition: issue operations available."
+assert_stdout_contains "issue-get-current"
+if [[ -e "${LAST_HEARTBEAT_OUTPUT_DIR}/osiris-paperclip-runtime-report.md" ]]; then
+  fail "next-action helper should not refresh blocked artifacts when issue operations are available"
+fi
+rm -rf "${LAST_HEARTBEAT_OUTPUT_DIR}"
+unset LAST_HEARTBEAT_OUTPUT_DIR
+pass "paperclip-heartbeat-next-action switches to current-issue playbook when auth is available"
 cleanup_last
 
 run_mock_runtime_check "degraded-health-auth-blocked"
