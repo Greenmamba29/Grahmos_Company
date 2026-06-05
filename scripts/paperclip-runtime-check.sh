@@ -143,6 +143,7 @@ summary = {
         or run_log_with_header_status == 200
         or workspace_ops_with_header_status == 200
     ),
+    "api_helper_ready": bearer_me_status == 200 and bearer_inbox_status == 200,
     "api_key_present": bool(api_key),
     "paperclip_api_key_injected": "PAPERCLIP_API_KEY" in injected_secret_names,
     "gh_token_present": bool(gh_token),
@@ -187,10 +188,13 @@ if run_issues_status == 200:
                 "issue_operations_blocked": False,
                 "access_path": "board_session",
                 "issue_count": issue_count,
+                "api_helper_ready": bearer_me_status == 200 and bearer_inbox_status == 200,
             },
             0,
         )
     print(f"Current run issue lookup succeeded via board session ({issue_count} issue entries).")
+    if not (bearer_me_status == 200 and bearer_inbox_status == 200):
+        print("Run-scoped issue visibility is available, but shell issue helpers still need PAPERCLIP_API_KEY.")
     sys.exit(0)
 
 if api_key:
@@ -235,6 +239,7 @@ if api_key:
                 "issue_operations_blocked": False,
                 "access_path": "paperclip_api_key",
                 "issue_count": issue_count,
+                "api_helper_ready": True,
             },
             0,
         )

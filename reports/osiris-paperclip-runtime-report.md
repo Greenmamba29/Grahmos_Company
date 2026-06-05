@@ -1,8 +1,8 @@
 # Osiris Hermes Paperclip Runtime Report
 
-- Generated at: 2026-06-05T23:25:14Z
+- Generated at: 2026-06-05T23:41:18Z
 - Git branch: cursor/paperclip-runtime-tooling-82aa
-- Git commit: e321f86e3773868317a100b507a92d34bb2ae70d
+- Git commit: 06cb34da74258bb4f495fe9c840141216ee6cee3
 - Runtime check exit code: 2
 - Operator handoff exit code: 0
 
@@ -24,6 +24,7 @@ Paperclip runtime check
   "run_log_with_run_header_status": 401,
   "workspace_operations_with_run_header_status": 401,
   "run_scoped_debug_read_access": false,
+  "api_helper_ready": false,
   "api_key_present": false,
   "paperclip_api_key_injected": false,
   "gh_token_present": true,

@@ -122,7 +122,9 @@ If the heartbeat should refresh both standard artifacts together, run
 If you want the single recommended heartbeat entry point, run
 `./scripts/paperclip-heartbeat-next-action.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
 When auth is still missing, it refreshes the blocked artifacts; when auth is
-available, it switches to the current-issue playbook.
+available through the API-helper path, it switches to the current-issue playbook.
+If the shell only has run visibility without API-helper readiness, it prints a
+warning instead of pretending issue mutations are ready.
 Once auth is fixed, run `./scripts/paperclip-api.sh current-issue-playbook` for the
 recommended current-issue inspection and execution-contract mutation commands.
 Use `./scripts/paperclip-api.sh comment-template ...`,

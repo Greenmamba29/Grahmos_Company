@@ -22,7 +22,8 @@ Examples:
 Behavior:
   - Runs `paperclip-runtime-check.sh --json`
   - If issue operations are blocked, refreshes both canonical runtime artifacts
-  - If issue operations are available, prints the current-issue playbook
+  - If the API-helper auth path is ready, prints the current-issue playbook
+  - If only run visibility is available, prints a warning instead of a false ready state
 
 Notes:
   - OUTPUT_DIR defaults to reports.
@@ -80,6 +81,15 @@ print("true" if data.get("issue_operations_blocked") else "false")
 PY
 )"
 
+api_helper_ready="$(python3 - "$diagnosis_file" <<'PY'
+import json
+import sys
+
+data = json.load(open(sys.argv[1]))
+print("true" if data.get("api_helper_ready") or data.get("summary", {}).get("api_helper_ready") else "false")
+PY
+)"
+
 printf 'Runtime diagnosis: %s (exit %s)\n' "$diagnosis" "$runtime_status"
 
 if [[ "$blocked_flag" == "true" ]]; then
@@ -96,6 +106,16 @@ EOF
   exit 0
 fi
 
-echo "Heartbeat disposition: issue operations available."
+if [[ "$api_helper_ready" != "true" ]]; then
+  cat <<EOF
+Heartbeat disposition: run visibility available, but Paperclip API helper is not ready.
+Run-scoped reads succeeded, but shell issue helpers still require PAPERCLIP_API_KEY.
+Recommended next action: inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env, then rerun this command.
+EOF
+  rm -f "$diagnosis_file"
+  exit 0
+fi
+
+echo "Heartbeat disposition: issue operations available via API helper."
 "$API_HELPER" current-issue-playbook
 rm -f "$diagnosis_file"

@@ -75,7 +75,9 @@ This is the Company run main repo for Grahmos.
 - If you want one command that decides the next heartbeat step for you, run
   `./scripts/paperclip-heartbeat-next-action.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
   It runs the JSON diagnosis, refreshes blocked artifacts when auth is missing, and
-  otherwise prints the current-issue playbook instead of refreshing blocked artifacts.
+  only prints the current-issue playbook when the API-helper auth path is actually
+  ready. A session-only/read-only state prints a warning instead of pretending issue
+  mutations are available.
 
 The comment helper accepts the raw JSON body expected by `POST /api/issues/{issueId}/comments`,
 so it can carry structured fields such as `resume`, `reopen`, or `interrupt` when

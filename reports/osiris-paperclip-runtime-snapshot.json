@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-06-05T23:25:15Z",
+  "generated_at": "2026-06-05T23:41:19Z",
   "git": {
     "branch": "cursor/paperclip-runtime-tooling-82aa",
-    "commit": "e321f86e3773868317a100b507a92d34bb2ae70d"
+    "commit": "06cb34da74258bb4f495fe9c840141216ee6cee3"
   },
   "runtime_check_exit_code": 2,
   "runtime": {
@@ -19,6 +19,7 @@
       "run_log_with_run_header_status": 401,
       "workspace_operations_with_run_header_status": 401,
       "run_scoped_debug_read_access": false,
+      "api_helper_ready": false,
       "api_key_present": false,
       "paperclip_api_key_injected": false,
       "gh_token_present": true,
