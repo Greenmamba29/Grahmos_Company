@@ -1,3 +1,15 @@
+.DS_Store
+.env
+.env.*
+*.log
+
+.cursor/
+.idea/
+.vscode/
+
+node_modules/
+dist/
+coverage/
 # gitignore template for LangChain products, e.g., LangGraph, LangSmith
 # website: https://www.langchain.com/
 # website: https://www.langchain.com/langgraph
