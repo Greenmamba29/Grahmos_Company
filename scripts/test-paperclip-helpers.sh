@@ -122,6 +122,15 @@ assert_stdout_contains "\"title\": \"Need input\""
 pass "ask-user-questions-template emits interaction payload"
 cleanup_last
 
+run_expect 0 ./scripts/paperclip-operator-unblock.sh paperclip-secret cursor-secret
+assert_stdout_contains "Paperclip Cursor Cloud unblock handoff"
+assert_stdout_contains "\"status\": \"blocked\""
+assert_stdout_contains "\"PAPERCLIP_API_KEY\""
+assert_stdout_contains "\"secretId\": \"paperclip-secret\""
+assert_stdout_contains "./scripts/paperclip-runtime-check.sh"
+pass "paperclip-operator-unblock prints the operator handoff package"
+cleanup_last
+
 run_expect 1 env \
   -u PAPERCLIP_API_URL \
   -u PAPERCLIP_AGENT_ID \

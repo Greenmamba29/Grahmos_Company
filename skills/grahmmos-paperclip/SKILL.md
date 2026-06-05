@@ -99,6 +99,10 @@ Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 without rebuilding the curl commands each heartbeat.
 Use `./scripts/paperclip-api.sh adapter-env-template PAPERCLIP_SECRET_ID [CURSOR_SECRET_ID]`
 to print the Cursor Cloud adapter JSON needed to inject `PAPERCLIP_API_KEY`.
+When the runtime is still blocked and a Paperclip operator must update the adapter,
+run `./scripts/paperclip-operator-unblock.sh [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`
+to print the blocked-status payload, the adapter env JSON, and the replay commands
+for the next heartbeat in one place.
 Once auth is fixed, run `./scripts/paperclip-api.sh current-issue-playbook` for the
 recommended current-issue inspection and execution-contract mutation commands.
 Use `./scripts/paperclip-api.sh comment-template ...`,
@@ -253,7 +257,9 @@ token into the shell, even though other secret-backed env vars may be present.
 **Fix:** Update the adapter env config so `CLOUD_AGENT_INJECTED_SECRET_NAMES`
 includes `PAPERCLIP_API_KEY`, then rerun the heartbeat. Use
 `./scripts/paperclip-api.sh adapter-env-template PAPERCLIP_SECRET_ID [CURSOR_SECRET_ID]`
-to print the exact JSON shape for the adapter update.
+to print the exact JSON shape for the adapter update, or
+`./scripts/paperclip-operator-unblock.sh [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`
+to generate the full operator handoff package.
 
 ## Heartbeat Schedule
 - Heartbeat on interval: ON

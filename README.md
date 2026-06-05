@@ -48,6 +48,11 @@ This is the Company run main repo for Grahmos.
   - `issue-blocked ISSUE_ID UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]`
   - `issue-blocked-current UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]`
   - `issue-blocked-current-template UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]`
+- When the runtime is still blocked, run
+  `./scripts/paperclip-operator-unblock.sh [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`
+  to print a complete operator handoff: the blocked-status payload, the adapter env
+  JSON needed to inject `PAPERCLIP_API_KEY`, and the replay commands for the next
+  heartbeat.
 
 The comment helper accepts the raw JSON body expected by `POST /api/issues/{issueId}/comments`,
 so it can carry structured fields such as `resume`, `reopen`, or `interrupt` when
@@ -73,5 +78,8 @@ For the three contract-specific interaction kinds, you can also use
 If you want the helper to generate the payload and apply it to the current issue in
 one step, use `issue-comment-current-template`, `issue-update-current-template`, or
 `issue-interaction-current-template`, or `issue-blocked-current-template`.
+If the blocker lives outside the shell and must be handed to a Paperclip operator,
+use `paperclip-operator-unblock.sh` to print the exact status payload, adapter JSON,
+and replay commands without rebuilding them by hand.
 Run `./scripts/test-paperclip-helpers.sh` to smoke-test the helper CLI surface
 before relying on it in a live heartbeat.
