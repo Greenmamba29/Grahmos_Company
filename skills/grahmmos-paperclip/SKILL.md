@@ -46,6 +46,22 @@ The CEO agent uses the Cursor Cloud adapter which runs in Cursor's hosted cloud 
 - CURSOR_API_KEY: Cursor background agent API key (crsr_...)
 - GH_TOKEN: GitHub fine-grained PAT (github_pat_...) with all-repos access
 
+### Paperclip Board Authentication
+
+The Paperclip web app and board APIs are a separate authentication boundary from
+the Cursor/GitHub setup above.
+
+- `/api/auth/get-session` requires an authenticated board session
+- issue endpoints such as `/api/issues/{id}` and watchdog endpoints such as
+  `/api/heartbeat-runs/{runId}/watchdog-decisions` rely on the same board auth
+- `PAPERCLIP_API_URL` by itself is not enough to read or update issue threads
+
+If a cloud agent wake provides issue context but the runtime does not expose a
+supported Paperclip session or agent-scoped API token, the agent should use the
+wake payload first, make durable progress elsewhere (repo changes, docs, or
+work products), and treat board-authenticated issue writes as blocked until that
+auth path is configured.
+
 ### Critical Setup Requirement
 The Cursor Cloud adapter uses Cursor's GitHub App (NOT the GH_TOKEN) to clone repos.
 You MUST connect your GitHub account to Cursor in:
