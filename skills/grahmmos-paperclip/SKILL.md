@@ -99,6 +99,22 @@ Grahmos_Company/
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
 
+### Error: "`opencode models` timed out after 20s"
+**Cause:** A local `opencode_local` adapter could not enumerate models quickly
+enough on the host where the Paperclip agent is running. This usually points to a
+host-side OpenCode problem rather than a repository-code problem: missing CLI
+install, broken provider credentials, dead backend connectivity, or a hung
+OpenCode runtime.
+**Fix:** Diagnose the actual local adapter host, not Cursor Cloud. Verify that:
+1. `opencode` is installed and callable on the Paperclip host
+2. `opencode models` succeeds interactively on that host
+3. model enumeration returns within Paperclip's timeout window
+
+If `opencode models` hangs or times out, repair the host OpenCode installation,
+credentials, or backend connection before rerunning the blocked heartbeat.
+**Review note:** Cursor Cloud may not have the `opencode` CLI installed at all, so
+absence of the command there does not reproduce the local adapter failure.
+
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
 - Interval: every 300 seconds (5 minutes)
