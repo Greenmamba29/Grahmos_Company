@@ -72,6 +72,8 @@ This is the Company run main repo for Grahmos.
   to write a machine-readable runtime snapshot plus unblock payloads.
 - If you want the standard markdown and JSON artifacts refreshed together, run
   `./scripts/paperclip-refresh-runtime-artifacts.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
+  That also writes `osiris-paperclip-blocked-update.json`, a standalone blocked
+  issue-update payload.
 - If you want one command that decides the next heartbeat step for you, run
   `./scripts/paperclip-heartbeat-next-action.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
   It runs the JSON diagnosis, refreshes blocked artifacts when auth is missing, and
@@ -112,6 +114,8 @@ If you need it for automation or downstream tooling, use
 `paperclip-runtime-check.sh --json` or `paperclip-write-runtime-snapshot.sh`.
 If you want to refresh both canonical runtime artifacts in one step, use
 `paperclip-refresh-runtime-artifacts.sh`.
+If you need the standalone blocked disposition payload as a file, use
+`paperclip-write-blocked-update.sh`.
 If you want a single blocked-vs-unblocked heartbeat entry point, use
 `paperclip-heartbeat-next-action.sh`.
 Run `./scripts/test-paperclip-helpers.sh` to smoke-test the helper CLI surface

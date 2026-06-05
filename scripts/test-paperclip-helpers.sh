@@ -611,6 +611,19 @@ assert_stdout_contains "./scripts/paperclip-runtime-check.sh"
 pass "paperclip-operator-unblock prints the operator handoff package"
 cleanup_last
 
+blocked_update_path="$(mktemp)"
+run_expect 0 ./scripts/paperclip-write-blocked-update.sh "$blocked_update_path"
+assert_stdout_contains "Wrote $blocked_update_path"
+if ! grep -Fq '"status": "blocked"' "$blocked_update_path"; then
+  fail "blocked update artifact missing blocked status"
+fi
+if ! grep -Fq 'Required action: Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env' "$blocked_update_path"; then
+  fail "blocked update artifact missing standard required action"
+fi
+rm -f "$blocked_update_path"
+pass "paperclip-write-blocked-update writes a standalone blocked payload"
+cleanup_last
+
 run_mock_runtime_check_json "degraded-health-auth-blocked"
 assert_stdout_json_value "diagnosis" "missing_paperclip_auth"
 assert_stdout_json_value "issue_operations_blocked" "true"
@@ -665,6 +678,9 @@ fi
 if [[ ! -f "$refresh_dir/osiris-paperclip-runtime-snapshot.json" ]]; then
   fail "refresh helper did not write json snapshot"
 fi
+if [[ ! -f "$refresh_dir/osiris-paperclip-blocked-update.json" ]]; then
+  fail "refresh helper did not write blocked update artifact"
+fi
 rm -rf "$refresh_dir"
 pass "paperclip-refresh-runtime-artifacts refreshes both runtime artifacts"
 cleanup_last
@@ -678,6 +694,9 @@ if [[ ! -f "$next_action_dir/osiris-paperclip-runtime-report.md" ]]; then
 fi
 if [[ ! -f "$next_action_dir/osiris-paperclip-runtime-snapshot.json" ]]; then
   fail "next-action helper did not write json snapshot"
+fi
+if [[ ! -f "$next_action_dir/osiris-paperclip-blocked-update.json" ]]; then
+  fail "next-action helper did not write blocked update artifact"
 fi
 rm -rf "$next_action_dir"
 pass "paperclip-heartbeat-next-action handles blocked heartbeats"

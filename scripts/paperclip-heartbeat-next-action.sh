@@ -22,6 +22,7 @@ Examples:
 Behavior:
   - Runs `paperclip-runtime-check.sh --json`
   - If issue operations are blocked, refreshes both canonical runtime artifacts
+    and the standalone blocked issue-update payload
   - If the API-helper auth path is ready, prints the current-issue playbook
   - If only run visibility is available, prints a warning instead of a false ready state
 
@@ -99,6 +100,7 @@ Heartbeat disposition: blocked on Paperclip auth.
 Refreshed artifacts:
   - $output_dir/osiris-paperclip-runtime-report.md
   - $output_dir/osiris-paperclip-runtime-snapshot.json
+  - $output_dir/osiris-paperclip-blocked-update.json
 Unblock owner: Paperclip operator
 Required action: inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env.
 EOF
