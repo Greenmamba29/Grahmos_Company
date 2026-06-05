@@ -183,6 +183,14 @@ This fetches the current agent record, merges `PAPERCLIP_API_KEY` into
 `adapterConfig.env`, and sends the corresponding `PATCH /api/agents/{id}` update with
 `replaceAdapterConfig=true`.
 
+If you only know the secret by name/key and not by UUID yet, use:
+
+```bash
+./scripts/paperclip-api.sh secret-find osiris-paperclip-agent-key
+./scripts/paperclip-api.sh secret-id osiris-paperclip-agent-key
+./scripts/paperclip-api.sh agent-inject-paperclip-key-current-by-query osiris-paperclip-agent-key
+```
+
 Next action for Osiris Hermes: update the Cursor Cloud agent configuration to inject
 `PAPERCLIP_API_KEY`, then rerun the heartbeat so the CEO agent can check inbox items
 and update the assigned issue disposition directly.

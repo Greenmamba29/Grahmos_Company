@@ -24,6 +24,10 @@ This is the Company run main repo for Grahmos.
   - `inbox-lite`
   - `current-agent-id`
   - `current-company-id`
+  - `secrets-list [COMPANY_ID]`
+  - `secret-find QUERY [COMPANY_ID]`
+  - `secret-id QUERY [COMPANY_ID]`
+  - `secret-id-from-json JSON_FILE|- QUERY`
   - `adapter-env-template PAPERCLIP_SECRET_ID [CURSOR_SECRET_ID]`
   - `agent-get AGENT_ID [COMPANY_ID]`
   - `agent-get-current`
@@ -83,6 +87,10 @@ agent configuration, run
 `./scripts/paperclip-api.sh agent-inject-paperclip-key-current YOUR_PAPERCLIP_SECRET_ID`
 to merge `PAPERCLIP_API_KEY` into the current Cursor Cloud adapter env and send the
 `PATCH /api/agents/{id}` request directly.
+If you do not know the secret UUID yet, resolve it first with
+`./scripts/paperclip-api.sh secret-find QUERY` / `secret-id QUERY`, or use the
+one-step current-agent helper
+`./scripts/paperclip-api.sh agent-inject-paperclip-key-current-by-query QUERY`.
 After auth is fixed, run `./scripts/paperclip-api.sh current-issue-playbook` for the
 recommended inspection, comment, interaction, blocked, and done commands.
 When you need a structured comment or status payload for the execution contract, run

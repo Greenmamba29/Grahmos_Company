@@ -71,6 +71,8 @@ assert_stdout_contains "issue-interaction-current"
 assert_stdout_contains "request-confirmation-template TITLE [JSON_FILE|-]"
 assert_stdout_contains "issue-blocked-current-template UNBLOCK_OWNER REQUIRED_ACTION [DETAILS]"
 assert_stdout_contains "agent-inject-paperclip-key-current PAPERCLIP_SECRET_ID [VERSION]"
+assert_stdout_contains "agent-inject-paperclip-key-current-by-query SECRET_QUERY [VERSION]"
+assert_stdout_contains "secret-id-from-json JSON_FILE|- QUERY"
 pass "paperclip-api help advertises template and current-issue commands"
 cleanup_last
 
@@ -164,6 +166,29 @@ assert_stdout_contains "\"PAPERCLIP_API_KEY\""
 assert_stdout_contains "\"version\": 7"
 pass "agent-paperclip-key-patch-template supports explicit secret versions"
 cleanup_last
+
+secrets_json_file="$(mktemp)"
+cat >"$secrets_json_file" <<'EOF'
+[
+  {
+    "id": "secret-111",
+    "name": "Osiris Paperclip Agent Key",
+    "key": "osiris-paperclip-agent-key"
+  },
+  {
+    "id": "secret-222",
+    "name": "Cursor API Key",
+    "key": "cursor-api-key"
+  }
+]
+EOF
+
+run_expect 0 ./scripts/paperclip-api.sh secret-id-from-json "$secrets_json_file" "osiris-paperclip-agent-key"
+assert_stdout_contains "secret-111"
+pass "secret-id-from-json prefers exact key/name matches"
+cleanup_last
+
+rm -f "$secrets_json_file"
 
 rm -f "$agent_json_file"
 

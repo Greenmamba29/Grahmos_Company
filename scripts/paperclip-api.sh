@@ -10,6 +10,10 @@ Usage:
   ./scripts/paperclip-api.sh inbox-lite
   ./scripts/paperclip-api.sh current-agent-id
   ./scripts/paperclip-api.sh current-company-id
+  ./scripts/paperclip-api.sh secrets-list [COMPANY_ID]
+  ./scripts/paperclip-api.sh secret-find QUERY [COMPANY_ID]
+  ./scripts/paperclip-api.sh secret-id QUERY [COMPANY_ID]
+  ./scripts/paperclip-api.sh secret-id-from-json JSON_FILE|- QUERY
   ./scripts/paperclip-api.sh adapter-env-template PAPERCLIP_SECRET_ID [CURSOR_SECRET_ID]
   ./scripts/paperclip-api.sh current-issue-playbook
   ./scripts/paperclip-api.sh comment-template BODY [RESUME_TRUE_OR_FALSE]
@@ -31,6 +35,8 @@ Usage:
   ./scripts/paperclip-api.sh agent-inject-secret-ref-current ENV_NAME SECRET_ID [VERSION]
   ./scripts/paperclip-api.sh agent-inject-paperclip-key AGENT_ID PAPERCLIP_SECRET_ID [VERSION] [COMPANY_ID]
   ./scripts/paperclip-api.sh agent-inject-paperclip-key-current PAPERCLIP_SECRET_ID [VERSION]
+  ./scripts/paperclip-api.sh agent-inject-secret-ref-current-by-query ENV_NAME SECRET_QUERY [VERSION]
+  ./scripts/paperclip-api.sh agent-inject-paperclip-key-current-by-query SECRET_QUERY [VERSION]
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get ISSUE_ID
   ./scripts/paperclip-api.sh issue-get-current
@@ -56,6 +62,10 @@ Examples:
   ./scripts/paperclip-api.sh inbox-lite
   ./scripts/paperclip-api.sh current-agent-id
   ./scripts/paperclip-api.sh current-company-id
+  ./scripts/paperclip-api.sh secrets-list
+  ./scripts/paperclip-api.sh secret-find osiris-paperclip-agent-key
+  ./scripts/paperclip-api.sh secret-id osiris-paperclip-agent-key
+  ./scripts/paperclip-api.sh secret-id-from-json secrets.json osiris-paperclip-agent-key
   ./scripts/paperclip-api.sh adapter-env-template \
     osiris-paperclip-agent-key-secret-id \
     cursor-api-key-secret-id
@@ -93,6 +103,8 @@ Examples:
     osiris-paperclip-agent-key-secret-id
   ./scripts/paperclip-api.sh agent-inject-paperclip-key-current \
     osiris-paperclip-agent-key-secret-id
+  ./scripts/paperclip-api.sh agent-inject-paperclip-key-current-by-query \
+    osiris-paperclip-agent-key
   ./scripts/paperclip-api.sh current-issue-id
   ./scripts/paperclip-api.sh issue-get 123e4567-e89b-12d3-a456-426614174000
   ./scripts/paperclip-api.sh issue-get-current
@@ -134,10 +146,16 @@ Notes:
     into the Cursor Cloud adapter environment.
   - `current-agent-id` and `current-company-id` read the currently running agent
     context from PAPERCLIP_AGENT_ID and PAPERCLIP_COMPANY_ID.
+  - `secrets-list`, `secret-find`, and `secret-id` help resolve Paperclip secret ids
+    from company-visible secret metadata once bearer auth is available.
+  - `secret-id-from-json` resolves a secret id from a saved JSON file or stdin, which
+    is useful for offline testing and for working from exported secret metadata.
   - `agent-env-patch-template` merges a secret-ref env binding into an existing agent
     JSON document and prints the PATCH payload expected by `PATCH /api/agents/{id}`.
   - `agent-inject-paperclip-key-current` is the one-command path for updating the
     current Cursor Cloud agent to inject `PAPERCLIP_API_KEY` once auth is available.
+  - `agent-inject-paperclip-key-current-by-query` resolves the secret id by name/key
+    first, then applies the current-agent adapter patch.
   - `current-issue-playbook` prints the recommended commands to inspect, comment on,
     interact with, block, or complete the current issue once auth is available.
   - `comment-template`, `update-template`, and `blocked-template` print JSON payloads
@@ -456,6 +474,74 @@ read_body_file() {
   printf '%s\n' "$tmp_body"
 }
 
+resolve_secret_id_from_company_json() {
+  local source="$1"
+  local query="$2"
+  local source_file
+
+  source_file="$(read_body_file "$source")"
+
+  python3 - "$source_file" "$query" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+data = json.loads(Path(sys.argv[1]).read_text())
+query = sys.argv[2].strip()
+query_lower = query.lower()
+
+if not query:
+    print("error: QUERY is required", file=sys.stderr)
+    raise SystemExit(2)
+
+items = data if isinstance(data, list) else data.get("items", [])
+matches = []
+for item in items:
+    if not isinstance(item, dict):
+        continue
+    values = [
+        str(item.get("id") or ""),
+        str(item.get("name") or ""),
+        str(item.get("key") or ""),
+    ]
+    lowered = [value.lower() for value in values if value]
+    if query_lower in lowered or any(query_lower in value for value in lowered):
+        matches.append(item)
+
+if not matches:
+    print(f"error: no secret matched query: {query}", file=sys.stderr)
+    raise SystemExit(4)
+
+exact = [
+    item for item in matches
+    if query_lower in {
+        str(item.get("id") or "").lower(),
+        str(item.get("name") or "").lower(),
+        str(item.get("key") or "").lower(),
+    }
+]
+chosen = exact if exact else matches
+
+if len(chosen) != 1:
+    print(f"error: query matched multiple secrets: {query}", file=sys.stderr)
+    for item in chosen:
+        ident = item.get("id") or ""
+        name = item.get("name") or ""
+        key = item.get("key") or ""
+        print(f"- id={ident} name={name} key={key}", file=sys.stderr)
+    raise SystemExit(5)
+
+secret_id = chosen[0].get("id")
+if not secret_id:
+    print("error: matched secret did not include an id", file=sys.stderr)
+    raise SystemExit(6)
+
+print(secret_id)
+PY
+
+  rm -f "$source_file"
+}
+
 write_agent_env_patch_from_agent_json() {
   local source="$1"
   local env_name="$2"
@@ -636,6 +722,72 @@ case "$cmd" in
   current-company-id)
     resolve_current_company_id
     ;;
+  secrets-list)
+    require_auth
+    company_id="${2:-${PAPERCLIP_COMPANY_ID:-}}"
+    if [[ -z "$company_id" ]]; then
+      echo "error: COMPANY_ID is required" >&2
+      exit 2
+    fi
+    request GET "/api/companies/$company_id/secrets"
+    ;;
+  secret-find)
+    require_auth
+    query="${2:-}"
+    company_id="${3:-${PAPERCLIP_COMPANY_ID:-}}"
+    if [[ -z "$query" || -z "$company_id" ]]; then
+      echo "error: QUERY and COMPANY_ID are required" >&2
+      exit 2
+    fi
+    secrets_file="$(mktemp)"
+    request GET "/api/companies/$company_id/secrets" > "$secrets_file"
+    python3 - "$secrets_file" "$query" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+data = json.loads(Path(sys.argv[1]).read_text())
+query = sys.argv[2].strip().lower()
+items = data if isinstance(data, list) else data.get("items", [])
+matches = []
+for item in items:
+    if not isinstance(item, dict):
+        continue
+    haystacks = [
+        str(item.get("id") or "").lower(),
+        str(item.get("name") or "").lower(),
+        str(item.get("key") or "").lower(),
+        str(item.get("description") or "").lower(),
+    ]
+    if any(query in value for value in haystacks if value):
+        matches.append(item)
+json.dump(matches, sys.stdout, indent=2)
+sys.stdout.write("\n")
+PY
+    rm -f "$secrets_file"
+    ;;
+  secret-id)
+    require_auth
+    query="${2:-}"
+    company_id="${3:-${PAPERCLIP_COMPANY_ID:-}}"
+    if [[ -z "$query" || -z "$company_id" ]]; then
+      echo "error: QUERY and COMPANY_ID are required" >&2
+      exit 2
+    fi
+    secrets_file="$(mktemp)"
+    request GET "/api/companies/$company_id/secrets" > "$secrets_file"
+    resolve_secret_id_from_company_json "$secrets_file" "$query"
+    rm -f "$secrets_file"
+    ;;
+  secret-id-from-json)
+    source="${2:-}"
+    query="${3:-}"
+    if [[ -z "$source" || -z "$query" ]]; then
+      echo "error: JSON_FILE|- and QUERY are required" >&2
+      exit 2
+    fi
+    resolve_secret_id_from_company_json "$source" "$query"
+    ;;
   adapter-env-template)
     print_adapter_env_template "${2:-}" "${3:-}"
     ;;
@@ -806,6 +958,47 @@ case "$cmd" in
     fi
     agent_id="$(resolve_current_agent_id)"
     company_id="$(resolve_current_company_id)"
+    current_agent_file="$(mktemp)"
+    request GET "$(agent_path "$agent_id" "$company_id")" > "$current_agent_file"
+    body_file="$(write_agent_env_patch_from_agent_json "$current_agent_file" "PAPERCLIP_API_KEY" "$secret_id" "$version")"
+    request PATCH "$(agent_path "$agent_id" "$company_id")" "$body_file"
+    rm -f "$current_agent_file" "$body_file"
+    ;;
+  agent-inject-secret-ref-current-by-query)
+    require_auth
+    env_name="${2:-}"
+    query="${3:-}"
+    version="${4:-latest}"
+    if [[ -z "$env_name" || -z "$query" ]]; then
+      echo "error: ENV_NAME and SECRET_QUERY are required" >&2
+      exit 2
+    fi
+    company_id="$(resolve_current_company_id)"
+    secrets_file="$(mktemp)"
+    request GET "/api/companies/$company_id/secrets" > "$secrets_file"
+    secret_id="$(resolve_secret_id_from_company_json "$secrets_file" "$query")"
+    rm -f "$secrets_file"
+    agent_id="$(resolve_current_agent_id)"
+    current_agent_file="$(mktemp)"
+    request GET "$(agent_path "$agent_id" "$company_id")" > "$current_agent_file"
+    body_file="$(write_agent_env_patch_from_agent_json "$current_agent_file" "$env_name" "$secret_id" "$version")"
+    request PATCH "$(agent_path "$agent_id" "$company_id")" "$body_file"
+    rm -f "$current_agent_file" "$body_file"
+    ;;
+  agent-inject-paperclip-key-current-by-query)
+    require_auth
+    query="${2:-}"
+    version="${3:-latest}"
+    if [[ -z "$query" ]]; then
+      echo "error: SECRET_QUERY is required" >&2
+      exit 2
+    fi
+    company_id="$(resolve_current_company_id)"
+    secrets_file="$(mktemp)"
+    request GET "/api/companies/$company_id/secrets" > "$secrets_file"
+    secret_id="$(resolve_secret_id_from_company_json "$secrets_file" "$query")"
+    rm -f "$secrets_file"
+    agent_id="$(resolve_current_agent_id)"
     current_agent_file="$(mktemp)"
     request GET "$(agent_path "$agent_id" "$company_id")" > "$current_agent_file"
     body_file="$(write_agent_env_patch_from_agent_json "$current_agent_file" "PAPERCLIP_API_KEY" "$secret_id" "$version")"
