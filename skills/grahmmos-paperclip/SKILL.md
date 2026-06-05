@@ -99,6 +99,23 @@ Grahmos_Company/
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
 
+### Error: "Configured OpenCode model is unavailable"
+**Cause:** The agent is configured with a provider/model slug that is no longer exposed by the
+OpenCode adapter in the current environment. Example failure seen in production:
+`openai/gpt-5.1-codex-mini`
+
+**Fix:** Update the affected Paperclip agent's configured model to one of the models currently
+reported by the adapter. At the time of writing, Paperclip reported these available OpenCode
+models:
+- `opencode/big-pickle`
+- `opencode/deepseek-v4-flash-free`
+- `opencode/mimo-v2.5-free`
+- `opencode/minimax-m3-free`
+- `opencode/nemotron-3-ultra-free`
+
+**Recovery action:** After changing the model, re-run the blocked heartbeat or wake so the agent
+can resume from the last concrete action instead of failing during adapter startup.
+
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
 - Interval: every 300 seconds (5 minutes)
