@@ -99,7 +99,8 @@ This is the Company run main repo for Grahmos.
   nested embedded artifacts inside refresh/heartbeat JSON results and enforces the
   bundle's field-type/literal expectations for supported schemas. Provide
   `EXPECTED_ARTIFACT_TYPE` for raw payloads like `osiris-paperclip-blocked-update.json`
-  that intentionally omit an `artifact_type` field.
+  that intentionally omit an `artifact_type` field. Pass `-` as JSON_FILE to read
+  the payload from stdin.
 - If you want one command that decides the next heartbeat step for you, run
   `./scripts/paperclip-heartbeat-next-action.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
   It runs the JSON diagnosis, refreshes blocked artifacts when auth is missing, and

@@ -11,6 +11,7 @@ Usage:
 
 Examples:
   ./scripts/paperclip-validate-json-output.sh reports/osiris-paperclip-runtime-latest.json
+  ./scripts/paperclip-validate-json-output.sh - paperclip_blocked_issue_update_payload
   ./scripts/paperclip-validate-json-output.sh \
     --json \
     reports/osiris-paperclip-runtime-latest.json \
@@ -18,6 +19,7 @@ Examples:
 
 Notes:
   - Validates one JSON file against the checked-in schema bundle.
+  - Pass JSON_FILE as `-` to read the payload from stdin.
   - If EXPECTED_ARTIFACT_TYPE is provided, the validator checks that too.
 EOF
 }
@@ -37,14 +39,22 @@ fi
 
 json_file="${1:-}"
 expected_artifact_type="${2:-}"
+temp_json_file=""
 
 if [[ -z "$json_file" ]]; then
   echo "error: JSON_FILE is required" >&2
   exit 2
 fi
 
+if [[ "$json_file" == "-" ]]; then
+  temp_json_file="$(mktemp)"
+  cat >"$temp_json_file"
+  json_file="$temp_json_file"
+fi
+
 if [[ ! -f "$SCHEMA_BUNDLE" ]]; then
   echo "error: missing schema bundle: $SCHEMA_BUNDLE" >&2
+  rm -f "$temp_json_file"
   exit 1
 fi
 
@@ -279,3 +289,5 @@ else:
 
 raise SystemExit(0 if not errors else 1)
 PY
+
+rm -f "$temp_json_file"

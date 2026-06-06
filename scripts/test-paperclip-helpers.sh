@@ -814,6 +814,15 @@ fi
 if ! grep -Fq 'Required action: Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env' "$blocked_update_path"; then
   fail "blocked update artifact missing standard required action"
 fi
+run_expect 0 bash -lc 'cat "$1" | ./scripts/paperclip-validate-json-output.sh - paperclip_blocked_issue_update_payload' _ "$blocked_update_path"
+assert_stdout_contains "Validated JSON artifact"
+pass "paperclip-validate-json-output accepts stdin in text mode"
+cleanup_last
+run_expect 0 bash -lc 'cat "$1" | ./scripts/paperclip-validate-json-output.sh --json - paperclip_blocked_issue_update_payload' _ "$blocked_update_path"
+assert_stdout_json_value "artifact_type" "paperclip_json_validation_result"
+assert_stdout_json_value "valid" "true"
+pass "paperclip-validate-json-output accepts stdin in JSON mode"
+cleanup_last
 rm -f "$blocked_update_path"
 pass "paperclip-write-blocked-update writes a standalone blocked payload"
 cleanup_last
