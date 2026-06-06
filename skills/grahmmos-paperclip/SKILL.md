@@ -41,10 +41,13 @@ The CEO agent uses the Cursor Cloud adapter which runs in Cursor's hosted cloud 
 - Starting ref: main
 - Cursor runtime: Cursor hosted
 - CURSOR_API_KEY: Set in environment variables
+- PAPERCLIP_API_KEY: Set in environment variables for Paperclip API access
 
 ### Environment Variables Required
 - CURSOR_API_KEY: Cursor background agent API key (crsr_...)
 - GH_TOKEN: GitHub fine-grained PAT (github_pat_...) with all-repos access
+- PAPERCLIP_API_KEY: Paperclip agent bearer token or run JWT used for `/api/issues/*`,
+  `/api/agents/me`, comments, and status updates during heartbeats
 
 ### Critical Setup Requirement
 The Cursor Cloud adapter uses Cursor's GitHub App (NOT the GH_TOKEN) to clone repos.
@@ -53,6 +56,11 @@ Cursor app -> Settings -> Integrations -> GitHub
 
 Without this OAuth connection, you will see:
   [validation_error] Failed to verify existence of branch 'main' in repository
+
+For non-local adapters such as Cursor Cloud, Paperclip does not inject auth
+implicitly unless `PAPERCLIP_API_KEY` is configured on the adapter. Without it,
+heartbeats can wake with issue context but fail to read or mutate Paperclip issue
+state because all `/api` requests return `401 Unauthorized`.
 
 ### Managed Instructions Bundle
 The agent instructions are stored as a Paperclip managed bundle at:
@@ -93,6 +101,12 @@ Grahmos_Company/
 ### Error: "cursor_cloud requires repoUrl in adapterC..."
 **Cause:** Repository URL field is empty in Cursor Cloud config
 **Fix:** Set Repository URL = https://github.com/Greenmamba29/Grahmos_Company
+
+### Error: "401 Unauthorized" from `/api/issues/*` or `/api/agents/me`
+**Cause:** `PAPERCLIP_API_KEY` is missing from the Cursor Cloud adapter environment
+**Fix:** Add `PAPERCLIP_API_KEY` to the adapter configuration. It must be a valid
+Paperclip agent API key or short-lived run JWT so heartbeats can authenticate with
+`Authorization: Bearer $PAPERCLIP_API_KEY`
 
 ### Error: "Failed to start command hermes in ."
 **Cause:** Hermes Agent (local) workspace not initialized
