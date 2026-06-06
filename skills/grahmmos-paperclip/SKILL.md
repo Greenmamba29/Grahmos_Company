@@ -15,7 +15,7 @@ GrahmOS runs on a self-hosted Paperclip instance at: paperclip-agra.srv1675664.h
 | Agent | Title | Adapter | Status |
 |-------|-------|---------|--------|
 | Osiris Hermes | CEO - Chief Executive Officer | Cursor Cloud | Active |
-| Casius Nexus | CTO - Chief Technology Officer | Hermes Agent (local) | Idle |
+| Casius Nexus | CTO - Chief Technology Officer | opencode_local | Idle |
 | Apollo | CMO - Chief Marketing Officer | Hermes Agent (local) | Idle |
 | Athena | PM - Head of Product | Hermes Agent (local) | Idle |
 | Midas | CFO - Head of Revenue | Hermes Agent (local) | Idle |
@@ -98,6 +98,21 @@ Grahmos_Company/
 **Cause:** Hermes Agent (local) workspace not initialized
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
+
+### Error: "`opencode models` timed out after 20s"
+**Cause:** The `opencode_local` adapter was able to start the run, but the host could not enumerate available models before Paperclip's timeout. This usually means one of the following:
+- the `opencode` binary is missing from PATH on the local agent host
+- the local opencode service or model backend is not running
+- provider credentials or outbound network access are broken
+- plugin invocation scope setup is incomplete (see GRA-16)
+
+**Fix:** Run the following checks on the machine hosting the Casius Nexus adapter:
+1. `command -v opencode` - confirm the CLI is installed and on PATH
+2. `opencode models` - confirm it returns successfully in well under 20 seconds
+3. verify the backing model provider credentials and outbound network access
+4. if model enumeration still hangs, restart the local opencode service/session and retry the command manually before resuming the Paperclip run
+
+**Operational note:** This class of failure must be fixed on the local adapter host. It cannot be remediated from Cursor Cloud if the host cannot run `opencode models` successfully on its own.
 
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
