@@ -99,6 +99,25 @@ Grahmos_Company/
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
 
+### Error: "Board authentication required" or "Unauthorized" during silent-run review
+**Cause:** The Cursor Cloud runtime receives `PAPERCLIP_*` context variables, but those values do not authenticate shell requests to the Paperclip board API. Silent-run review endpoints rely on a board session cookie or a dedicated service-auth path that is not injected here by default.
+
+**Observed behavior from Cursor Cloud:**
+- `GET /api/auth/get-session` -> `401 {"error":"Board authentication required"}`
+- `GET /api/issues/{issueId}/active-run` -> `401 {"error":"Unauthorized"}`
+- `GET /api/issues/{issueId}/live-runs` -> `401 {"error":"Unauthorized"}`
+- `GET /api/heartbeat-runs/{runId}` -> `401 {"error":"Unauthorized"}`
+- `POST /api/heartbeat-runs/{runId}/cancel` -> `403 {"error":"Board access required"}`
+
+**Fix:** Use a board-authenticated Paperclip browser session (or inject a dedicated Paperclip service credential) before trying to inspect, comment on, cancel, or record watchdog decisions for silent runs from Cursor Cloud.
+
+### Silent-run review flow
+Once board auth is available, use the following sequence for watchdog review work:
+1. Read `/api/issues/{issueId}/active-run` and `/api/issues/{issueId}/live-runs` to confirm whether the issue still owns a live run.
+2. Read `/api/heartbeat-runs/{runId}`, `/api/heartbeat-runs/{runId}/events`, and `/api/heartbeat-runs/{runId}/log` to inspect state, output silence, and any workspace operations.
+3. If the run is unhealthy, use `/api/heartbeat-runs/{runId}/cancel` or `/api/heartbeat-runs/{runId}/watchdog-decisions` from an authenticated context.
+4. Leave the final issue disposition in Paperclip with a named unblock owner and explicit next action.
+
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
 - Interval: every 300 seconds (5 minutes)
