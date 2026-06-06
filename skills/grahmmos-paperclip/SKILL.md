@@ -18,7 +18,7 @@ GrahmOS runs on a self-hosted Paperclip instance at: paperclip-agra.srv1675664.h
 | Casius Nexus | CTO - Chief Technology Officer | Hermes Agent (local) | Idle |
 | Apollo | CMO - Chief Marketing Officer | Hermes Agent (local) | Idle |
 | Athena | PM - Head of Product | Hermes Agent (local) | Idle |
-| Midas | CFO - Head of Revenue | Hermes Agent (local) | Idle |
+| Midas | CFO - Head of Revenue | opencode_local (last verified) | Idle |
 | Echo | General - Content and Media Lead | Claude Code (local) | Idle |
 | Hermes-GTM | General - Sales and GTM Lead | Claude Code (local) | Idle |
 | Daedalus | General - UX/UI Lead | Claude Code (local) | Idle |
@@ -30,6 +30,11 @@ GrahmOS runs on a self-hosted Paperclip instance at: paperclip-agra.srv1675664.h
 - OpenClaw
 - Accio Source
 - JAM Media
+
+The last verified live signal for Midas came from a silent-run review and
+showed the agent running on `opencode_local` with no emitted output. Treat the
+live Paperclip board or continuation payload as the source of truth if the
+adapter config changes again.
 
 ## Cursor Cloud Adapter Setup (Osiris Hermes)
 
@@ -71,6 +76,8 @@ Grahmos_Company/
   README.md          # Repository readme
   LICENSE            # MIT License
   .gitignore         # Git ignore
+  docs/
+    midas-silent-active-run-review.md  # Durable ops review note
   skills/
     grahmmos-paperclip/
       SKILL.md       # This file - company setup documentation
@@ -98,6 +105,27 @@ Grahmos_Company/
 **Cause:** Hermes Agent (local) workspace not initialized
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
+
+### Review path: "silent active run" for Midas
+**Current repo signal:** repo metadata can lag behind the live Paperclip
+configuration.
+**Review order:**
+1. Use the live run payload or Paperclip board record as the source of truth for
+   the adapter type.
+2. If the run is `opencode_local` and there is no output at all, inspect
+   OpenCode model-slug availability first. A retired model can fail before
+   normal logs begin.
+3. If the model slug is valid, inspect host-side adapter startup logs for a
+   pre-log failure.
+4. Only use the Hermes-local bootstrap path when the live run actually confirms
+   `Hermes Agent (local)`.
+
+### Heartbeat auth limitation for Cursor Cloud
+**Cause:** This runtime can reach the Paperclip deployment but does not inherit a
+board-authenticated session by default.
+**Fix:** Inject `PAPERCLIP_API_KEY` into the Cursor Cloud adapter environment or
+perform the run inspection in a board-authenticated Paperclip session when a
+heartbeat must read or mutate protected issue or run state.
 
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
