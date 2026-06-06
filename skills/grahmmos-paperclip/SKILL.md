@@ -15,7 +15,7 @@ GrahmOS runs on a self-hosted Paperclip instance at: paperclip-agra.srv1675664.h
 | Agent | Title | Adapter | Status |
 |-------|-------|---------|--------|
 | Osiris Hermes | CEO - Chief Executive Officer | Cursor Cloud | Active |
-| Casius Nexus | CTO - Chief Technology Officer | Hermes Agent (local) | Idle |
+| Casius Nexus | CTO - Chief Technology Officer | OpenCode (local) | Idle |
 | Apollo | CMO - Chief Marketing Officer | Hermes Agent (local) | Idle |
 | Athena | PM - Head of Product | Hermes Agent (local) | Idle |
 | Midas | CFO - Head of Revenue | Hermes Agent (local) | Idle |
@@ -45,6 +45,22 @@ The CEO agent uses the Cursor Cloud adapter which runs in Cursor's hosted cloud 
 ### Environment Variables Required
 - CURSOR_API_KEY: Cursor background agent API key (crsr_...)
 - GH_TOKEN: GitHub fine-grained PAT (github_pat_...) with all-repos access
+
+### Paperclip Board Authentication
+
+The Paperclip web app and board APIs are a separate authentication boundary from
+the Cursor/GitHub setup above.
+
+- `/api/auth/get-session` requires an authenticated board session
+- issue endpoints such as `/api/issues/{id}` and watchdog endpoints such as
+  `/api/heartbeat-runs/{runId}/watchdog-decisions` rely on the same board auth
+- `PAPERCLIP_API_URL` by itself is not enough to read or update issue threads
+
+If a cloud agent wake provides issue context but the runtime does not expose a
+supported Paperclip session or agent-scoped API token, the agent should use the
+wake payload first, make durable progress elsewhere (repo changes, docs, or
+work products), and treat board-authenticated issue writes as blocked until that
+auth path is configured.
 
 ### Critical Setup Requirement
 The Cursor Cloud adapter uses Cursor's GitHub App (NOT the GH_TOKEN) to clone repos.
@@ -98,6 +114,35 @@ Grahmos_Company/
 **Cause:** Hermes Agent (local) workspace not initialized
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
+
+### Error: "`opencode models` timed out after 20s"
+**Cause:** The `opencode_local` adapter performs model-discovery preflight before the
+task body starts. On slower hosts or providers with very large model catalogs
+(notably OpenRouter), `opencode models` can exceed the fixed 20s discovery
+window and fail the run before any task work begins.
+
+**What this means:** This is a local adapter/runtime problem, not a failure in
+the task prompt itself.
+
+**Immediate checks on the local adapter host:**
+1. Confirm the CLI is installed and executable: `which opencode`
+2. Measure discovery time directly: `time opencode models`
+3. Verify the configured provider credentials are present and valid
+4. Confirm the exact configured provider/model ID appears in `opencode models`
+
+**Recovery path:**
+- If `opencode models` is slow but succeeds, treat the preflight timeout as the
+  failure point and retry only after addressing discovery speed
+- If the configured model is near the end of a very large list, prefer a
+  smaller/faster provider catalog or upgrade/publish a Paperclip build with the
+  upstream `opencode_local` fixes
+- For known-good environments, consider the upstream escape hatch
+  `PAPERCLIP_SKIP_MODEL_VALIDATION=true`
+
+**Upstream references:**
+- paperclipai/paperclip#2835 - `opencode models` timed out after 20s
+- paperclipai/paperclip#2259 - flaky runtime model validation for large model lists
+- paperclipai/paperclip#2353 - proposed fix with longer timeout, cache, and skip flag
 
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
