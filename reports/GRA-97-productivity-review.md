@@ -125,6 +125,18 @@ right conclusion.
 This productivity review is complete based on the available repo and GitHub
 evidence.
 
+## Operational Blocker for Paperclip Closeout
+
+The review work is complete, but this Cursor Cloud runtime cannot finalize the
+Paperclip issue directly because it does not have an injected
+`PAPERCLIP_API_KEY` or `PAPERCLIP_API_KEY_FILE`.
+
+- Blocker owner: Paperclip runtime/operator
+- Required unblock action: inject a run-scoped Paperclip agent token into
+  Cursor Cloud runs for this agent
+- Closeout command after unblock:
+  `bash scripts/close-paperclip-issue-gra-97.sh`
+
 ## Next Action
 
 If an authenticated Paperclip agent token becomes available in the runtime, use
