@@ -946,6 +946,24 @@ rm -rf "$refresh_dir"
 pass "paperclip-refresh-runtime-artifacts refreshes both runtime artifacts"
 cleanup_last
 
+refresh_json_dir="$(mktemp -d)"
+run_expect 0 ./scripts/paperclip-refresh-runtime-artifacts.sh --json "$refresh_json_dir" paperclip-secret cursor-secret
+assert_stdout_json_value "schema_version" "1"
+assert_stdout_json_value "artifact_type" "paperclip_refresh_result"
+assert_stdout_json_nonempty "latest_manifest_path"
+assert_stdout_json_value "latest_manifest.artifact_type" "paperclip_runtime_latest_manifest"
+python3 - "$LAST_STDOUT_FILE" <<'PY'
+import json
+import sys
+
+data = json.load(open(sys.argv[1]))
+assert data["archive_dir"]
+assert data["latest_manifest"]["runtime"]["heartbeat_next_action_state"] == "refresh_blocked_artifacts"
+PY
+rm -rf "$refresh_json_dir"
+pass "paperclip-refresh-runtime-artifacts emits JSON result"
+cleanup_last
+
 run_mock_heartbeat_next_action "degraded-health-auth-blocked"
 assert_stdout_contains "Runtime diagnosis: missing_paperclip_auth"
 assert_stdout_contains "Heartbeat disposition: blocked on Paperclip auth."

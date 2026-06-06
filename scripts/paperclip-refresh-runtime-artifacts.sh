@@ -9,10 +9,11 @@ BLOCKED_WRITER="$ROOT_DIR/scripts/paperclip-write-blocked-update.sh"
 usage() {
   cat <<'EOF'
 Usage:
-  ./scripts/paperclip-refresh-runtime-artifacts.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]
+  ./scripts/paperclip-refresh-runtime-artifacts.sh [--json] [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]
 
 Examples:
   ./scripts/paperclip-refresh-runtime-artifacts.sh
+  ./scripts/paperclip-refresh-runtime-artifacts.sh --json
   ./scripts/paperclip-refresh-runtime-artifacts.sh reports
   ./scripts/paperclip-refresh-runtime-artifacts.sh \
     reports \
@@ -28,8 +29,17 @@ Notes:
   - Also writes timestamped archive copies under OUTPUT_DIR/history/<timestamp>/.
   - OUTPUT_DIR defaults to reports.
   - This is the single-command refresh path for blocked Paperclip heartbeats.
+  - Add `--json` for a machine-readable refresh result.
 EOF
 }
+
+json_mode=0
+case "${1:-}" in
+  --json)
+    json_mode=1
+    shift
+    ;;
+esac
 
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "${1:-}" == "help" ]]; then
   usage
@@ -68,9 +78,28 @@ commit_sha="$(git -C "$ROOT_DIR" rev-parse HEAD 2>/dev/null || printf 'unknown')
 
 mkdir -p "$archive_dir"
 
-"$REPORT_WRITER" "$report_path" "$paperclip_secret_id" "$cursor_secret_id"
-"$SNAPSHOT_WRITER" "$snapshot_path" "$paperclip_secret_id" "$cursor_secret_id"
-"$BLOCKED_WRITER" "$blocked_path"
+writer_log_file="$(mktemp)"
+if "$REPORT_WRITER" "$report_path" "$paperclip_secret_id" "$cursor_secret_id" >>"$writer_log_file"; then
+  :
+else
+  cat "$writer_log_file" >&2
+  rm -f "$writer_log_file"
+  exit 1
+fi
+if "$SNAPSHOT_WRITER" "$snapshot_path" "$paperclip_secret_id" "$cursor_secret_id" >>"$writer_log_file"; then
+  :
+else
+  cat "$writer_log_file" >&2
+  rm -f "$writer_log_file"
+  exit 1
+fi
+if "$BLOCKED_WRITER" "$blocked_path" >>"$writer_log_file"; then
+  :
+else
+  cat "$writer_log_file" >&2
+  rm -f "$writer_log_file"
+  exit 1
+fi
 
 cp "$report_path" "$archive_dir/$(basename "$report_path")"
 cp "$snapshot_path" "$archive_dir/$(basename "$snapshot_path")"
@@ -160,5 +189,28 @@ PY
 
 cp "$latest_manifest_path" "$archive_dir/$(basename "$latest_manifest_path")"
 
+if [[ "$json_mode" == "1" ]]; then
+  python3 - "$latest_manifest_path" "$output_dir" "$archive_dir" <<'PY'
+import json
+import sys
+
+latest_manifest = json.load(open(sys.argv[1]))
+payload = {
+    "schema_version": 1,
+    "artifact_type": "paperclip_refresh_result",
+    "output_dir": sys.argv[2],
+    "archive_dir": sys.argv[3],
+    "latest_manifest_path": sys.argv[1],
+    "latest_manifest": latest_manifest,
+}
+json.dump(payload, sys.stdout, indent=2)
+sys.stdout.write("\n")
+PY
+  rm -f "$writer_log_file"
+  exit 0
+fi
+
+cat "$writer_log_file"
+rm -f "$writer_log_file"
 printf 'Refreshed runtime artifacts in %s\n' "$output_dir"
 printf 'Archived runtime artifacts in %s\n' "$archive_dir"

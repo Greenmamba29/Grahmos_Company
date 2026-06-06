@@ -128,6 +128,8 @@ That also writes `osiris-paperclip-blocked-update.json`, the standalone blocked
 issue-update payload for the execution contract, `osiris-paperclip-runtime-latest.json`
 as the stable latest manifest with file size/hash metadata, plus timestamped archive copies under
 `OUTPUT_DIR/history/`.
+Add `--json` when another tool needs the refresh result as a machine-readable wrapper
+around the latest manifest and archive directory.
 If you want the single recommended heartbeat entry point, run
 `./scripts/paperclip-heartbeat-next-action.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
 When auth is still missing, it refreshes the blocked artifacts; when auth is

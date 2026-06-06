@@ -82,6 +82,8 @@ This is the Company run main repo for Grahmos.
   issue-update payload, `osiris-paperclip-runtime-latest.json` as a stable pointer
   to the newest canonical files, size/hash metadata for the generated payloads, plus timestamped archive copies under
   `OUTPUT_DIR/history/`.
+- Add `--json` to `paperclip-refresh-runtime-artifacts.sh` when automation needs a
+  machine-readable refresh result containing the latest manifest and archive dir.
 - If you want one command that decides the next heartbeat step for you, run
   `./scripts/paperclip-heartbeat-next-action.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
   It runs the JSON diagnosis, refreshes blocked artifacts when auth is missing, and
