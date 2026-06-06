@@ -99,6 +99,28 @@ Grahmos_Company/
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
 
+### Error: `opencode models` timed out after 20s
+**Cause:** The `opencode_local` adapter checks model availability before normal run logs are
+attached. A timeout here means the local adapter host could not finish model discovery in
+time. Typical causes are:
+- `opencode` is missing from `PATH` on the local host
+- provider credentials or outbound network access are broken
+- the OpenCode provider call is hanging before adapter logging begins
+
+**Fix:** Run the probe directly on the local adapter host, not in Cursor Cloud:
+1. `which opencode`
+2. `timeout 20s opencode models`
+3. Interpret the result:
+   - exit `127`: install `opencode` or fix `PATH`
+   - exit `124`: inspect provider connectivity, credentials, and upstream health
+   - a fast non-zero exit with stderr: fix the reported CLI/provider error
+4. Re-run the blocked heartbeat only after the probe succeeds and returns the available
+   model list within the timeout window.
+
+**Recovery action:** Treat this as a local adapter runtime issue, not a source-checkout
+or repository defect. If a Cursor Cloud review wake sees this error, leave a blocked
+handoff naming the local Paperclip/OpenCode operator as the unblock owner.
+
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
 - Interval: every 300 seconds (5 minutes)
