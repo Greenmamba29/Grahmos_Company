@@ -83,6 +83,102 @@ def has_required(obj: dict, fields: dict[str, str], prefix: str = ""):
         record(key in obj, f"{prefix}{key} exists")
 
 
+def validate_blocked_payload(obj: dict, prefix: str = ""):
+    if not isinstance(obj, dict):
+        record(False, f"{prefix}blocked payload is object")
+        return
+    record(obj.get("status") == "blocked", f"{prefix}blocked payload status is blocked")
+    record(isinstance(obj.get("comment"), str) and len(obj["comment"]) > 0, f"{prefix}blocked payload comment is non-empty")
+
+
+def validate_artifact(obj: dict, expected_type: str | None = None, prefix: str = ""):
+    if not isinstance(obj, dict):
+        record(False, f"{prefix}artifact is object")
+        return None
+
+    artifact_type = obj.get("artifact_type")
+    record(isinstance(artifact_type, str) and artifact_type in schemas, f"{prefix}artifact_type is supported: {artifact_type}")
+
+    if expected_type:
+        record(artifact_type == expected_type, f"{prefix}artifact_type matches expected: {expected_type}")
+
+    schema = schemas.get(artifact_type or "", {})
+    required_fields = schema.get("required_fields", {})
+    if isinstance(required_fields, dict):
+        has_required(obj, required_fields, prefix)
+
+    if artifact_type == "paperclip_runtime_diagnosis":
+        allowed = set(schema.get("heartbeat_next_action_state_values", []))
+        record(obj.get("heartbeat_next_action_state") in allowed, f"{prefix}runtime diagnosis heartbeat_next_action_state is allowed")
+
+    if artifact_type == "paperclip_runtime_snapshot":
+        record(isinstance(obj.get("runtime"), dict), f"{prefix}runtime snapshot runtime is object")
+        record(isinstance(obj.get("unblock"), dict), f"{prefix}runtime snapshot unblock is object")
+        validate_artifact(obj.get("runtime"), "paperclip_runtime_diagnosis", prefix + "runtime.")
+        unblock = obj.get("unblock", {})
+        if isinstance(unblock, dict) and "blocked_issue_payload" in unblock:
+            validate_blocked_payload(unblock.get("blocked_issue_payload"), prefix + "unblock.")
+
+    if artifact_type == "paperclip_blocked_issue_update_payload":
+        validate_blocked_payload(obj, prefix)
+
+    if artifact_type == "paperclip_runtime_latest_manifest":
+        latest = obj.get("latest", {})
+        file_metadata = obj.get("file_metadata", {})
+        runtime = obj.get("runtime", {})
+        record(isinstance(latest, dict), f"{prefix}latest manifest latest is object")
+        record(isinstance(file_metadata, dict), f"{prefix}latest manifest file_metadata is object")
+        record(isinstance(runtime, dict), f"{prefix}latest manifest runtime is object")
+        for key in schema.get("latest_fields", {}):
+            record(key in latest, f"{prefix}latest manifest latest.{key} exists")
+        for key, meta in file_metadata.items():
+            record(isinstance(meta, dict), f"{prefix}latest manifest file_metadata.{key} is object")
+            for field in schema.get("file_metadata_entry", {}):
+                record(field in meta, f"{prefix}latest manifest file_metadata.{key}.{field} exists")
+
+    if artifact_type == "paperclip_refresh_result":
+        record(isinstance(obj.get("latest_manifest"), dict), f"{prefix}refresh result latest_manifest is object")
+        record(obj.get("latest_manifest", {}).get("artifact_type") == "paperclip_runtime_latest_manifest", f"{prefix}refresh result latest_manifest artifact_type matches")
+        record(isinstance(obj.get("validation_result"), dict), f"{prefix}refresh result validation_result is object")
+        record(obj.get("validation_result", {}).get("artifact_type") == "paperclip_artifact_validation_result", f"{prefix}refresh result validation_result artifact_type matches")
+        validate_artifact(obj.get("latest_manifest"), "paperclip_runtime_latest_manifest", prefix + "latest_manifest.")
+        validate_artifact(obj.get("validation_result"), "paperclip_artifact_validation_result", prefix + "validation_result.")
+
+    if artifact_type == "paperclip_heartbeat_next_action":
+        allowed_dispositions = set(schema.get("heartbeat_disposition_values", []))
+        allowed_actions = set(schema.get("next_action_state_values", []))
+        disposition = obj.get("heartbeat_disposition")
+        action = obj.get("next_action_state")
+        record(disposition in allowed_dispositions, f"{prefix}heartbeat next action disposition is allowed")
+        record(action in allowed_actions, f"{prefix}heartbeat next action next_action_state is allowed")
+        validate_artifact(obj.get("diagnosis"), "paperclip_runtime_diagnosis", prefix + "diagnosis.")
+        conditional = schema.get("conditional_fields", {})
+        if disposition == "blocked":
+            for key in conditional.get("blocked", {}):
+                record(key in obj, f"{prefix}heartbeat blocked field {key} exists")
+            validate_artifact(obj.get("latest_manifest"), "paperclip_runtime_latest_manifest", prefix + "latest_manifest.")
+            validate_blocked_payload(obj.get("blocked_update_payload"), prefix)
+            validate_artifact(obj.get("refresh_result"), "paperclip_refresh_result", prefix + "refresh_result.")
+        if disposition == "session_only":
+            for key in conditional.get("session_only", {}):
+                record(key in obj, f"{prefix}heartbeat session_only field {key} exists")
+        if disposition == "ready":
+            for key in conditional.get("ready", {}):
+                record(key in obj, f"{prefix}heartbeat ready field {key} exists")
+
+    if artifact_type == "paperclip_artifact_validation_result":
+        record(isinstance(obj.get("checks"), list), f"{prefix}validation result checks is list")
+        record(isinstance(obj.get("warnings"), list), f"{prefix}validation result warnings is list")
+        record(isinstance(obj.get("errors"), list), f"{prefix}validation result errors is list")
+
+    if artifact_type == "paperclip_json_validation_result":
+        record(isinstance(obj.get("checks"), list), f"{prefix}json validation result checks is list")
+        record(isinstance(obj.get("warnings"), list), f"{prefix}json validation result warnings is list")
+        record(isinstance(obj.get("errors"), list), f"{prefix}json validation result errors is list")
+
+    return artifact_type
+
+
 schema_bundle = load_json(schema_bundle_path, "schema bundle")
 data = load_json(json_path, "target JSON")
 
@@ -105,71 +201,7 @@ if schema_bundle is None or data is None:
     raise SystemExit(1)
 
 schemas = schema_bundle.get("schemas", {})
-artifact_type = data.get("artifact_type")
-record(isinstance(artifact_type, str) and artifact_type in schemas, f"artifact_type is supported: {artifact_type}")
-
-if expected_artifact_type:
-    record(artifact_type == expected_artifact_type, f"artifact_type matches expected: {expected_artifact_type}")
-
-schema = schemas.get(artifact_type or "", {})
-required_fields = schema.get("required_fields", {})
-if isinstance(required_fields, dict):
-    has_required(data, required_fields)
-
-if artifact_type == "paperclip_runtime_diagnosis":
-    allowed = set(schema.get("heartbeat_next_action_state_values", []))
-    record(data.get("heartbeat_next_action_state") in allowed, "runtime diagnosis heartbeat_next_action_state is allowed")
-
-if artifact_type == "paperclip_runtime_snapshot":
-    record(isinstance(data.get("runtime"), dict), "runtime snapshot runtime is object")
-    record(isinstance(data.get("unblock"), dict), "runtime snapshot unblock is object")
-
-if artifact_type == "paperclip_blocked_issue_update_payload":
-    record(data.get("status") == "blocked", "blocked payload status is blocked")
-    record(isinstance(data.get("comment"), str) and len(data["comment"]) > 0, "blocked payload comment is non-empty")
-
-if artifact_type == "paperclip_runtime_latest_manifest":
-    latest = data.get("latest", {})
-    file_metadata = data.get("file_metadata", {})
-    runtime = data.get("runtime", {})
-    record(isinstance(latest, dict), "latest manifest latest is object")
-    record(isinstance(file_metadata, dict), "latest manifest file_metadata is object")
-    record(isinstance(runtime, dict), "latest manifest runtime is object")
-    for key in schema.get("latest_fields", {}):
-        record(key in latest, f"latest manifest latest.{key} exists")
-    for key, meta in file_metadata.items():
-        record(isinstance(meta, dict), f"latest manifest file_metadata.{key} is object")
-        for field in schema.get("file_metadata_entry", {}):
-            record(field in meta, f"latest manifest file_metadata.{key}.{field} exists")
-
-if artifact_type == "paperclip_refresh_result":
-    record(isinstance(data.get("latest_manifest"), dict), "refresh result latest_manifest is object")
-    record(data.get("latest_manifest", {}).get("artifact_type") == "paperclip_runtime_latest_manifest", "refresh result latest_manifest artifact_type matches")
-    record(isinstance(data.get("validation_result"), dict), "refresh result validation_result is object")
-    record(data.get("validation_result", {}).get("artifact_type") == "paperclip_artifact_validation_result", "refresh result validation_result artifact_type matches")
-
-if artifact_type == "paperclip_heartbeat_next_action":
-    allowed_dispositions = set(schema.get("heartbeat_disposition_values", []))
-    allowed_actions = set(schema.get("next_action_state_values", []))
-    disposition = data.get("heartbeat_disposition")
-    action = data.get("next_action_state")
-    record(disposition in allowed_dispositions, "heartbeat next action disposition is allowed")
-    record(action in allowed_actions, "heartbeat next action next_action_state is allowed")
-    conditional = schema.get("conditional_fields", {})
-    if disposition == "blocked":
-      for key in conditional.get("blocked", {}):
-          record(key in data, f"heartbeat blocked field {key} exists")
-    if disposition == "session_only":
-      for key in conditional.get("session_only", {}):
-          record(key in data, f"heartbeat session_only field {key} exists")
-    if disposition == "ready":
-      for key in conditional.get("ready", {}):
-          record(key in data, f"heartbeat ready field {key} exists")
-
-if artifact_type == "paperclip_artifact_validation_result":
-    record(isinstance(data.get("checks"), list), "validation result checks is list")
-    record(isinstance(data.get("warnings"), list), "validation result warnings is list")
-    record(isinstance(data.get("errors"), list), "validation result errors is list")
+artifact_type = validate_artifact(data, expected_artifact_type or None)
 
 result = {
     "schema_version": 1,

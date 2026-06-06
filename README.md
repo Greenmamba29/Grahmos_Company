@@ -95,7 +95,8 @@ This is the Company run main repo for Grahmos.
 - Run `./scripts/paperclip-validate-json-output.sh [--json] JSON_FILE [EXPECTED_ARTIFACT_TYPE]`
   to validate an individual captured JSON payload (for example a saved
   `runtime-check --json`, `refresh --json`, or `heartbeat-next-action --json`
-  result) against the checked-in schema bundle.
+  result) against the checked-in schema bundle. The validator also walks the
+  nested embedded artifacts inside refresh/heartbeat JSON results.
 - If you want one command that decides the next heartbeat step for you, run
   `./scripts/paperclip-heartbeat-next-action.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
   It runs the JSON diagnosis, refreshes blocked artifacts when auth is missing, and

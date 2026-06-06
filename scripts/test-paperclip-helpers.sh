@@ -845,6 +845,7 @@ cleanup_last
 run_mock_runtime_check_json "degraded-health-auth-blocked"
 run_expect 0 ./scripts/paperclip-validate-json-output.sh "$LAST_STDOUT_FILE" paperclip_runtime_diagnosis
 assert_stdout_contains "Validated JSON artifact"
+assert_stdout_contains "PASS: runtime diagnosis heartbeat_next_action_state is allowed"
 pass "paperclip-validate-json-output validates runtime diagnosis JSON"
 cleanup_last
 
@@ -996,6 +997,14 @@ PY
 run_expect 0 ./scripts/paperclip-validate-json-output.sh --json "$LAST_STDOUT_FILE" paperclip_refresh_result
 assert_stdout_json_value "artifact_type" "paperclip_json_validation_result"
 assert_stdout_json_value "valid" "true"
+python3 - "$LAST_STDOUT_FILE" <<'PY'
+import json
+import sys
+
+data = json.load(open(sys.argv[1]))
+assert "latest_manifest.artifact_type matches expected: paperclip_runtime_latest_manifest" in data["checks"]
+assert "validation_result.artifact_type matches expected: paperclip_artifact_validation_result" in data["checks"]
+PY
 rm -rf "$refresh_json_dir"
 pass "paperclip-refresh-runtime-artifacts emits JSON result"
 cleanup_last
@@ -1053,6 +1062,15 @@ PY
 run_expect 0 ./scripts/paperclip-validate-json-output.sh --json "$LAST_STDOUT_FILE" paperclip_heartbeat_next_action
 assert_stdout_json_value "artifact_type" "paperclip_json_validation_result"
 assert_stdout_json_value "valid" "true"
+python3 - "$LAST_STDOUT_FILE" <<'PY'
+import json
+import sys
+
+data = json.load(open(sys.argv[1]))
+assert "diagnosis.artifact_type matches expected: paperclip_runtime_diagnosis" in data["checks"]
+assert "refresh_result.artifact_type matches expected: paperclip_refresh_result" in data["checks"]
+assert "latest_manifest.artifact_type matches expected: paperclip_runtime_latest_manifest" in data["checks"]
+PY
 rm -rf "${LAST_HEARTBEAT_OUTPUT_DIR}"
 unset LAST_HEARTBEAT_OUTPUT_DIR
 pass "paperclip-heartbeat-next-action emits blocked JSON result"
