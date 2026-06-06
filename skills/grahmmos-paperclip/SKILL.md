@@ -99,6 +99,35 @@ Grahmos_Company/
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
 
+### Symptom: Local Hermes-agent run stays active but produces no output
+**Likely scope:** Hermes Agent (local) adapters such as Casius Nexus
+**What to check first:**
+1. Confirm the local adapter host is online and the Paperclip container can still spawn `hermes`.
+2. Verify the configured working directory still exists and has the expected repo checkout.
+3. Check whether the agent process is blocked on an interactive prompt, missing binary, or crashed child process.
+4. If the run remains silent, cancel or mark the stuck run blocked in Paperclip and create a child recovery issue for the local operator instead of polling.
+
+**Recommended unblock owner:** the operator who manages the local Hermes Agent runtime.
+
+### Symptom: Cursor Cloud runtime has malformed `PAPERCLIP_API_URL`
+**Observed shape:** `http://[localhost:<forward-port>]:<api-port>`
+**Impact:** Cloud agents cannot reach the Paperclip API, even for issue comments or status updates.
+**Fix:** Provide a valid API base URL to the runtime. A working value must resolve directly from the cloud worker, for example:
+- the public Paperclip host, or
+- a functioning localhost forward such as `http://localhost:3101`
+
+Bracketed `localhost:3100` is not a valid host and causes URL parsing failures.
+
+### Symptom: Cloud agent can read wake data but cannot update Paperclip issues
+**Cause:** The runtime has no authenticated board session or board API key.
+**Fix:** For non-browser automation, provide a board API key and send it as:
+
+```bash
+Authorization: Bearer pcp_board_<token>
+```
+
+Without board auth, company-scoped issue routes return `401 Unauthorized` or `403 Board access required`, so the agent can investigate from wake payloads but cannot post comments, create interactions, or change issue state.
+
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
 - Interval: every 300 seconds (5 minutes)
