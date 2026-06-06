@@ -949,6 +949,9 @@ fi
 if [[ ! -f "$refresh_dir/osiris-paperclip-blocked-update.json" ]]; then
   fail "refresh helper did not write blocked update artifact"
 fi
+if [[ ! -f "$refresh_dir/osiris-paperclip-runtime-validation.json" ]]; then
+  fail "refresh helper did not write validation artifact"
+fi
 if [[ ! -f "$refresh_dir/osiris-paperclip-runtime-latest.json" ]]; then
   fail "refresh helper did not write latest manifest"
 fi
@@ -964,6 +967,9 @@ if [[ ! -f "${archive_dirs[0]}/osiris-paperclip-runtime-snapshot.json" ]]; then
 fi
 if [[ ! -f "${archive_dirs[0]}/osiris-paperclip-blocked-update.json" ]]; then
   fail "refresh helper did not archive blocked update artifact"
+fi
+if [[ ! -f "${archive_dirs[0]}/osiris-paperclip-runtime-validation.json" ]]; then
+  fail "refresh helper did not archive validation artifact"
 fi
 if [[ ! -f "${archive_dirs[0]}/osiris-paperclip-runtime-latest.json" ]]; then
   fail "refresh helper did not archive latest manifest"
@@ -1001,6 +1007,7 @@ run_expect 0 ./scripts/paperclip-refresh-runtime-artifacts.sh --json "$refresh_j
 assert_stdout_json_value "schema_version" "1"
 assert_stdout_json_value "artifact_type" "paperclip_refresh_result"
 assert_stdout_json_nonempty "latest_manifest_path"
+assert_stdout_json_nonempty "validation_artifact_path"
 assert_stdout_json_value "latest_manifest.artifact_type" "paperclip_runtime_latest_manifest"
 assert_stdout_json_value "validation_result.valid" "true"
 python3 - "$LAST_STDOUT_FILE" <<'PY'
@@ -1011,6 +1018,7 @@ data = json.load(open(sys.argv[1]))
 assert data["archive_dir"]
 assert data["latest_manifest"]["runtime"]["heartbeat_next_action_state"] == "refresh_blocked_artifacts"
 assert data["validation_result"]["artifact_type"] == "paperclip_artifact_validation_result"
+assert data["validation_artifact_path"]
 PY
 run_expect 0 ./scripts/paperclip-validate-json-output.sh --json "$LAST_STDOUT_FILE" paperclip_refresh_result
 assert_stdout_json_value "artifact_type" "paperclip_json_validation_result"
@@ -1041,6 +1049,9 @@ fi
 if [[ ! -f "${LAST_HEARTBEAT_OUTPUT_DIR}/osiris-paperclip-blocked-update.json" ]]; then
   fail "next-action helper did not write blocked update artifact"
 fi
+if [[ ! -f "${LAST_HEARTBEAT_OUTPUT_DIR}/osiris-paperclip-runtime-validation.json" ]]; then
+  fail "next-action helper did not write validation artifact"
+fi
 if [[ ! -f "${LAST_HEARTBEAT_OUTPUT_DIR}/osiris-paperclip-runtime-latest.json" ]]; then
   fail "next-action helper did not write latest manifest"
 fi
@@ -1050,6 +1061,9 @@ if [[ ! -d "${next_archive_dirs[0]}" ]]; then
 fi
 if [[ ! -f "${next_archive_dirs[0]}/osiris-paperclip-blocked-update.json" ]]; then
   fail "next-action helper did not archive blocked update artifact"
+fi
+if [[ ! -f "${next_archive_dirs[0]}/osiris-paperclip-runtime-validation.json" ]]; then
+  fail "next-action helper did not archive validation artifact"
 fi
 if [[ ! -f "${next_archive_dirs[0]}/osiris-paperclip-runtime-latest.json" ]]; then
   fail "next-action helper did not archive latest manifest"
@@ -1069,6 +1083,7 @@ assert_stdout_json_value "latest_manifest.schema_version" "1"
 assert_stdout_json_value "latest_manifest.artifact_type" "paperclip_runtime_latest_manifest"
 assert_stdout_json_value "blocked_update_payload.status" "blocked"
 assert_stdout_json_value "refresh_result.validation_result.valid" "true"
+assert_stdout_json_nonempty "refresh_result.validation_artifact_path"
 python3 - "$LAST_STDOUT_FILE" <<'PY'
 import json
 import sys

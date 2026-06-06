@@ -129,7 +129,8 @@ If the heartbeat needs the same handoff as structured JSON, run
 If the heartbeat should refresh both standard artifacts together, run
 `./scripts/paperclip-refresh-runtime-artifacts.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
 That also writes `osiris-paperclip-blocked-update.json`, the standalone blocked
-issue-update payload for the execution contract, `osiris-paperclip-runtime-latest.json`
+issue-update payload for the execution contract, `osiris-paperclip-runtime-validation.json`
+as the canonical validation result, and `osiris-paperclip-runtime-latest.json`
 as the stable latest manifest with file size/hash metadata, plus timestamped archive copies under
 `OUTPUT_DIR/history/`.
 Add `--json` when another tool needs the refresh result as a machine-readable wrapper

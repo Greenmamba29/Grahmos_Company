@@ -26,6 +26,7 @@ Notes:
     - osiris-paperclip-runtime-report.md
     - osiris-paperclip-runtime-snapshot.json
     - osiris-paperclip-blocked-update.json
+    - osiris-paperclip-runtime-validation.json
     - osiris-paperclip-runtime-latest.json
   - Also writes timestamped archive copies under OUTPUT_DIR/history/<timestamp>/.
   - OUTPUT_DIR defaults to reports.
@@ -77,6 +78,7 @@ mkdir -p "$output_dir"
 report_path="$output_dir/osiris-paperclip-runtime-report.md"
 snapshot_path="$output_dir/osiris-paperclip-runtime-snapshot.json"
 blocked_path="$output_dir/osiris-paperclip-blocked-update.json"
+validation_path="$output_dir/osiris-paperclip-runtime-validation.json"
 latest_manifest_path="$output_dir/osiris-paperclip-runtime-latest.json"
 timestamp="$(date -u +"%Y%m%dT%H%M%SZ")"
 archive_dir="$output_dir/history/$timestamp"
@@ -205,8 +207,11 @@ else
   exit 1
 fi
 
+cp "$validation_json_file" "$validation_path"
+cp "$validation_path" "$archive_dir/$(basename "$validation_path")"
+
 if [[ "$json_mode" == "1" ]]; then
-  python3 - "$latest_manifest_path" "$output_dir" "$archive_dir" "$validation_json_file" <<'PY'
+  python3 - "$latest_manifest_path" "$output_dir" "$archive_dir" "$validation_json_file" "$validation_path" <<'PY'
 import json
 import sys
 
@@ -220,6 +225,7 @@ payload = {
     "latest_manifest_path": sys.argv[1],
     "latest_manifest": latest_manifest,
     "validation_result": validation_result,
+    "validation_artifact_path": sys.argv[5],
 }
 json.dump(payload, sys.stdout, indent=2)
 sys.stdout.write("\n")

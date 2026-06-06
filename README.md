@@ -83,7 +83,8 @@ This is the Company run main repo for Grahmos.
 - If you want the standard markdown and JSON artifacts refreshed together, run
   `./scripts/paperclip-refresh-runtime-artifacts.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
   That also writes `osiris-paperclip-blocked-update.json`, a standalone blocked
-  issue-update payload, `osiris-paperclip-runtime-latest.json` as a stable pointer
+  issue-update payload, `osiris-paperclip-runtime-validation.json` as the canonical
+  validation result, and `osiris-paperclip-runtime-latest.json` as a stable pointer
   to the newest canonical files, size/hash metadata for the generated payloads, plus timestamped archive copies under
   `OUTPUT_DIR/history/`.
 - Add `--json` to `paperclip-refresh-runtime-artifacts.sh` when automation needs a

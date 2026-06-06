@@ -221,6 +221,7 @@ Refreshed artifacts:
   - $output_dir/osiris-paperclip-runtime-report.md
   - $output_dir/osiris-paperclip-runtime-snapshot.json
   - $output_dir/osiris-paperclip-blocked-update.json
+  - $output_dir/osiris-paperclip-runtime-validation.json
   - $output_dir/osiris-paperclip-runtime-latest.json
 Latest manifest:
   - $output_dir/osiris-paperclip-runtime-latest.json
