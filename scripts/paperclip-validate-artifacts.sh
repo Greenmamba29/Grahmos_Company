@@ -94,9 +94,11 @@ if schema_bundle is not None:
     for key in [
         "paperclip_runtime_diagnosis",
         "paperclip_runtime_snapshot",
+        "paperclip_blocked_issue_update_payload",
         "paperclip_runtime_latest_manifest",
         "paperclip_refresh_result",
         "paperclip_heartbeat_next_action",
+        "paperclip_artifact_validation_result",
     ]:
         record(key in schema_bundle.get("schemas", {}), f"schema bundle includes {key}")
 

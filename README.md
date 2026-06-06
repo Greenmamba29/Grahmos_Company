@@ -17,6 +17,8 @@ This is the Company run main repo for Grahmos.
   parsing.
 - Canonical field-level schema notes for the machine-readable artifacts live in
   `docs/paperclip-artifact-schemas.json`.
+- That schema bundle also documents the raw blocked issue-update payload written to
+  `reports/osiris-paperclip-blocked-update.json`.
 - If the script exits with `2`, the agent can still work on the Git repository but
   cannot read or mutate Paperclip issues from the shell yet.
 - Even if `/api/health` is degraded or returns a non-200 status, the runtime check

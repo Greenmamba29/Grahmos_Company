@@ -830,6 +830,13 @@ run_expect 0 ./scripts/paperclip-validate-artifacts.sh --json "$validation_dir"
 assert_stdout_json_value "schema_version" "1"
 assert_stdout_json_value "artifact_type" "paperclip_artifact_validation_result"
 assert_stdout_json_value "valid" "true"
+python3 - "$LAST_STDOUT_FILE" <<'PY'
+import json
+import sys
+
+data = json.load(open(sys.argv[1]))
+assert "schema bundle includes paperclip_blocked_issue_update_payload" in data["checks"]
+PY
 rm -rf "$validation_dir"
 pass "paperclip-validate-artifacts emits JSON validation result"
 cleanup_last

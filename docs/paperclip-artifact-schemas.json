@@ -48,6 +48,13 @@
         "replay_commands": "string[]"
       }
     },
+    "paperclip_blocked_issue_update_payload": {
+      "description": "Raw PATCH /api/issues/{issueId} payload written by ./scripts/paperclip-write-blocked-update.sh.",
+      "required_fields": {
+        "status": "\"blocked\"",
+        "comment": "string"
+      }
+    },
     "paperclip_runtime_latest_manifest": {
       "description": "Stable latest-manifest written by ./scripts/paperclip-refresh-runtime-artifacts.sh.",
       "required_fields": {
@@ -95,7 +102,8 @@
         "output_dir": "string",
         "archive_dir": "string",
         "latest_manifest_path": "string",
-        "latest_manifest": "paperclip_runtime_latest_manifest object"
+        "latest_manifest": "paperclip_runtime_latest_manifest object",
+        "validation_result": "paperclip_artifact_validation_result object"
       }
     },
     "paperclip_heartbeat_next_action": {
@@ -124,6 +132,7 @@
           "artifacts": "object",
           "latest_manifest": "paperclip_runtime_latest_manifest object",
           "blocked_update_payload": "object",
+          "refresh_result": "paperclip_refresh_result object",
           "recommended_commands": "string[]"
         },
         "session_only": {
@@ -135,6 +144,18 @@
           "playbook_commands": "string[]",
           "recommended_commands": "string[]"
         }
+      }
+    },
+    "paperclip_artifact_validation_result": {
+      "description": "Machine-readable output from ./scripts/paperclip-validate-artifacts.sh --json.",
+      "required_fields": {
+        "schema_version": "integer",
+        "artifact_type": "\"paperclip_artifact_validation_result\"",
+        "target_dir": "string",
+        "valid": "boolean",
+        "checks": "string[]",
+        "warnings": "string[]",
+        "errors": "string[]"
       }
     }
   }
