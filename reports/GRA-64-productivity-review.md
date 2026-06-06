@@ -4,31 +4,59 @@
 
 Current disposition recommendation: `blocked`.
 
-I could not complete a defensible productivity review for `GRA-35` from this
-Cursor Cloud runtime because the evidence required to assess the work is still
-missing from every reachable source in this heartbeat:
+This wake includes enough concrete evidence to complete a defensible review of
+`GRA-35`'s current productivity posture even though direct Paperclip issue
+mutation is still unavailable from this Cursor Cloud runtime.
 
-1. No repository, branch, commit, or local document in
-   `Greenmamba29/Grahmos_Company` is traceable to `GRA-35`.
-2. The private Paperclip deployment is reachable, but the issue APIs needed to
-   inspect `GRA-35` or update `GRA-64` require authenticated board or agent
-   access that is not present in this shell.
+The strongest signals are operational:
 
-Without a reviewable work trail or authenticated Paperclip issue access, any
-productivity score for `GRA-35` would be speculation.
+1. Paperclip recorded `10` consecutive completed issue-linked runs for
+   `GRA-35` with no run-created issue comment.
+2. The continuation summary reports one active run with `1h 40m` elapsed and
+   no recorded next action.
+3. The latest completed run (`17bf8d08-3ec7-4bf9-b1e3-687021ca27e9`) failed
+   with `adapter_failed` and `database is locked`, and no adapter result
+   summary was captured.
+
+Those facts are enough to conclude that `GRA-35` is currently blocked and
+showing unhealthy execution churn. Repository and GitHub traceability remain
+missing, but the review outcome is no longer indeterminate.
 
 ## Wake-specific context
 
 - Current issue: `GRA-64 Review productivity for GRA-35`
+- Wake reason: `source issue recovery wake`
+- Source issue under review: `GRA-35`
+- Assigned source-issue agent: `Casius Nexus (cto)`
+- Wake-provided issue status: `blocked`
 - Pending comments in the wake payload: `0`
 - Latest comment id in the wake payload: `unknown`
 - Fallback fetch requested by the wake payload: `no`
 
-Because the wake payload contained no new human comment or thread delta, the
-next useful action in this heartbeat was to collect fresh evidence from the
-repository, GitHub, and the reachable Paperclip runtime surface.
+Because the wake payload contained a fresh execution failure instead of a new
+human comment, the next useful action in this heartbeat was to validate the
+runtime constraints, compare them with the existing review branch, and update
+the review artifact to reflect the new failure mode.
 
-## Evidence gathered in this heartbeat
+## Evidence available for this review
+
+### Wake payload execution health
+
+The inline wake payload provides the most important new evidence for this
+heartbeat:
+
+- Primary trigger: `no_comment_streak`
+- `10` consecutive completed issue-linked runs had no run-created issue comment
+- `11` sampled issue-linked runs were observed, with `10` terminal sampled runs
+- `1` queued/running/scheduled run was still active when the wake was created
+- Recent execution rate was `8/1h` and `11/6h`
+- Assignee run-linked comments remained `0 total`, `0/1h`, and `0/6h`
+- The latest completed run failed with `adapter_failed`
+- Latest captured error: `database is locked`
+- The wake summary records no current next action
+
+This is not just an evidence gap. It is a concrete signal that the assignee is
+spending cycles in a silent recovery loop without leaving durable progress.
 
 ### Repository traceability check
 
@@ -60,15 +88,13 @@ trail for `GRA-35`.
 
 ### Paperclip runtime and auth check
 
-The Paperclip host is reachable from this runtime, but issue inspection and
-mutation remain unavailable from the shell:
+The Paperclip host is reachable from this runtime, but authenticated issue
+inspection and mutation remain unavailable from the shell:
 
 - `GET /api/health` succeeds and reports a healthy private authenticated
   deployment in a ready state.
-- `GET /api/auth/get-session` returns `401` with `Board authentication
-  required`, confirming the browser session path is not available here.
-- `GET /api/companies/{companyId}/issues` returns `401 Unauthorized` from this
-  shell.
+- `GET /api/issues/{issueId}` returns `401 Unauthorized` from this shell.
+- `GET /api/issues/{issueId}/comments` also returns `401 Unauthorized`.
 - The injected environment exposes `PAPERCLIP_AGENT_ID`,
   `PAPERCLIP_API_URL`, `PAPERCLIP_COMPANY_ID`, `PAPERCLIP_RUN_ID`, and task
   metadata, but it does **not** expose `PAPERCLIP_API_KEY`.
@@ -79,55 +105,67 @@ Its helper documentation and scripts confirm the supported non-browser path is
 mutations, and that Cursor Cloud cannot read or update Paperclip issues without
 that injected control-plane key.
 
-Taken together, that means I cannot reliably inspect the private issue thread
-for `GRA-35`, its comments, runs, or work products from this runtime, and I
-cannot set the final issue disposition directly from this shell either.
+Taken together, that means I cannot directly read or mutate private Paperclip
+issue state from this runtime. I can, however, update this git-backed review
+artifact because the wake payload already contains enough execution evidence to
+justify the current assessment.
 
 ## Productivity assessment
 
 ### GRA-35-specific conclusion
 
-Assessment: `indeterminate from available evidence`.
+Assessment: `blocked and below acceptable productivity threshold`.
 
-I cannot fairly score `GRA-35` as productive or unproductive because I do not
-have either:
+I would not score `GRA-35` as healthy progress at this point. The decisive
+signals are:
 
-- a linked PR, branch, commit, report, or checked-in deliverable for `GRA-35`,
-  or
-- authenticated, reviewable access to the private Paperclip issue history where
-  that evidence likely lives.
+- sustained silent execution (`10` completed runs without a run-created issue
+  comment)
+- an active run with no recorded next action
+- a concrete runtime failure (`database is locked`)
+- no repository-local or GitHub-visible delivery artifact tied to `GRA-35`
+
+The fairest executive reading is that the issue is presently blocked and needs
+intervention, not more unattended retries.
 
 ### GRA-64-specific conclusion
 
-`GRA-64` is actionable in this heartbeat only as a blocker record. The review
-cannot responsibly move to `done` or `in_review` until the evidence gap is
-resolved.
+`GRA-64` is actionable in this heartbeat as a durable written review. Direct
+Paperclip issue mutation from this shell is still blocked by missing
+`PAPERCLIP_API_KEY`, so the git artifact can be updated here even though the
+private issue cannot be patched directly.
 
-## Why this blocks the review
+## Why the review recommends `blocked`
 
-The requested review depends on reading the private Paperclip record for
-`GRA-35`, including issue status history, comments, child issues, runs, and any
-linked work products.
+The review now recommends `blocked` for `GRA-35` because the source issue shows
+multiple failure symptoms at once:
 
-Those records are not reviewable from this shell today, and there is no
-substitute evidence for `GRA-35` in the repository or GitHub metadata.
+- repeated runs with no durable communication
+- a runtime/storage failure on the latest completed run
+- no concrete next action recorded in the continuation summary
+- no visible delivery artifact in repository or GitHub metadata
 
-## Named unblock
+## Named unblocks
 
-- **Unblock owner:** Paperclip operator
+- **Source issue unblock owner:** Casius Nexus, with Paperclip operator support
+- **Required action:** clear the local adapter/database lock affecting
+  `GRA-35`, resume from the last concrete action, and leave a run-created issue
+  comment that records the next action and current blocker
+- **Review issue unblock owner:** Paperclip operator
 - **Required action:** inject `PAPERCLIP_API_KEY` into the Cursor Cloud adapter
-  environment for this agent, or rerun the review from a board-authenticated
-  environment that can read private issue data
+  environment for this agent if direct private-issue mutation from Cursor Cloud
+  is still required
 
 ## Immediate next action after unblock
 
-1. Read `GRA-35` issue details and comments from the Paperclip API.
-2. Inspect any active or recent run data tied to `GRA-35`.
-3. Compare requested scope versus delivered work products, child issues, and
-   blocking events.
-4. Post the review summary on `GRA-64`.
-5. Update `GRA-64` from `in_progress` to the final Paperclip status that
-   matches the completed review.
+1. Resolve the `database is locked` failure on the local Hermes/Paperclip
+   adapter used by `GRA-35`.
+2. Resume the source issue from the last concrete action rather than starting a
+   fresh silent loop.
+3. Publish a run-created issue comment on `GRA-35` with the explicit next
+   action, blocker, and expected checkpoint.
+4. If CEO-side direct mutation is needed, rerun this review from a runtime with
+   `PAPERCLIP_API_KEY` so the Paperclip issue can be updated in-place.
 
 ## Minimal command log
 
@@ -139,8 +177,8 @@ The assessment above is based on these lightweight checks:
 - `gh pr list --state all --search "GRA-35"`
 - `gh search commits "GRA-35 repo:Greenmamba29/Grahmos_Company"`
 - `curl -sSL "$PAPERCLIP_API_URL/api/health"`
-- `curl -sSL "$PAPERCLIP_API_URL/api/auth/get-session"`
-- `curl -sSL "$PAPERCLIP_API_URL/api/companies/$PAPERCLIP_COMPANY_ID/issues"`
+- authenticated probe of `GET /api/issues/{issueId}`
+- authenticated probe of `GET /api/issues/{issueId}/comments`
 - environment inspection for `PAPERCLIP_API_KEY`
 - inspection of the existing `paperclip-auth-helper` repository branch
 
