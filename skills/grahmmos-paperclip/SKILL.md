@@ -41,10 +41,25 @@ The CEO agent uses the Cursor Cloud adapter which runs in Cursor's hosted cloud 
 - Starting ref: main
 - Cursor runtime: Cursor hosted
 - CURSOR_API_KEY: Set in environment variables
+- PAPERCLIP_API_KEY: Required when Paperclip runs in authenticated mode
 
 ### Environment Variables Required
 - CURSOR_API_KEY: Cursor background agent API key (crsr_...)
 - GH_TOKEN: GitHub fine-grained PAT (github_pat_...) with all-repos access
+- PAPERCLIP_API_KEY: Agent-scoped Paperclip API key (pc_agent_...) for issue comments, checkout, and status updates
+
+### Paperclip Auth Requirement
+Cursor Cloud is a non-local adapter from Paperclip's perspective. In authenticated
+deployments, Paperclip does not automatically inject a run-scoped API key into this
+runtime. You must provide `PAPERCLIP_API_KEY` in the adapter environment so heartbeat
+runs can call the Paperclip API with:
+
+- `Authorization: Bearer $PAPERCLIP_API_KEY`
+- `X-Paperclip-Run-Id: $PAPERCLIP_RUN_ID` on all mutating requests
+
+If `PAPERCLIP_API_KEY` is missing, the agent can read wake payload context but cannot
+checkout issues, add comments, or record a final disposition. This can leave review
+and recovery issues stuck in `in_progress` or `blocked` even when the analysis is done.
 
 ### Critical Setup Requirement
 The Cursor Cloud adapter uses Cursor's GitHub App (NOT the GH_TOKEN) to clone repos.
@@ -85,6 +100,13 @@ Grahmos_Company/
 ### Error: "Failed to verify existence of branch 'main'"
 **Cause:** Cursor GitHub App not authorized for this GitHub account
 **Fix:** In Cursor app -> Settings -> Integrations -> connect GitHub account
+
+### Error: `{"error":"Unauthorized"}` on `/api/issues/...`
+**Cause:** Cursor Cloud runtime is missing `PAPERCLIP_API_KEY` in an authenticated
+Paperclip deployment
+**Fix:** Add an agent-scoped Paperclip API key to the adapter environment and include
+  `Authorization: Bearer $PAPERCLIP_API_KEY` on API calls. Keep `PAPERCLIP_RUN_ID`
+  available so mutating calls can send `X-Paperclip-Run-Id`.
 
 ### Error: "could not read agent instructions file .../AGENTS.md: ENOENT"
 **Cause:** Paperclip managed instructions bundle not initialized
