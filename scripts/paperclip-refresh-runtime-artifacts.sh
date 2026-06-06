@@ -77,6 +77,7 @@ cp "$snapshot_path" "$archive_dir/$(basename "$snapshot_path")"
 cp "$blocked_path" "$archive_dir/$(basename "$blocked_path")"
 
 python3 - "$ROOT_DIR" "$report_path" "$snapshot_path" "$blocked_path" "$archive_dir" "$latest_manifest_path" "$timestamp" "$branch_name" "$commit_sha" <<'PY'
+import hashlib
 import json
 import os
 import sys
@@ -100,6 +101,15 @@ archive_manifest_path = archive_dir / manifest_path.name
 
 def rel(path: Path) -> str:
     return os.path.relpath(path, workspace_root)
+
+def file_metadata(path: Path) -> dict:
+    data = path.read_bytes()
+    return {
+        "path": str(path),
+        "relative_path": rel(path),
+        "size_bytes": len(data),
+        "sha256": hashlib.sha256(data).hexdigest(),
+    }
 
 manifest = {
     "schema_version": 1,
@@ -129,6 +139,14 @@ manifest = {
         "archive_blocked_update_relative_path": rel(archive_blocked_path),
         "archive_manifest_path": str(archive_manifest_path),
         "archive_manifest_relative_path": rel(archive_manifest_path),
+    },
+    "file_metadata": {
+        "report": file_metadata(report_path),
+        "snapshot": file_metadata(snapshot_path),
+        "blocked_update": file_metadata(blocked_path),
+        "archive_report": file_metadata(archive_report_path),
+        "archive_snapshot": file_metadata(archive_snapshot_path),
+        "archive_blocked_update": file_metadata(archive_blocked_path),
     },
     "runtime": {
         "diagnosis": snapshot.get("runtime", {}).get("diagnosis"),

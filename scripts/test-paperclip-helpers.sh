@@ -764,6 +764,10 @@ assert data["latest"]["archive_report_relative_path"]
 assert data["latest"]["archive_snapshot_relative_path"]
 assert data["latest"]["archive_blocked_update_relative_path"]
 assert data["latest"]["archive_manifest_relative_path"]
+for key in ["report", "snapshot", "blocked_update", "archive_report", "archive_snapshot", "archive_blocked_update"]:
+    assert data["file_metadata"][key]["size_bytes"] > 0
+    assert len(data["file_metadata"][key]["sha256"]) == 64
+    assert data["file_metadata"][key]["relative_path"]
 PY
 rm -rf "$refresh_dir"
 pass "paperclip-refresh-runtime-artifacts refreshes both runtime artifacts"

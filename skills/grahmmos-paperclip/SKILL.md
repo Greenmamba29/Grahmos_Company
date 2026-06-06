@@ -126,7 +126,7 @@ If the heartbeat should refresh both standard artifacts together, run
 `./scripts/paperclip-refresh-runtime-artifacts.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
 That also writes `osiris-paperclip-blocked-update.json`, the standalone blocked
 issue-update payload for the execution contract, `osiris-paperclip-runtime-latest.json`
-as the stable latest manifest, plus timestamped archive copies under
+as the stable latest manifest with file size/hash metadata, plus timestamped archive copies under
 `OUTPUT_DIR/history/`.
 If you want the single recommended heartbeat entry point, run
 `./scripts/paperclip-heartbeat-next-action.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.

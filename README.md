@@ -80,7 +80,7 @@ This is the Company run main repo for Grahmos.
   `./scripts/paperclip-refresh-runtime-artifacts.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
   That also writes `osiris-paperclip-blocked-update.json`, a standalone blocked
   issue-update payload, `osiris-paperclip-runtime-latest.json` as a stable pointer
-  to the newest canonical files, plus timestamped archive copies under
+  to the newest canonical files, size/hash metadata for the generated payloads, plus timestamped archive copies under
   `OUTPUT_DIR/history/`.
 - If you want one command that decides the next heartbeat step for you, run
   `./scripts/paperclip-heartbeat-next-action.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
