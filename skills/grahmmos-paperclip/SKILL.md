@@ -134,6 +134,7 @@ When auth is still missing, it refreshes the blocked artifacts; when auth is
 available through the API-helper path, it switches to the current-issue playbook.
 If the shell only has run visibility without API-helper readiness, it prints a
 warning instead of pretending issue mutations are ready.
+If another tool needs a machine-readable result from that entry point, add `--json`.
 Once auth is fixed, run `./scripts/paperclip-api.sh current-issue-playbook` for the
 recommended current-issue inspection and execution-contract mutation commands.
 Use `./scripts/paperclip-api.sh comment-template ...`,

@@ -85,6 +85,21 @@ if actual != expected:
 PY
 }
 
+assert_stdout_json_nonempty() {
+  local path="$1"
+  python3 - "$LAST_STDOUT_FILE" "$path" <<'PY'
+import json
+import sys
+
+data = json.load(open(sys.argv[1]))
+cur = data
+for part in sys.argv[2].split("."):
+    cur = cur[part]
+if not isinstance(cur, str) or not cur:
+    raise SystemExit(f"expected non-empty string at {sys.argv[2]}")
+PY
+}
+
 run_mock_runtime_check() {
   local scenario="$1"
   local port server_pid
@@ -567,6 +582,164 @@ PY
   trap - RETURN
 }
 
+run_mock_heartbeat_next_action_json() {
+  local scenario="$1"
+  local port server_pid output_dir
+  port="$(python3 - <<'PY'
+import socket
+s = socket.socket()
+s.bind(("127.0.0.1", 0))
+print(s.getsockname()[1])
+s.close()
+PY
+)"
+  output_dir="$(mktemp -d)"
+
+  python3 - "$port" "$scenario" <<'PY' &
+import json
+import re
+import sys
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+port = int(sys.argv[1])
+scenario = sys.argv[2]
+
+
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        run_issue_match = re.fullmatch(r"/api/heartbeat-runs/[^/]+/issues", self.path)
+        run_log_match = re.fullmatch(r"/api/heartbeat-runs/[^/]+/log\?offset=0&limitBytes=4096", self.path)
+        workspace_ops_match = re.fullmatch(r"/api/heartbeat-runs/[^/]+/workspace-operations", self.path)
+        auth = self.headers.get("Authorization", "")
+        if scenario == "degraded-health-auth-blocked":
+            if self.path == "/api/health":
+                self.send_response(503)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "health unavailable"}).encode())
+                return
+            if self.path == "/api/auth/get-session":
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Board authentication required"}).encode())
+                return
+            if run_issue_match or run_log_match or workspace_ops_match:
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Board authentication required"}).encode())
+                return
+        if scenario == "board-session-ok":
+            if self.path == "/api/health":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps(
+                        {
+                            "status": "ok",
+                            "deploymentMode": "authenticated",
+                            "deploymentExposure": "private",
+                        }
+                    ).encode()
+                )
+                return
+            if self.path == "/api/auth/get-session":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"user": {"id": "user-123"}}).encode())
+                return
+            if run_issue_match:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps([{"id": "issue-1"}]).encode())
+                return
+            if run_log_match:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"lines": []}).encode())
+                return
+            if workspace_ops_match:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"items": []}).encode())
+                return
+        if scenario == "api-key-ok":
+            if self.path == "/api/health":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps(
+                        {
+                            "status": "ok",
+                            "deploymentMode": "authenticated",
+                            "deploymentExposure": "private",
+                        }
+                    ).encode()
+                )
+                return
+            if self.path == "/api/auth/get-session":
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Board authentication required"}).encode())
+                return
+            if run_issue_match or run_log_match or workspace_ops_match:
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Unauthorized"}).encode())
+                return
+            if self.path == "/api/agents/me" and auth.startswith("Bearer "):
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"id": "agent-123"}).encode())
+                return
+            if self.path == "/api/agents/me/inbox-lite" and auth.startswith("Bearer "):
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"items": [{"id": "issue-1"}]}).encode())
+                return
+
+        self.send_response(404)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps({"error": "not found"}).encode())
+
+    def log_message(self, format, *args):
+        return
+
+
+HTTPServer(("127.0.0.1", port), Handler).serve_forever()
+PY
+  server_pid=$!
+
+  trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true; rm -rf "$output_dir"' RETURN
+  run_expect 0 env \
+    PAPERCLIP_API_URL="http://127.0.0.1:$port" \
+    PAPERCLIP_AGENT_ID="agent-123" \
+    PAPERCLIP_COMPANY_ID="company-123" \
+    PAPERCLIP_RUN_ID="run-123" \
+    PAPERCLIP_WORKSPACE_CWD="/workspace" \
+    PAPERCLIP_WORKSPACE_SOURCE="agent-run" \
+    PAPERCLIP_API_KEY="${PAPERCLIP_API_KEY:-}" \
+    GH_TOKEN="gh-test-token" \
+    CLOUD_AGENT_INJECTED_SECRET_NAMES="GH_TOKEN" \
+    ./scripts/paperclip-heartbeat-next-action.sh --json "$output_dir" paperclip-secret cursor-secret
+  LAST_HEARTBEAT_OUTPUT_DIR="$output_dir"
+  kill "$server_pid" 2>/dev/null || true
+  wait "$server_pid" 2>/dev/null || true
+  trap - RETURN
+}
+
 run_expect 0 ./scripts/paperclip-api.sh help
 assert_stdout_contains "issue-interaction-current"
 assert_stdout_contains "request-confirmation-template TITLE [JSON_FILE|-]"
@@ -804,6 +977,17 @@ unset LAST_HEARTBEAT_OUTPUT_DIR
 pass "paperclip-heartbeat-next-action handles blocked heartbeats"
 cleanup_last
 
+run_mock_heartbeat_next_action_json "degraded-health-auth-blocked"
+assert_stdout_json_value "schema_version" "1"
+assert_stdout_json_value "artifact_type" "paperclip_heartbeat_next_action"
+assert_stdout_json_value "next_action_state" "refresh_blocked_artifacts"
+assert_stdout_json_value "heartbeat_disposition" "blocked"
+assert_stdout_json_nonempty "artifacts.latest_manifest_path"
+rm -rf "${LAST_HEARTBEAT_OUTPUT_DIR}"
+unset LAST_HEARTBEAT_OUTPUT_DIR
+pass "paperclip-heartbeat-next-action emits blocked JSON result"
+cleanup_last
+
 run_mock_heartbeat_next_action "board-session-ok"
 assert_stdout_contains "Runtime diagnosis: board_session_ok"
 assert_stdout_contains "Heartbeat disposition: run visibility available, but Paperclip API helper is not ready."
@@ -813,6 +997,16 @@ fi
 rm -rf "${LAST_HEARTBEAT_OUTPUT_DIR}"
 unset LAST_HEARTBEAT_OUTPUT_DIR
 pass "paperclip-heartbeat-next-action warns when board session exists without API helper readiness"
+cleanup_last
+
+run_mock_heartbeat_next_action_json "board-session-ok"
+assert_stdout_json_value "schema_version" "1"
+assert_stdout_json_value "artifact_type" "paperclip_heartbeat_next_action"
+assert_stdout_json_value "next_action_state" "warn_session_only"
+assert_stdout_json_value "heartbeat_disposition" "session_only"
+rm -rf "${LAST_HEARTBEAT_OUTPUT_DIR}"
+unset LAST_HEARTBEAT_OUTPUT_DIR
+pass "paperclip-heartbeat-next-action emits session-only JSON result"
 cleanup_last
 
 PAPERCLIP_API_KEY="paperclip-test-token" run_mock_heartbeat_next_action "api-key-ok"
@@ -825,6 +1019,17 @@ fi
 rm -rf "${LAST_HEARTBEAT_OUTPUT_DIR}"
 unset LAST_HEARTBEAT_OUTPUT_DIR
 pass "paperclip-heartbeat-next-action switches to current-issue playbook when API helper auth is available"
+cleanup_last
+
+PAPERCLIP_API_KEY="paperclip-test-token" run_mock_heartbeat_next_action_json "api-key-ok"
+assert_stdout_json_value "schema_version" "1"
+assert_stdout_json_value "artifact_type" "paperclip_heartbeat_next_action"
+assert_stdout_json_value "next_action_state" "current_issue_playbook"
+assert_stdout_json_value "heartbeat_disposition" "ready"
+assert_stdout_json_value "playbook_command" "./scripts/paperclip-api.sh current-issue-playbook"
+rm -rf "${LAST_HEARTBEAT_OUTPUT_DIR}"
+unset LAST_HEARTBEAT_OUTPUT_DIR
+pass "paperclip-heartbeat-next-action emits API-helper-ready JSON result"
 cleanup_last
 
 run_mock_runtime_check "degraded-health-auth-blocked"

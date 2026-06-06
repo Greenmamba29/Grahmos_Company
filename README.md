@@ -88,6 +88,9 @@ This is the Company run main repo for Grahmos.
   only prints the current-issue playbook when the API-helper auth path is actually
   ready. A session-only/read-only state prints a warning instead of pretending issue
   mutations are available.
+- Add `--json` to `paperclip-heartbeat-next-action.sh` when downstream tooling needs
+  a single machine-readable result describing the chosen next action and any
+  refreshed artifact paths.
 
 The comment helper accepts the raw JSON body expected by `POST /api/issues/{issueId}/comments`,
 so it can carry structured fields such as `resume`, `reopen`, or `interrupt` when

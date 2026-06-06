@@ -9,10 +9,11 @@ API_HELPER="$ROOT_DIR/scripts/paperclip-api.sh"
 usage() {
   cat <<'EOF'
 Usage:
-  ./scripts/paperclip-heartbeat-next-action.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]
+  ./scripts/paperclip-heartbeat-next-action.sh [--json] [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]
 
 Examples:
   ./scripts/paperclip-heartbeat-next-action.sh
+  ./scripts/paperclip-heartbeat-next-action.sh --json
   ./scripts/paperclip-heartbeat-next-action.sh reports
   ./scripts/paperclip-heartbeat-next-action.sh \
     reports \
@@ -29,8 +30,17 @@ Behavior:
 Notes:
   - OUTPUT_DIR defaults to reports.
   - This is the preferred single-command heartbeat entry point.
+  - Use `--json` for a machine-readable next-action result.
 EOF
 }
+
+json_mode=0
+case "${1:-}" in
+  --json)
+    json_mode=1
+    shift
+    ;;
+esac
 
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "${1:-}" == "help" ]]; then
   usage
@@ -91,10 +101,79 @@ print(data.get("heartbeat_next_action_state", "refresh_blocked_artifacts"))
 PY
 )"
 
-printf 'Runtime diagnosis: %s (exit %s)\n' "$diagnosis" "$runtime_status"
+emit_json() {
+  local action_state="$1"
+  local heartbeat_disposition="$2"
+  local message="$3"
+  local manifest_path="$4"
+  local playbook_text="${5:-}"
+  local playbook_command="${6:-}"
+  python3 - "$diagnosis_file" "$action_state" "$heartbeat_disposition" "$message" "$output_dir" "$manifest_path" "$playbook_text" "$playbook_command" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+diagnosis = json.load(open(sys.argv[1]))
+action_state = sys.argv[2]
+heartbeat_disposition = sys.argv[3]
+message = sys.argv[4]
+output_dir = sys.argv[5]
+manifest_path = sys.argv[6]
+playbook_text = sys.argv[7]
+playbook_command = sys.argv[8]
+
+payload = {
+    "schema_version": 1,
+    "artifact_type": "paperclip_heartbeat_next_action",
+    "diagnosis": diagnosis,
+    "heartbeat_disposition": heartbeat_disposition,
+    "next_action_state": action_state,
+    "message": message,
+    "output_dir": output_dir,
+}
+
+if manifest_path:
+    payload["artifacts"] = {
+        "report_path": str(Path(output_dir) / "osiris-paperclip-runtime-report.md"),
+        "snapshot_path": str(Path(output_dir) / "osiris-paperclip-runtime-snapshot.json"),
+        "blocked_update_path": str(Path(output_dir) / "osiris-paperclip-blocked-update.json"),
+        "latest_manifest_path": manifest_path,
+    }
+
+if playbook_command:
+    payload["playbook_command"] = playbook_command
+if playbook_text:
+    payload["playbook_text"] = playbook_text
+
+json.dump(payload, sys.stdout, indent=2)
+sys.stdout.write("\n")
+PY
+}
+
+if [[ "$json_mode" != "1" ]]; then
+  printf 'Runtime diagnosis: %s (exit %s)\n' "$diagnosis" "$runtime_status"
+fi
 
 if [[ "$next_action_state" == "refresh_blocked_artifacts" || "$blocked_flag" == "true" ]]; then
-  "$REFRESH_ARTIFACTS" "$output_dir" "$paperclip_secret_id" "$cursor_secret_id"
+  refresh_log_file="$(mktemp)"
+  if "$REFRESH_ARTIFACTS" "$output_dir" "$paperclip_secret_id" "$cursor_secret_id" >"$refresh_log_file"; then
+    :
+  else
+    cat "$refresh_log_file" >&2
+    rm -f "$refresh_log_file" "$diagnosis_file"
+    exit 1
+  fi
+  latest_manifest_path="$output_dir/osiris-paperclip-runtime-latest.json"
+  if [[ "$json_mode" == "1" ]]; then
+    emit_json \
+      "refresh_blocked_artifacts" \
+      "blocked" \
+      "Blocked on Paperclip auth. Refresh the canonical blocked-heartbeat artifacts and use the standalone blocked update payload." \
+      "$latest_manifest_path"
+    rm -f "$refresh_log_file" "$diagnosis_file"
+    exit 0
+  fi
+  cat "$refresh_log_file"
   cat <<EOF
 Heartbeat disposition: blocked on Paperclip auth.
 Refreshed artifacts:
@@ -107,11 +186,20 @@ Latest manifest:
 Unblock owner: Paperclip operator
 Required action: inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env.
 EOF
-  rm -f "$diagnosis_file"
+  rm -f "$refresh_log_file" "$diagnosis_file"
   exit 0
 fi
 
 if [[ "$next_action_state" == "warn_session_only" ]]; then
+  if [[ "$json_mode" == "1" ]]; then
+    emit_json \
+      "warn_session_only" \
+      "session_only" \
+      "Run visibility is available, but the Paperclip API helper is not ready. Inject PAPERCLIP_API_KEY and rerun this command." \
+      ""
+    rm -f "$diagnosis_file"
+    exit 0
+  fi
   cat <<EOF
 Heartbeat disposition: run visibility available, but Paperclip API helper is not ready.
 Run-scoped reads succeeded, but shell issue helpers still require PAPERCLIP_API_KEY.
@@ -121,6 +209,19 @@ EOF
   exit 0
 fi
 
+playbook_text="$("$API_HELPER" current-issue-playbook)"
+if [[ "$json_mode" == "1" ]]; then
+  emit_json \
+    "current_issue_playbook" \
+    "ready" \
+    "Issue operations are available via the Paperclip API helper. Follow the current-issue playbook." \
+    "" \
+    "$playbook_text" \
+    "./scripts/paperclip-api.sh current-issue-playbook"
+  rm -f "$diagnosis_file"
+  exit 0
+fi
+
 echo "Heartbeat disposition: issue operations available via API helper."
-"$API_HELPER" current-issue-playbook
+printf '%s\n' "$playbook_text"
 rm -f "$diagnosis_file"
