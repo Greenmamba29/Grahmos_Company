@@ -127,6 +127,7 @@ evidence.
 
 ## Next Action
 
-If an authenticated Paperclip session is available, post a short summary of this
-review to `GRA-97`, reference the superseding GRA-75 artifact, and close the
-duplicate path in favor of the stronger later review.
+If an authenticated Paperclip agent token becomes available in the runtime, use
+`scripts/close-paperclip-issue-gra-97.sh` to post the summary and mark
+`GRA-97` as `done` in one step. That avoids repeating the issue-closeout
+investigation in a later heartbeat.
