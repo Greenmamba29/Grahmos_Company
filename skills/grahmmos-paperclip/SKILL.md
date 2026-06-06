@@ -86,6 +86,28 @@ Grahmos_Company/
 **Cause:** Cursor GitHub App not authorized for this GitHub account
 **Fix:** In Cursor app -> Settings -> Integrations -> connect GitHub account
 
+### Error: "Board authentication required" when calling `/api/issues/*`
+**Cause:** The Paperclip web API is protected by a browser-backed board session cookie.
+The usual cloud-agent runtime variables (`PAPERCLIP_API_URL`, `PAPERCLIP_AGENT_ID`,
+`PAPERCLIP_RUN_ID`, `PAPERCLIP_TASK_ID`) are not sufficient on their own to authenticate
+direct `GET /api/issues/*` or `GET /api/auth/get-session` requests from the shell.
+**Fix:** Provide the agent with board credentials/session bootstrapping, or add a
+token-based service auth path for agent heartbeats. Without that access, cloud agents
+can only rely on the inline wake payload and repository work products.
+
+### Reviewing silent active run issues
+When Paperclip raises a "silent active run" issue:
+- Read the wake payload first and record whether `continuationSummary` or
+  `livenessContinuation` is present.
+- If `continuationSummary` is `null`, do not infer a run ID or watchdog decision
+  from the issue title alone.
+- Treat `GET /api/issues/{issueId}/active-run` and `/live-runs` as the first
+  required post-auth checks before recommending `continue`, `snooze`,
+  `dismissed_false_positive`, or explicit cancellation.
+- If the current Cursor Cloud runtime cannot read those routes because board
+  auth is missing, block the issue on the Paperclip operator or workspace
+  administrator instead of guessing whether the run is stale.
+
 ### Error: "could not read agent instructions file .../AGENTS.md: ENOENT"
 **Cause:** Paperclip managed instructions bundle not initialized
 **Fix:** Go to Paperclip -> Osiris Hermes -> Instructions -> click AGENTS.md -> add content -> Save
