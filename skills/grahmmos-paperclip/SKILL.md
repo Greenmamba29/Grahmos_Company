@@ -54,6 +54,15 @@ Cursor app -> Settings -> Integrations -> GitHub
 Without this OAuth connection, you will see:
   [validation_error] Failed to verify existence of branch 'main' in repository
 
+### Repo Scope Guardrail
+Osiris Hermes is intentionally wired to the company repo:
+  https://github.com/Greenmamba29/Grahmos_Company
+
+That repo is for company operations, instructions, and Paperclip setup. It is not a
+product monorepo. If a wake payload references product packages, apps, or workspaces
+that are not present in this checkout (for example `@grahmos/platform`), treat that as
+a source-repo routing problem first, not an implementation failure in this repository.
+
 ### Managed Instructions Bundle
 The agent instructions are stored as a Paperclip managed bundle at:
   /paperclip/instances/default/companies/{company-id}/agents/{agent-id}/instructions/AGENTS.md
@@ -98,6 +107,20 @@ Grahmos_Company/
 **Cause:** Hermes Agent (local) workspace not initialized
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
+
+### Recovery: issue references code that is not in this repo
+**Signal:** The issue mentions packages, apps, or workspace names that do not exist in
+this checkout (for example `@grahmos/platform`, design-system packages, product UI code,
+or monorepo tooling such as pnpm workspaces or Turborepo config).
+
+**Cause:** The Cursor Cloud adapter is pointed at `Grahmos_Company`, but the issue
+belongs to a different source repository.
+
+**Action:**
+1. Confirm the target repo URL and the owning agent/team for that codebase.
+2. Leave a durable note describing the mismatch and the exact repo/action needed.
+3. Keep the issue blocked until the adapter or assignee is redirected to the correct repo.
+4. Do not fabricate implementation work in `Grahmos_Company` for code that lives elsewhere.
 
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
