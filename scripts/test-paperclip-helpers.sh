@@ -718,6 +718,9 @@ fi
 if [[ ! -f "$refresh_dir/osiris-paperclip-blocked-update.json" ]]; then
   fail "refresh helper did not write blocked update artifact"
 fi
+if [[ ! -f "$refresh_dir/osiris-paperclip-runtime-latest.json" ]]; then
+  fail "refresh helper did not write latest manifest"
+fi
 archive_dirs=("$refresh_dir"/history/*)
 if [[ ! -d "${archive_dirs[0]}" ]]; then
   fail "refresh helper did not create archive directory"
@@ -731,6 +734,18 @@ fi
 if [[ ! -f "${archive_dirs[0]}/osiris-paperclip-blocked-update.json" ]]; then
   fail "refresh helper did not archive blocked update artifact"
 fi
+if [[ ! -f "${archive_dirs[0]}/osiris-paperclip-runtime-latest.json" ]]; then
+  fail "refresh helper did not archive latest manifest"
+fi
+python3 - "$refresh_dir/osiris-paperclip-runtime-latest.json" <<'PY'
+import json
+import sys
+
+data = json.load(open(sys.argv[1]))
+assert data["runtime"]["heartbeat_next_action_state"] == "refresh_blocked_artifacts"
+assert data["runtime"]["issue_operations_blocked"] is True
+assert data["latest"]["latest_archive_dir"]
+PY
 rm -rf "$refresh_dir"
 pass "paperclip-refresh-runtime-artifacts refreshes both runtime artifacts"
 cleanup_last
@@ -747,12 +762,18 @@ fi
 if [[ ! -f "${LAST_HEARTBEAT_OUTPUT_DIR}/osiris-paperclip-blocked-update.json" ]]; then
   fail "next-action helper did not write blocked update artifact"
 fi
+if [[ ! -f "${LAST_HEARTBEAT_OUTPUT_DIR}/osiris-paperclip-runtime-latest.json" ]]; then
+  fail "next-action helper did not write latest manifest"
+fi
 next_archive_dirs=("${LAST_HEARTBEAT_OUTPUT_DIR}"/history/*)
 if [[ ! -d "${next_archive_dirs[0]}" ]]; then
   fail "next-action helper did not create archive directory"
 fi
 if [[ ! -f "${next_archive_dirs[0]}/osiris-paperclip-blocked-update.json" ]]; then
   fail "next-action helper did not archive blocked update artifact"
+fi
+if [[ ! -f "${next_archive_dirs[0]}/osiris-paperclip-runtime-latest.json" ]]; then
+  fail "next-action helper did not archive latest manifest"
 fi
 rm -rf "${LAST_HEARTBEAT_OUTPUT_DIR}"
 unset LAST_HEARTBEAT_OUTPUT_DIR

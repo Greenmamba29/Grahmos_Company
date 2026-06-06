@@ -1,0 +1,14 @@
+{
+  "generated_at": "20260606T004104Z",
+  "latest": {
+    "report_path": "/workspace/reports/osiris-paperclip-runtime-report.md",
+    "snapshot_path": "/workspace/reports/osiris-paperclip-runtime-snapshot.json",
+    "blocked_update_path": "/workspace/reports/osiris-paperclip-blocked-update.json",
+    "latest_archive_dir": "/workspace/reports/history/20260606T004104Z"
+  },
+  "runtime": {
+    "diagnosis": "missing_paperclip_auth",
+    "heartbeat_next_action_state": "refresh_blocked_artifacts",
+    "issue_operations_blocked": true
+  }
+}
