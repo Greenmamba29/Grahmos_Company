@@ -143,4 +143,18 @@ assert_stderr_contains "Missing required environment variables:"
 pass "paperclip-runtime-check reports missing runtime env"
 cleanup_last
 
+run_expect 2 env \
+  PAPERCLIP_API_URL="http://[localhost:3100]" \
+  PAPERCLIP_AGENT_ID="agent-123" \
+  PAPERCLIP_COMPANY_ID="company-123" \
+  PAPERCLIP_RUN_ID="run-123" \
+  PAPERCLIP_WORKSPACE_CWD="/workspace" \
+  PAPERCLIP_WORKSPACE_SOURCE="repo" \
+  ./scripts/paperclip-runtime-check.sh
+assert_stdout_contains "Paperclip runtime check"
+assert_stdout_contains "\"effective_api_base\": \"https://paperclip-agra.srv1675664.hstgr.cloud\""
+assert_stdout_contains "Board authentication is not available in this shell session."
+pass "paperclip-runtime-check normalizes bracketed host api urls and reports auth blocker"
+cleanup_last
+
 printf 'All %d Paperclip helper smoke tests passed.\n' "$pass_count"

@@ -82,6 +82,11 @@ call endpoints such as:
 This means a Cursor Cloud agent can work on the Git repo, but it cannot read or
 update Paperclip issues unless you explicitly provide a Paperclip auth path.
 
+In this environment, `PAPERCLIP_API_URL` may also point at a localhost-style
+proxy that is not directly reachable from the shell. The checked-in helper
+scripts normalize malformed bracketed hosts and fall back to the public GrahmOS
+Paperclip base URL when the runtime API URL resolves to localhost.
+
 Run `./scripts/paperclip-runtime-check.sh` in the cloud workspace to confirm the
 current runtime state before attempting issue operations. Once auth is
 available, use `./scripts/paperclip-api.sh` to query session status, current

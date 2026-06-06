@@ -118,6 +118,36 @@ require_api_url() {
   fi
 }
 
+normalize_api_url() {
+  local url="${PAPERCLIP_API_URL%/}"
+
+  if [[ "$url" =~ ^(https?://)\[([^][]+)\](.*)$ ]]; then
+    local inner="${BASH_REMATCH[2]}"
+    # Strip brackets only for malformed host[:port] values. Legitimate IPv6
+    # literals contain multiple colons and should remain bracketed.
+    if [[ $(printf '%s' "$inner" | tr -cd ':' | wc -c) -le 1 ]]; then
+      printf '%s%s%s\n' "${BASH_REMATCH[1]}" "$inner" "${BASH_REMATCH[3]}"
+      return 0
+    fi
+  fi
+
+  printf '%s\n' "$url"
+}
+
+effective_api_url() {
+  local url
+  url="$(normalize_api_url)"
+
+  case "$url" in
+    http://localhost:*|https://localhost:*|http://127.0.0.1:*|https://127.0.0.1:*|http://[::1]*|https://[::1]*)
+      printf '%s\n' "${PAPERCLIP_PUBLIC_BASE_URL:-https://paperclip-agra.srv1675664.hstgr.cloud}"
+      ;;
+    *)
+      printf '%s\n' "$url"
+      ;;
+  esac
+}
+
 require_auth() {
   if [[ -z "${PAPERCLIP_API_KEY:-}" ]]; then
     echo "error: PAPERCLIP_API_KEY is required for this command" >&2
@@ -341,8 +371,10 @@ request() {
   local method="$1"
   local path="$2"
   local body_file="${3:-}"
+  local api_base
 
   require_api_url
+  api_base="$(effective_api_url)"
 
   local -a args
   args=(-sSL -X "$method" -H "Accept: application/json")
@@ -362,7 +394,7 @@ request() {
   local tmp_body
   tmp_body="$(mktemp)"
   local code
-  code="$(curl "${args[@]}" -o "$tmp_body" -w '%{http_code}' "$PAPERCLIP_API_URL$path")"
+  code="$(curl "${args[@]}" -o "$tmp_body" -w '%{http_code}' "$api_base$path")"
 
   if [[ "$code" -lt 200 || "$code" -ge 300 ]]; then
     echo "HTTP $code" >&2
@@ -422,6 +454,8 @@ PY
 }
 
 resolve_current_issue_id() {
+  local api_base
+
   if [[ -n "${PAPERCLIP_TASK_ID:-}" ]]; then
     printf '%s\n' "$PAPERCLIP_TASK_ID"
     return 0
@@ -429,6 +463,7 @@ resolve_current_issue_id() {
 
   require_auth
   require_api_url
+  api_base="$(effective_api_url)"
 
   local tmp_body
   tmp_body="$(mktemp)"
@@ -438,7 +473,7 @@ resolve_current_issue_id() {
     -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
     -o "$tmp_body" \
     -w '%{http_code}' \
-    "$PAPERCLIP_API_URL/api/agents/me/inbox-lite")"
+    "$api_base/api/agents/me/inbox-lite")"
 
   if [[ "$code" -lt 200 || "$code" -ge 300 ]]; then
     echo "HTTP $code" >&2

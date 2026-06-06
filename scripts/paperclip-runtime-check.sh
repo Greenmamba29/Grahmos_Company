@@ -25,11 +25,44 @@ fi
 python3 - <<'PY'
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
+from urllib.parse import urlsplit
 
-base = os.environ["PAPERCLIP_API_URL"].rstrip("/")
+PUBLIC_FALLBACK_BASE = os.environ.get(
+    "PAPERCLIP_PUBLIC_BASE_URL",
+    "https://paperclip-agra.srv1675664.hstgr.cloud",
+).rstrip("/")
+
+def normalize_base_url(raw: str) -> str:
+    value = raw.strip().rstrip("/")
+    match = re.match(r"^(https?://)\[([^\[\]/]+)\](.*)$", value)
+    if match:
+        inner = match.group(2)
+        # Strip brackets only for malformed host[:port] values. Legitimate IPv6
+        # literals contain multiple colons and should remain bracketed.
+        if inner.count(":") <= 1:
+            return f"{match.group(1)}{inner}{match.group(3)}"
+    return value
+
+
+def resolve_base_url(raw: str) -> str:
+    value = normalize_base_url(raw)
+    parsed = urlsplit(value)
+    if parsed.hostname in {"localhost", "127.0.0.1", "::1"}:
+        return PUBLIC_FALLBACK_BASE
+    return value
+
+
+base = resolve_base_url(os.environ["PAPERCLIP_API_URL"])
+try:
+    urlsplit(base)
+except ValueError as exc:
+    print(f"Invalid PAPERCLIP_API_URL after normalization: {exc}", file=sys.stderr)
+    sys.exit(1)
+
 run_id = os.environ["PAPERCLIP_RUN_ID"]
 api_key = os.environ.get("PAPERCLIP_API_KEY", "").strip()
 gh_token = os.environ.get("GH_TOKEN", "").strip()
@@ -100,6 +133,7 @@ summary = {
     "aux_home_is_directory": bool(aux_home) and os.path.isdir(aux_home),
     "bearer_me_status": bearer_me_status,
     "bearer_inbox_status": bearer_inbox_status,
+    "effective_api_base": base,
 }
 
 print("Paperclip runtime check")
