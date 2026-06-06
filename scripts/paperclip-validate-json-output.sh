@@ -79,8 +79,42 @@ def load_json(path: Path, kind: str):
 
 
 def has_required(obj: dict, fields: dict[str, str], prefix: str = ""):
-    for key in fields:
+    for key, spec in fields.items():
         record(key in obj, f"{prefix}{key} exists")
+        if key in obj:
+            check_value_against_spec(obj[key], spec, f"{prefix}{key}")
+
+
+def check_value_against_spec(value, spec: str, prefix: str):
+    if spec == "string":
+        record(isinstance(value, str), f"{prefix} is string")
+        return
+    if spec == "integer":
+        record(isinstance(value, int) and not isinstance(value, bool), f"{prefix} is integer")
+        return
+    if spec == "boolean":
+        record(isinstance(value, bool), f"{prefix} is boolean")
+        return
+    if spec == "object":
+        record(isinstance(value, dict), f"{prefix} is object")
+        return
+    if spec == "string[]":
+        record(isinstance(value, list), f"{prefix} is list")
+        if isinstance(value, list):
+            record(all(isinstance(item, str) for item in value), f"{prefix} items are strings")
+        return
+    if spec == "string|null":
+        record(value is None or isinstance(value, str), f"{prefix} is string or null")
+        return
+    if spec.startswith('"') and spec.endswith('"'):
+        literal = spec[1:-1]
+        record(value == literal, f"{prefix} matches literal {literal}")
+        return
+    if spec.endswith(" object"):
+        artifact_type = spec[: -len(" object")]
+        validate_artifact(value, artifact_type, prefix + ".")
+        return
+    warnings.append(f"{prefix} has unhandled schema spec: {spec}")
 
 
 def validate_blocked_payload(obj: dict, prefix: str = ""):
@@ -97,7 +131,13 @@ def validate_artifact(obj: dict, expected_type: str | None = None, prefix: str =
         return None
 
     artifact_type = obj.get("artifact_type")
-    record(isinstance(artifact_type, str) and artifact_type in schemas, f"{prefix}artifact_type is supported: {artifact_type}")
+    if isinstance(artifact_type, str) and artifact_type in schemas:
+        record(True, f"{prefix}artifact_type is supported: {artifact_type}")
+    elif expected_type and expected_type in schemas:
+        warnings.append(f"{prefix}artifact_type missing or unsupported; using expected artifact type {expected_type}")
+        artifact_type = expected_type
+    else:
+        record(False, f"{prefix}artifact_type is supported: {artifact_type}")
 
     if expected_type:
         record(artifact_type == expected_type, f"{prefix}artifact_type matches expected: {expected_type}")
@@ -129,12 +169,16 @@ def validate_artifact(obj: dict, expected_type: str | None = None, prefix: str =
         record(isinstance(latest, dict), f"{prefix}latest manifest latest is object")
         record(isinstance(file_metadata, dict), f"{prefix}latest manifest file_metadata is object")
         record(isinstance(runtime, dict), f"{prefix}latest manifest runtime is object")
-        for key in schema.get("latest_fields", {}):
+        for key, spec in schema.get("latest_fields", {}).items():
             record(key in latest, f"{prefix}latest manifest latest.{key} exists")
+            if key in latest:
+                check_value_against_spec(latest[key], spec, f"{prefix}latest manifest latest.{key}")
         for key, meta in file_metadata.items():
             record(isinstance(meta, dict), f"{prefix}latest manifest file_metadata.{key} is object")
-            for field in schema.get("file_metadata_entry", {}):
+            for field, spec in schema.get("file_metadata_entry", {}).items():
                 record(field in meta, f"{prefix}latest manifest file_metadata.{key}.{field} exists")
+                if field in meta:
+                    check_value_against_spec(meta[field], spec, f"{prefix}latest manifest file_metadata.{key}.{field}")
 
     if artifact_type == "paperclip_refresh_result":
         record(isinstance(obj.get("latest_manifest"), dict), f"{prefix}refresh result latest_manifest is object")
@@ -154,17 +198,23 @@ def validate_artifact(obj: dict, expected_type: str | None = None, prefix: str =
         validate_artifact(obj.get("diagnosis"), "paperclip_runtime_diagnosis", prefix + "diagnosis.")
         conditional = schema.get("conditional_fields", {})
         if disposition == "blocked":
-            for key in conditional.get("blocked", {}):
+            for key, spec in conditional.get("blocked", {}).items():
                 record(key in obj, f"{prefix}heartbeat blocked field {key} exists")
+                if key in obj:
+                    check_value_against_spec(obj[key], spec, f"{prefix}heartbeat blocked field {key}")
             validate_artifact(obj.get("latest_manifest"), "paperclip_runtime_latest_manifest", prefix + "latest_manifest.")
             validate_blocked_payload(obj.get("blocked_update_payload"), prefix)
             validate_artifact(obj.get("refresh_result"), "paperclip_refresh_result", prefix + "refresh_result.")
         if disposition == "session_only":
-            for key in conditional.get("session_only", {}):
+            for key, spec in conditional.get("session_only", {}).items():
                 record(key in obj, f"{prefix}heartbeat session_only field {key} exists")
+                if key in obj:
+                    check_value_against_spec(obj[key], spec, f"{prefix}heartbeat session_only field {key}")
         if disposition == "ready":
-            for key in conditional.get("ready", {}):
+            for key, spec in conditional.get("ready", {}).items():
                 record(key in obj, f"{prefix}heartbeat ready field {key} exists")
+                if key in obj:
+                    check_value_against_spec(obj[key], spec, f"{prefix}heartbeat ready field {key}")
 
     if artifact_type == "paperclip_artifact_validation_result":
         record(isinstance(obj.get("checks"), list), f"{prefix}validation result checks is list")

@@ -818,6 +818,15 @@ rm -f "$blocked_update_path"
 pass "paperclip-write-blocked-update writes a standalone blocked payload"
 cleanup_last
 
+invalid_blocked_path="$(mktemp)"
+printf '{"status":"open","comment":""}\n' >"$invalid_blocked_path"
+run_expect 1 ./scripts/paperclip-validate-json-output.sh "$invalid_blocked_path" paperclip_blocked_issue_update_payload
+assert_stdout_contains "FAIL: blocked payload status is blocked"
+assert_stdout_contains "FAIL: blocked payload comment is non-empty"
+rm -f "$invalid_blocked_path"
+pass "paperclip-validate-json-output rejects invalid blocked payloads"
+cleanup_last
+
 validation_dir="$(mktemp -d)"
 ./scripts/paperclip-refresh-runtime-artifacts.sh "$validation_dir" paperclip-secret cursor-secret >/dev/null
 run_expect 0 ./scripts/paperclip-validate-artifacts.sh "$validation_dir"

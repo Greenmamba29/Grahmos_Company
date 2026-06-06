@@ -96,7 +96,10 @@ This is the Company run main repo for Grahmos.
   to validate an individual captured JSON payload (for example a saved
   `runtime-check --json`, `refresh --json`, or `heartbeat-next-action --json`
   result) against the checked-in schema bundle. The validator also walks the
-  nested embedded artifacts inside refresh/heartbeat JSON results.
+  nested embedded artifacts inside refresh/heartbeat JSON results and enforces the
+  bundle's field-type/literal expectations for supported schemas. Provide
+  `EXPECTED_ARTIFACT_TYPE` for raw payloads like `osiris-paperclip-blocked-update.json`
+  that intentionally omit an `artifact_type` field.
 - If you want one command that decides the next heartbeat step for you, run
   `./scripts/paperclip-heartbeat-next-action.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
   It runs the JSON diagnosis, refreshes blocked artifacts when auth is missing, and

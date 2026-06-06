@@ -140,7 +140,9 @@ latest manifest's file metadata.
 Run `./scripts/paperclip-validate-json-output.sh [--json] JSON_FILE [EXPECTED_ARTIFACT_TYPE]`
 when you want to validate one captured JSON payload directly against the checked-in
 schema bundle. The validator also checks nested embedded artifacts inside refresh
-and heartbeat JSON results.
+and heartbeat JSON results and enforces the bundle's field-type/literal
+expectations for supported schemas. Pass `EXPECTED_ARTIFACT_TYPE` for raw payloads
+like the blocked issue-update file that do not carry an `artifact_type`.
 If you want the single recommended heartbeat entry point, run
 `./scripts/paperclip-heartbeat-next-action.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
 When auth is still missing, it refreshes the blocked artifacts; when auth is
