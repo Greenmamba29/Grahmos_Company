@@ -132,6 +132,9 @@ as the stable latest manifest with file size/hash metadata, plus timestamped arc
 `OUTPUT_DIR/history/`.
 Add `--json` when another tool needs the refresh result as a machine-readable wrapper
 around the latest manifest and archive directory.
+Run `./scripts/paperclip-validate-artifacts.sh [--json] [TARGET_DIR]` when you want
+to validate the generated artifact set against the checked-in schema bundle and the
+latest manifest's file metadata.
 If you want the single recommended heartbeat entry point, run
 `./scripts/paperclip-heartbeat-next-action.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
 When auth is still missing, it refreshes the blocked artifacts; when auth is

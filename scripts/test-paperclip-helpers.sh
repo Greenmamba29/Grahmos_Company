@@ -818,6 +818,22 @@ rm -f "$blocked_update_path"
 pass "paperclip-write-blocked-update writes a standalone blocked payload"
 cleanup_last
 
+validation_dir="$(mktemp -d)"
+./scripts/paperclip-refresh-runtime-artifacts.sh "$validation_dir" paperclip-secret cursor-secret >/dev/null
+run_expect 0 ./scripts/paperclip-validate-artifacts.sh "$validation_dir"
+assert_stdout_contains "Validated Paperclip artifacts in $validation_dir"
+assert_stdout_contains "PASS: latest manifest schema_version is 1"
+pass "paperclip-validate-artifacts validates refreshed artifacts"
+cleanup_last
+
+run_expect 0 ./scripts/paperclip-validate-artifacts.sh --json "$validation_dir"
+assert_stdout_json_value "schema_version" "1"
+assert_stdout_json_value "artifact_type" "paperclip_artifact_validation_result"
+assert_stdout_json_value "valid" "true"
+rm -rf "$validation_dir"
+pass "paperclip-validate-artifacts emits JSON validation result"
+cleanup_last
+
 run_mock_runtime_check_json "degraded-health-auth-blocked"
 assert_stdout_json_value "schema_version" "1"
 assert_stdout_json_value "artifact_type" "paperclip_runtime_diagnosis"

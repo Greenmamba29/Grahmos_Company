@@ -86,6 +86,9 @@ This is the Company run main repo for Grahmos.
   `OUTPUT_DIR/history/`.
 - Add `--json` to `paperclip-refresh-runtime-artifacts.sh` when automation needs a
   machine-readable refresh result containing the latest manifest and archive dir.
+- Run `./scripts/paperclip-validate-artifacts.sh [--json] [TARGET_DIR]` to validate
+  the current report/snapshot/blocked-update/latest-manifest artifact set against
+  the checked-in contract and on-disk file metadata.
 - If you want one command that decides the next heartbeat step for you, run
   `./scripts/paperclip-heartbeat-next-action.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
   It runs the JSON diagnosis, refreshes blocked artifacts when auth is missing, and
