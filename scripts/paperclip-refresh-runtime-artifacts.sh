@@ -24,6 +24,7 @@ Notes:
     - osiris-paperclip-runtime-report.md
     - osiris-paperclip-runtime-snapshot.json
     - osiris-paperclip-blocked-update.json
+  - Also writes timestamped archive copies under OUTPUT_DIR/history/<timestamp>/.
   - OUTPUT_DIR defaults to reports.
   - This is the single-command refresh path for blocked Paperclip heartbeats.
 EOF
@@ -58,9 +59,18 @@ mkdir -p "$output_dir"
 report_path="$output_dir/osiris-paperclip-runtime-report.md"
 snapshot_path="$output_dir/osiris-paperclip-runtime-snapshot.json"
 blocked_path="$output_dir/osiris-paperclip-blocked-update.json"
+timestamp="$(date -u +"%Y%m%dT%H%M%SZ")"
+archive_dir="$output_dir/history/$timestamp"
+
+mkdir -p "$archive_dir"
 
 "$REPORT_WRITER" "$report_path" "$paperclip_secret_id" "$cursor_secret_id"
 "$SNAPSHOT_WRITER" "$snapshot_path" "$paperclip_secret_id" "$cursor_secret_id"
 "$BLOCKED_WRITER" "$blocked_path"
 
+cp "$report_path" "$archive_dir/$(basename "$report_path")"
+cp "$snapshot_path" "$archive_dir/$(basename "$snapshot_path")"
+cp "$blocked_path" "$archive_dir/$(basename "$blocked_path")"
+
 printf 'Refreshed runtime artifacts in %s\n' "$output_dir"
+printf 'Archived runtime artifacts in %s\n' "$archive_dir"

@@ -76,7 +76,7 @@ This is the Company run main repo for Grahmos.
 - If you want the standard markdown and JSON artifacts refreshed together, run
   `./scripts/paperclip-refresh-runtime-artifacts.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
   That also writes `osiris-paperclip-blocked-update.json`, a standalone blocked
-  issue-update payload.
+  issue-update payload, plus timestamped archive copies under `OUTPUT_DIR/history/`.
 - If you want one command that decides the next heartbeat step for you, run
   `./scripts/paperclip-heartbeat-next-action.sh [OUTPUT_DIR] [PAPERCLIP_SECRET_ID] [CURSOR_SECRET_ID]`.
   It runs the JSON diagnosis, refreshes blocked artifacts when auth is missing, and

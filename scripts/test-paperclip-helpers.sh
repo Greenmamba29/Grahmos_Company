@@ -438,6 +438,25 @@ class Handler(BaseHTTPRequestHandler):
         run_log_match = re.fullmatch(r"/api/heartbeat-runs/[^/]+/log\?offset=0&limitBytes=4096", self.path)
         workspace_ops_match = re.fullmatch(r"/api/heartbeat-runs/[^/]+/workspace-operations", self.path)
         auth = self.headers.get("Authorization", "")
+        if scenario == "degraded-health-auth-blocked":
+            if self.path == "/api/health":
+                self.send_response(503)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "health unavailable"}).encode())
+                return
+            if self.path == "/api/auth/get-session":
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Board authentication required"}).encode())
+                return
+            if run_issue_match or run_log_match or workspace_ops_match:
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Board authentication required"}).encode())
+                return
         if scenario == "board-session-ok":
             if self.path == "/api/health":
                 self.send_response(200)
@@ -689,6 +708,7 @@ cleanup_last
 refresh_dir="$(mktemp -d)"
 run_expect 0 ./scripts/paperclip-refresh-runtime-artifacts.sh "$refresh_dir" paperclip-secret cursor-secret
 assert_stdout_contains "Refreshed runtime artifacts in $refresh_dir"
+assert_stdout_contains "Archived runtime artifacts in $refresh_dir/history/"
 if [[ ! -f "$refresh_dir/osiris-paperclip-runtime-report.md" ]]; then
   fail "refresh helper did not write markdown report"
 fi
@@ -698,24 +718,44 @@ fi
 if [[ ! -f "$refresh_dir/osiris-paperclip-blocked-update.json" ]]; then
   fail "refresh helper did not write blocked update artifact"
 fi
+archive_dirs=("$refresh_dir"/history/*)
+if [[ ! -d "${archive_dirs[0]}" ]]; then
+  fail "refresh helper did not create archive directory"
+fi
+if [[ ! -f "${archive_dirs[0]}/osiris-paperclip-runtime-report.md" ]]; then
+  fail "refresh helper did not archive markdown report"
+fi
+if [[ ! -f "${archive_dirs[0]}/osiris-paperclip-runtime-snapshot.json" ]]; then
+  fail "refresh helper did not archive json snapshot"
+fi
+if [[ ! -f "${archive_dirs[0]}/osiris-paperclip-blocked-update.json" ]]; then
+  fail "refresh helper did not archive blocked update artifact"
+fi
 rm -rf "$refresh_dir"
 pass "paperclip-refresh-runtime-artifacts refreshes both runtime artifacts"
 cleanup_last
 
-next_action_dir="$(mktemp -d)"
-run_expect 0 ./scripts/paperclip-heartbeat-next-action.sh "$next_action_dir" paperclip-secret cursor-secret
+run_mock_heartbeat_next_action "degraded-health-auth-blocked"
 assert_stdout_contains "Runtime diagnosis: missing_paperclip_auth"
 assert_stdout_contains "Heartbeat disposition: blocked on Paperclip auth."
-if [[ ! -f "$next_action_dir/osiris-paperclip-runtime-report.md" ]]; then
+if [[ ! -f "${LAST_HEARTBEAT_OUTPUT_DIR}/osiris-paperclip-runtime-report.md" ]]; then
   fail "next-action helper did not write markdown report"
 fi
-if [[ ! -f "$next_action_dir/osiris-paperclip-runtime-snapshot.json" ]]; then
+if [[ ! -f "${LAST_HEARTBEAT_OUTPUT_DIR}/osiris-paperclip-runtime-snapshot.json" ]]; then
   fail "next-action helper did not write json snapshot"
 fi
-if [[ ! -f "$next_action_dir/osiris-paperclip-blocked-update.json" ]]; then
+if [[ ! -f "${LAST_HEARTBEAT_OUTPUT_DIR}/osiris-paperclip-blocked-update.json" ]]; then
   fail "next-action helper did not write blocked update artifact"
 fi
-rm -rf "$next_action_dir"
+next_archive_dirs=("${LAST_HEARTBEAT_OUTPUT_DIR}"/history/*)
+if [[ ! -d "${next_archive_dirs[0]}" ]]; then
+  fail "next-action helper did not create archive directory"
+fi
+if [[ ! -f "${next_archive_dirs[0]}/osiris-paperclip-blocked-update.json" ]]; then
+  fail "next-action helper did not archive blocked update artifact"
+fi
+rm -rf "${LAST_HEARTBEAT_OUTPUT_DIR}"
+unset LAST_HEARTBEAT_OUTPUT_DIR
 pass "paperclip-heartbeat-next-action handles blocked heartbeats"
 cleanup_last
 
