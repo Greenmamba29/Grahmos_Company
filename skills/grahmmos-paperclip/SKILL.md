@@ -40,11 +40,21 @@ The CEO agent uses the Cursor Cloud adapter which runs in Cursor's hosted cloud 
 - Repository URL: https://github.com/Greenmamba29/Grahmos_Company
 - Starting ref: main
 - Cursor runtime: Cursor hosted
-- CURSOR_API_KEY: Set in environment variables
+- Adapter env: inject CURSOR_API_KEY and PAPERCLIP_API_KEY secret refs
 
 ### Environment Variables Required
 - CURSOR_API_KEY: Cursor background agent API key (crsr_...)
+- PAPERCLIP_API_KEY: Paperclip bearer token for issue, run, comment, and interaction API access
 - GH_TOKEN: GitHub fine-grained PAT (github_pat_...) with all-repos access
+
+### Recommended Adapter Env Template
+
+The repo includes a checked-in template at:
+
+`configs/osiris-cursor-cloud-adapter.example.json`
+
+Update the placeholder secret IDs, then apply the resulting env block to the
+Osiris Hermes Cursor Cloud adapter configuration.
 
 ### Critical Setup Requirement
 The Cursor Cloud adapter uses Cursor's GitHub App (NOT the GH_TOKEN) to clone repos.
@@ -71,6 +81,8 @@ Grahmos_Company/
   README.md          # Repository readme
   LICENSE            # MIT License
   .gitignore         # Git ignore
+  configs/
+    osiris-cursor-cloud-adapter.example.json  # Cursor Cloud env template with Paperclip auth
   skills/
     grahmmos-paperclip/
       SKILL.md       # This file - company setup documentation
@@ -93,6 +105,10 @@ Grahmos_Company/
 ### Error: "cursor_cloud requires repoUrl in adapterC..."
 **Cause:** Repository URL field is empty in Cursor Cloud config
 **Fix:** Set Repository URL = https://github.com/Greenmamba29/Grahmos_Company
+
+### Error: "Board authentication required" or Paperclip issue/run routes return 401
+**Cause:** Cursor Cloud runtime is missing PAPERCLIP_API_KEY in the adapter env
+**Fix:** Add PAPERCLIP_API_KEY to the adapter env using `configs/osiris-cursor-cloud-adapter.example.json`
 
 ### Error: "Failed to start command hermes in ."
 **Cause:** Hermes Agent (local) workspace not initialized
