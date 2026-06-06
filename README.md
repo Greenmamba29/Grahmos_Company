@@ -90,7 +90,8 @@ This is the Company run main repo for Grahmos.
   mutations are available.
 - Add `--json` to `paperclip-heartbeat-next-action.sh` when downstream tooling needs
   a single machine-readable result describing the chosen next action and any
-  refreshed artifact paths.
+  refreshed artifact paths. The blocked JSON result now embeds the latest manifest,
+  and the ready JSON result includes structured playbook commands.
 
 The comment helper accepts the raw JSON body expected by `POST /api/issues/{issueId}/comments`,
 so it can carry structured fields such as `resume`, `reopen`, or `interrupt` when

@@ -108,7 +108,8 @@ emit_json() {
   local manifest_path="$4"
   local playbook_text="${5:-}"
   local playbook_command="${6:-}"
-  python3 - "$diagnosis_file" "$action_state" "$heartbeat_disposition" "$message" "$output_dir" "$manifest_path" "$playbook_text" "$playbook_command" <<'PY'
+  local extra_json_path="${7:-}"
+  python3 - "$diagnosis_file" "$action_state" "$heartbeat_disposition" "$message" "$output_dir" "$manifest_path" "$playbook_text" "$playbook_command" "$extra_json_path" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -121,6 +122,7 @@ output_dir = sys.argv[5]
 manifest_path = sys.argv[6]
 playbook_text = sys.argv[7]
 playbook_command = sys.argv[8]
+extra_json_path = sys.argv[9]
 
 payload = {
     "schema_version": 1,
@@ -139,11 +141,14 @@ if manifest_path:
         "blocked_update_path": str(Path(output_dir) / "osiris-paperclip-blocked-update.json"),
         "latest_manifest_path": manifest_path,
     }
+    payload["latest_manifest"] = json.load(open(manifest_path))
 
 if playbook_command:
     payload["playbook_command"] = playbook_command
 if playbook_text:
     payload["playbook_text"] = playbook_text
+if extra_json_path:
+    payload.update(json.load(open(extra_json_path)))
 
 json.dump(payload, sys.stdout, indent=2)
 sys.stdout.write("\n")
@@ -211,14 +216,27 @@ fi
 
 playbook_text="$("$API_HELPER" current-issue-playbook)"
 if [[ "$json_mode" == "1" ]]; then
+  playbook_json_file="$(mktemp)"
+  cat >"$playbook_json_file" <<'EOF'
+{
+  "playbook_commands": [
+    "./scripts/paperclip-api.sh issue-get-current",
+    "./scripts/paperclip-api.sh issue-comments-current",
+    "./scripts/paperclip-api.sh issue-comment-current-template \"Resuming with auth fixed.\" true",
+    "./scripts/paperclip-api.sh issue-blocked-current-template \"Paperclip operator\" \"Inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env\" \"Current run is blocked.\"",
+    "./scripts/paperclip-api.sh issue-update-current-template done \"Verified and complete.\""
+  ]
+}
+EOF
   emit_json \
     "current_issue_playbook" \
     "ready" \
     "Issue operations are available via the Paperclip API helper. Follow the current-issue playbook." \
     "" \
     "$playbook_text" \
-    "./scripts/paperclip-api.sh current-issue-playbook"
-  rm -f "$diagnosis_file"
+    "./scripts/paperclip-api.sh current-issue-playbook" \
+    "$playbook_json_file"
+  rm -f "$playbook_json_file" "$diagnosis_file"
   exit 0
 fi
 
