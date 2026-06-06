@@ -99,6 +99,14 @@ Grahmos_Company/
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
 
+### Error: "`opencode models` timed out after 20s"
+**Cause:** The local `opencode_local` adapter is unhealthy. In practice this means the Hermes/local runtime cannot execute `opencode` reliably because the binary is missing, the model provider credentials are invalid, or outbound access to the provider is unavailable.
+**Fix:** On the Hermes/local host, verify `opencode` is installed and in PATH, confirm the provider API key and network egress are working, and rerun `opencode models` there before resuming the assigned issue heartbeat.
+
+### Error: "Paperclip API returns 401 from Cursor Cloud shell"
+**Cause:** Direct REST access from the Cursor Cloud runtime is not authenticated by `GH_TOKEN` or the `PAPERCLIP_*` context variables alone. The web app shell is reachable, but `/api/issues/*` endpoints still require an authenticated Paperclip session.
+**Fix:** Use a runtime with a valid Paperclip session or a dedicated machine-to-machine integration for issue comments/status updates. Do not assume the cloud shell can mutate issue state just because `PAPERCLIP_API_URL`, `PAPERCLIP_AGENT_ID`, or `PAPERCLIP_RUN_ID` are present.
+
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
 - Interval: every 300 seconds (5 minutes)
