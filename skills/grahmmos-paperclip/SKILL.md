@@ -15,7 +15,7 @@ GrahmOS runs on a self-hosted Paperclip instance at: paperclip-agra.srv1675664.h
 | Agent | Title | Adapter | Status |
 |-------|-------|---------|--------|
 | Osiris Hermes | CEO - Chief Executive Officer | Cursor Cloud | Active |
-| Casius Nexus | CTO - Chief Technology Officer | Hermes Agent (local) | Idle |
+| Casius Nexus | CTO - Chief Technology Officer | OpenCode (local) | Idle |
 | Apollo | CMO - Chief Marketing Officer | Hermes Agent (local) | Idle |
 | Athena | PM - Head of Product | Hermes Agent (local) | Idle |
 | Midas | CFO - Head of Revenue | Hermes Agent (local) | Idle |
@@ -114,6 +114,35 @@ Grahmos_Company/
 **Cause:** Hermes Agent (local) workspace not initialized
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
+
+### Error: "`opencode models` timed out after 20s"
+**Cause:** The `opencode_local` adapter performs model-discovery preflight before the
+task body starts. On slower hosts or providers with very large model catalogs
+(notably OpenRouter), `opencode models` can exceed the fixed 20s discovery
+window and fail the run before any task work begins.
+
+**What this means:** This is a local adapter/runtime problem, not a failure in
+the task prompt itself.
+
+**Immediate checks on the local adapter host:**
+1. Confirm the CLI is installed and executable: `which opencode`
+2. Measure discovery time directly: `time opencode models`
+3. Verify the configured provider credentials are present and valid
+4. Confirm the exact configured provider/model ID appears in `opencode models`
+
+**Recovery path:**
+- If `opencode models` is slow but succeeds, treat the preflight timeout as the
+  failure point and retry only after addressing discovery speed
+- If the configured model is near the end of a very large list, prefer a
+  smaller/faster provider catalog or upgrade/publish a Paperclip build with the
+  upstream `opencode_local` fixes
+- For known-good environments, consider the upstream escape hatch
+  `PAPERCLIP_SKIP_MODEL_VALIDATION=true`
+
+**Upstream references:**
+- paperclipai/paperclip#2835 - `opencode models` timed out after 20s
+- paperclipai/paperclip#2259 - flaky runtime model validation for large model lists
+- paperclipai/paperclip#2353 - proposed fix with longer timeout, cache, and skip flag
 
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
