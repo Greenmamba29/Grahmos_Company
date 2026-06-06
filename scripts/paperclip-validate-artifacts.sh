@@ -99,6 +99,7 @@ if schema_bundle is not None:
         "paperclip_refresh_result",
         "paperclip_heartbeat_next_action",
         "paperclip_artifact_validation_result",
+        "paperclip_json_validation_result",
     ]:
         record(key in schema_bundle.get("schemas", {}), f"schema bundle includes {key}")
 

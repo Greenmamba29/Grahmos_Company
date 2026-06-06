@@ -157,6 +157,22 @@
         "warnings": "string[]",
         "errors": "string[]"
       }
+    },
+    "paperclip_json_validation_result": {
+      "description": "Machine-readable output from ./scripts/paperclip-validate-json-output.sh --json.",
+      "required_fields": {
+        "schema_version": "integer",
+        "artifact_type": "\"paperclip_json_validation_result\"",
+        "json_file": "string",
+        "valid": "boolean",
+        "checks": "string[]",
+        "warnings": "string[]",
+        "errors": "string[]"
+      },
+      "notable_optional_fields": {
+        "expected_artifact_type": "string|null",
+        "detected_artifact_type": "string|null"
+      }
     }
   }
 }

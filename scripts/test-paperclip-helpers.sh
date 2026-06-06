@@ -836,9 +836,16 @@ import sys
 
 data = json.load(open(sys.argv[1]))
 assert "schema bundle includes paperclip_blocked_issue_update_payload" in data["checks"]
+assert "schema bundle includes paperclip_json_validation_result" in data["checks"]
 PY
 rm -rf "$validation_dir"
 pass "paperclip-validate-artifacts emits JSON validation result"
+cleanup_last
+
+run_mock_runtime_check_json "degraded-health-auth-blocked"
+run_expect 0 ./scripts/paperclip-validate-json-output.sh "$LAST_STDOUT_FILE" paperclip_runtime_diagnosis
+assert_stdout_contains "Validated JSON artifact"
+pass "paperclip-validate-json-output validates runtime diagnosis JSON"
 cleanup_last
 
 run_mock_runtime_check_json "degraded-health-auth-blocked"
@@ -986,6 +993,9 @@ assert data["archive_dir"]
 assert data["latest_manifest"]["runtime"]["heartbeat_next_action_state"] == "refresh_blocked_artifacts"
 assert data["validation_result"]["artifact_type"] == "paperclip_artifact_validation_result"
 PY
+run_expect 0 ./scripts/paperclip-validate-json-output.sh --json "$LAST_STDOUT_FILE" paperclip_refresh_result
+assert_stdout_json_value "artifact_type" "paperclip_json_validation_result"
+assert_stdout_json_value "valid" "true"
 rm -rf "$refresh_json_dir"
 pass "paperclip-refresh-runtime-artifacts emits JSON result"
 cleanup_last
@@ -1040,6 +1050,9 @@ data = json.load(open(sys.argv[1]))
 assert isinstance(data["recommended_commands"], list) and len(data["recommended_commands"]) >= 2
 assert data["refresh_result"]["artifact_type"] == "paperclip_refresh_result"
 PY
+run_expect 0 ./scripts/paperclip-validate-json-output.sh --json "$LAST_STDOUT_FILE" paperclip_heartbeat_next_action
+assert_stdout_json_value "artifact_type" "paperclip_json_validation_result"
+assert_stdout_json_value "valid" "true"
 rm -rf "${LAST_HEARTBEAT_OUTPUT_DIR}"
 unset LAST_HEARTBEAT_OUTPUT_DIR
 pass "paperclip-heartbeat-next-action emits blocked JSON result"
