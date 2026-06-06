@@ -23,7 +23,7 @@ GrahmOS runs on a self-hosted Paperclip instance at: paperclip-agra.srv1675664.h
 | Hermes-GTM | General - Sales and GTM Lead | Claude Code (local) | Idle |
 | Daedalus | General - UX/UI Lead | Claude Code (local) | Idle |
 | Lyra | General - AI/ML Engineer | Claude Code (local) | Idle |
-| Prometheus | General - Platform and Infrastructure | Claude Code (local) | Idle |
+| Prometheus | General - Platform and Infrastructure | OpenCode (local) | Idle |
 
 ## Brands / Projects
 - Hermes
@@ -45,6 +45,73 @@ The CEO agent uses the Cursor Cloud adapter which runs in Cursor's hosted cloud 
 ### Environment Variables Required
 - CURSOR_API_KEY: Cursor background agent API key (crsr_...)
 - GH_TOKEN: GitHub fine-grained PAT (github_pat_...) with all-repos access
+
+### Control-Plane Auth Caveat
+Cursor Cloud runs get Cursor/GitHub credentials for repository work, but they do not
+automatically get a Paperclip control-plane bearer token in the shell. In practice,
+the cloud runtime may expose:
+- PAPERCLIP_AGENT_ID
+- PAPERCLIP_COMPANY_ID
+- PAPERCLIP_API_URL
+- PAPERCLIP_RUN_ID
+- PAPERCLIP_WAKE_REASON
+
+...while still omitting:
+- PAPERCLIP_API_KEY
+- PAPERCLIP_TASK_ID
+- PAPERCLIP_WAKE_COMMENT_ID
+
+Without `PAPERCLIP_API_KEY`, the agent cannot call endpoints such as:
+- `GET /api/agents/me/inbox-lite`
+- `PATCH /api/issues/{issueId}`
+- `POST /api/issues/{issueId}/comments`
+- `POST /api/issues/{issueId}/interactions`
+
+This means a Cursor Cloud agent can work on the Git repo, but it cannot read or
+update Paperclip issues unless you explicitly provide a Paperclip agent key.
+Run `./scripts/paperclip-runtime-check.sh` in the cloud workspace to confirm the
+current runtime state before attempting issue operations.
+Once auth is available, use `./scripts/paperclip-api.sh` to query `me`,
+`inbox-lite`, issue details, issue comments, and `PATCH /api/issues/{issueId}`
+without rebuilding the curl commands each heartbeat.
+Use `./scripts/paperclip-api.sh issue-blocked ...` when the correct disposition is
+`blocked` and the issue must name an unblock owner and required action.
+Use `./scripts/paperclip-api.sh current-issue-id` or
+`./scripts/paperclip-api.sh issue-blocked-current ...` when the run should target
+the current task automatically. The helper prefers `PAPERCLIP_TASK_ID`; otherwise
+it only auto-selects when `inbox-lite` returns exactly one issue.
+
+#### Workaround
+Add a long-lived Paperclip agent API key to the Cursor Cloud adapter environment as
+`PAPERCLIP_API_KEY` using a Paperclip secret reference. The request shape is:
+
+```json
+{
+  "adapterType": "cursor_cloud",
+  "adapterConfig": {
+    "env": {
+      "CURSOR_API_KEY": {
+        "type": "secret_ref",
+        "secretId": "cursor-api-key-secret-id",
+        "version": "latest"
+      },
+      "PAPERCLIP_API_KEY": {
+        "type": "secret_ref",
+        "secretId": "osiris-paperclip-agent-key-secret-id",
+        "version": "latest"
+      }
+    }
+  }
+}
+```
+
+Once this is set, agent code should authenticate with:
+- `Authorization: Bearer $PAPERCLIP_API_KEY`
+- `X-Paperclip-Run-Id: $PAPERCLIP_RUN_ID` on mutating requests
+
+Next action for Osiris Hermes: update the Cursor Cloud agent configuration to inject
+`PAPERCLIP_API_KEY`, then rerun the heartbeat so the CEO agent can check inbox items
+and update the assigned issue disposition directly.
 
 ### Critical Setup Requirement
 The Cursor Cloud adapter uses Cursor's GitHub App (NOT the GH_TOKEN) to clone repos.
@@ -98,6 +165,35 @@ Grahmos_Company/
 **Cause:** Hermes Agent (local) workspace not initialized
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
+
+### Error: `opencode models` timed out after 20s
+**Cause:** The `opencode_local` adapter checks model availability before normal run logs are
+attached. A timeout here means the local adapter host could not finish model discovery in
+time. Typical causes are:
+- `opencode` is missing from `PATH` on the local host
+- provider credentials or outbound network access are broken
+- the OpenCode provider call is hanging before adapter logging begins
+
+**Fix:** Run the probe directly on the local adapter host, not in Cursor Cloud:
+1. `which opencode`
+2. `timeout 20s opencode models`
+3. Interpret the result:
+   - exit `127`: install `opencode` or fix `PATH`
+   - exit `124`: inspect provider connectivity, credentials, and upstream health
+   - a fast non-zero exit with stderr: fix the reported CLI/provider error
+4. Re-run the blocked heartbeat only after the probe succeeds and returns the available
+   model list within the timeout window.
+
+**Recovery action:** Treat this as a local adapter runtime issue, not a source-checkout
+or repository defect. If a Cursor Cloud review wake sees this error, leave a blocked
+handoff naming the local Paperclip/OpenCode operator as the unblock owner.
+
+### Error: `{"error":"Unauthorized"}` from `/api/agents/me` or `/api/issues/...`
+**Cause:** Cursor Cloud runtime is missing `PAPERCLIP_API_KEY`, so the agent has
+metadata about its run but no Paperclip bearer token for control-plane calls.
+**Fix:** Add `PAPERCLIP_API_KEY` to the Cursor Cloud adapter `env` as a Paperclip
+agent key secret, then retry the heartbeat. Include `X-Paperclip-Run-Id` on
+mutating requests for issue updates, comments, and interactions.
 
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
