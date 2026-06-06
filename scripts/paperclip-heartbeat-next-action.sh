@@ -102,6 +102,8 @@ Refreshed artifacts:
   - $output_dir/osiris-paperclip-runtime-snapshot.json
   - $output_dir/osiris-paperclip-blocked-update.json
   - $output_dir/osiris-paperclip-runtime-latest.json
+Latest manifest:
+  - $output_dir/osiris-paperclip-runtime-latest.json
 Unblock owner: Paperclip operator
 Required action: inject PAPERCLIP_API_KEY into the Cursor Cloud adapter env.
 EOF

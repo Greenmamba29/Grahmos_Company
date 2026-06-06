@@ -745,6 +745,15 @@ data = json.load(open(sys.argv[1]))
 assert data["runtime"]["heartbeat_next_action_state"] == "refresh_blocked_artifacts"
 assert data["runtime"]["issue_operations_blocked"] is True
 assert data["latest"]["latest_archive_dir"]
+assert data["git"]["branch"]
+assert data["git"]["commit"]
+assert data["latest"]["report_relative_path"]
+assert data["latest"]["snapshot_relative_path"]
+assert data["latest"]["blocked_update_relative_path"]
+assert data["latest"]["archive_report_relative_path"]
+assert data["latest"]["archive_snapshot_relative_path"]
+assert data["latest"]["archive_blocked_update_relative_path"]
+assert data["latest"]["archive_manifest_relative_path"]
 PY
 rm -rf "$refresh_dir"
 pass "paperclip-refresh-runtime-artifacts refreshes both runtime artifacts"
@@ -753,6 +762,7 @@ cleanup_last
 run_mock_heartbeat_next_action "degraded-health-auth-blocked"
 assert_stdout_contains "Runtime diagnosis: missing_paperclip_auth"
 assert_stdout_contains "Heartbeat disposition: blocked on Paperclip auth."
+assert_stdout_contains "Latest manifest:"
 if [[ ! -f "${LAST_HEARTBEAT_OUTPUT_DIR}/osiris-paperclip-runtime-report.md" ]]; then
   fail "next-action helper did not write markdown report"
 fi
