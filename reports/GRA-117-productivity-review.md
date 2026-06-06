@@ -24,6 +24,10 @@ Because there was no latest comment or continuation bundle attached, the next
 action for this heartbeat was to verify whether the current Cursor Cloud runtime
 could fetch the missing `GRA-95` evidence directly from Paperclip.
 
+This continuation heartbeat also reran the established Paperclip runtime-auth
+diagnostic flow used by other GrahmOS recovery branches to determine whether the
+earlier blocker had cleared.
+
 ## Evidence Reviewed
 
 ### 1. Runtime authentication state
@@ -49,7 +53,22 @@ Unauthenticated requests from this Cursor Cloud shell returned:
 This confirms the runtime cannot inspect the source issue thread, runs, work
 products, or comments from the shell.
 
-### 3. Repo and GitHub artifact search
+### 3. Continuation heartbeat runtime-auth recheck
+
+This heartbeat reran the established `paperclip-runtime-check` logic used in prior
+Paperclip auth/tooling branches. The runtime reported:
+
+- `health_status`: `200`
+- `deployment_mode`: `authenticated`
+- `deployment_exposure`: `private`
+- `session_status`: `401`
+- `run_issues_status`: `401`
+- `api_key_present`: `false`
+
+The server response remained `Board authentication required`, which confirms the
+blocker is still active and not limited to the earlier ad hoc HTTP probes.
+
+### 4. Repo and GitHub artifact search
 
 I also checked whether `GRA-95` had any durable evidence in the repository or on
 GitHub that could be reviewed without Paperclip access.
@@ -79,7 +98,8 @@ for `GRA-95`, this heartbeat needs at least one of:
 
 None of that evidence is available in the wake payload or in the repository.
 
-### 2. The current Cursor Cloud runtime cannot recover the missing evidence
+### 2. The current Cursor Cloud runtime still cannot recover the missing
+evidence
 
 The runtime can reach the Paperclip deployment, but it is not authenticated for
 issue reads or writes. That prevents:
@@ -89,7 +109,9 @@ issue reads or writes. That prevents:
 - updating issue status,
 - or creating an interaction to request missing evidence from within the issue.
 
-This is an environment/authentication blocker, not a judgment call.
+This continuation heartbeat confirms the problem persists even when using the
+established runtime-auth diagnostic flow. It is an environment/authentication
+blocker, not a judgment call.
 
 ### 3. No justified productivity classification can be made yet
 
@@ -99,6 +121,15 @@ would be speculative.
 
 The correct executive outcome for this heartbeat is therefore to record the
 blocker durably and stop short of inventing an assessment.
+
+### 4. The existing PR/report is the only durable output available from this
+heartbeat
+
+Because the Paperclip deployment is private and this shell lacks both board
+session auth and `PAPERCLIP_API_KEY`, the report and draft PR are the only
+durable places this heartbeat can record the blocked review. The issue itself
+should still be marked `blocked` once Paperclip-side authentication is
+available.
 
 ## Productivity Assessment
 
