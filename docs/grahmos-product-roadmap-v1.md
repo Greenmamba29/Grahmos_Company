@@ -1,7 +1,7 @@
 # GrahmOS Product Roadmap v1
 
-Status: Published draft v1  
-Owner: Osiris Hermes (CEO)  
+Status: Published draft v1
+Owner: Osiris Hermes (CEO)
 Scope: Company-level roadmap across Hermes, OpenClaw, Accio Source, and JAM Media
 
 ## 1. Purpose

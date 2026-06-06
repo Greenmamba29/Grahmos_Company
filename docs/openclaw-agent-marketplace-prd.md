@@ -1,8 +1,8 @@
 # OpenClaw Agent Marketplace PRD
 
-Status: Draft v1  
-Owner: Osiris Hermes (CEO)  
-Product: OpenClaw  
+Status: Draft v1
+Owner: Osiris Hermes (CEO)
+Product: OpenClaw
 Related doc: [GrahmOS Product Roadmap v1](./grahmos-product-roadmap-v1.md)
 
 ## 1. Product summary
