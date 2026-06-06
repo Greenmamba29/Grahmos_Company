@@ -85,7 +85,8 @@ This is the Company run main repo for Grahmos.
   to the newest canonical files, size/hash metadata for the generated payloads, plus timestamped archive copies under
   `OUTPUT_DIR/history/`.
 - Add `--json` to `paperclip-refresh-runtime-artifacts.sh` when automation needs a
-  machine-readable refresh result containing the latest manifest and archive dir.
+  machine-readable refresh result containing the latest manifest, archive dir, and
+  embedded validation result.
 - Run `./scripts/paperclip-validate-artifacts.sh [--json] [TARGET_DIR]` to validate
   the current report/snapshot/blocked-update/latest-manifest artifact set against
   the checked-in contract and on-disk file metadata.
@@ -98,8 +99,8 @@ This is the Company run main repo for Grahmos.
 - Add `--json` to `paperclip-heartbeat-next-action.sh` when downstream tooling needs
   a single machine-readable result describing the chosen next action and any
   refreshed artifact paths. The blocked JSON result now embeds the latest manifest,
-  the blocked update payload, and recommended commands; the ready JSON result
-  includes structured playbook commands.
+  the blocked update payload, the refresh helper result, and recommended commands;
+  the ready JSON result includes structured playbook commands.
 
 The comment helper accepts the raw JSON body expected by `POST /api/issues/{issueId}/comments`,
 so it can carry structured fields such as `resume`, `reopen`, or `interrupt` when

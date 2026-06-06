@@ -906,6 +906,7 @@ refresh_dir="$(mktemp -d)"
 run_expect 0 ./scripts/paperclip-refresh-runtime-artifacts.sh "$refresh_dir" paperclip-secret cursor-secret
 assert_stdout_contains "Refreshed runtime artifacts in $refresh_dir"
 assert_stdout_contains "Archived runtime artifacts in $refresh_dir/history/"
+assert_stdout_contains "Validated runtime artifacts in $refresh_dir"
 if [[ ! -f "$refresh_dir/osiris-paperclip-runtime-report.md" ]]; then
   fail "refresh helper did not write markdown report"
 fi
@@ -968,6 +969,7 @@ assert_stdout_json_value "schema_version" "1"
 assert_stdout_json_value "artifact_type" "paperclip_refresh_result"
 assert_stdout_json_nonempty "latest_manifest_path"
 assert_stdout_json_value "latest_manifest.artifact_type" "paperclip_runtime_latest_manifest"
+assert_stdout_json_value "validation_result.valid" "true"
 python3 - "$LAST_STDOUT_FILE" <<'PY'
 import json
 import sys
@@ -975,6 +977,7 @@ import sys
 data = json.load(open(sys.argv[1]))
 assert data["archive_dir"]
 assert data["latest_manifest"]["runtime"]["heartbeat_next_action_state"] == "refresh_blocked_artifacts"
+assert data["validation_result"]["artifact_type"] == "paperclip_artifact_validation_result"
 PY
 rm -rf "$refresh_json_dir"
 pass "paperclip-refresh-runtime-artifacts emits JSON result"
@@ -984,6 +987,7 @@ run_mock_heartbeat_next_action "degraded-health-auth-blocked"
 assert_stdout_contains "Runtime diagnosis: missing_paperclip_auth"
 assert_stdout_contains "Heartbeat disposition: blocked on Paperclip auth."
 assert_stdout_contains "Latest manifest:"
+assert_stdout_contains "Validated runtime artifacts in"
 if [[ ! -f "${LAST_HEARTBEAT_OUTPUT_DIR}/osiris-paperclip-runtime-report.md" ]]; then
   fail "next-action helper did not write markdown report"
 fi
@@ -1020,12 +1024,14 @@ assert_stdout_json_nonempty "artifacts.latest_manifest_path"
 assert_stdout_json_value "latest_manifest.schema_version" "1"
 assert_stdout_json_value "latest_manifest.artifact_type" "paperclip_runtime_latest_manifest"
 assert_stdout_json_value "blocked_update_payload.status" "blocked"
+assert_stdout_json_value "refresh_result.validation_result.valid" "true"
 python3 - "$LAST_STDOUT_FILE" <<'PY'
 import json
 import sys
 
 data = json.load(open(sys.argv[1]))
 assert isinstance(data["recommended_commands"], list) and len(data["recommended_commands"]) >= 2
+assert data["refresh_result"]["artifact_type"] == "paperclip_refresh_result"
 PY
 rm -rf "${LAST_HEARTBEAT_OUTPUT_DIR}"
 unset LAST_HEARTBEAT_OUTPUT_DIR

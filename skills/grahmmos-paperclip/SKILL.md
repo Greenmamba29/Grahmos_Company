@@ -131,7 +131,7 @@ issue-update payload for the execution contract, `osiris-paperclip-runtime-lates
 as the stable latest manifest with file size/hash metadata, plus timestamped archive copies under
 `OUTPUT_DIR/history/`.
 Add `--json` when another tool needs the refresh result as a machine-readable wrapper
-around the latest manifest and archive directory.
+around the latest manifest, archive directory, and validation result.
 Run `./scripts/paperclip-validate-artifacts.sh [--json] [TARGET_DIR]` when you want
 to validate the generated artifact set against the checked-in schema bundle and the
 latest manifest's file metadata.
@@ -143,7 +143,8 @@ If the shell only has run visibility without API-helper readiness, it prints a
 warning instead of pretending issue mutations are ready.
 If another tool needs a machine-readable result from that entry point, add `--json`;
 the blocked result embeds the latest manifest, blocked update payload, and
-recommended commands, while the ready result includes structured playbook commands.
+recommended commands plus the refresh helper result, while the ready result
+includes structured playbook commands.
 Once auth is fixed, run `./scripts/paperclip-api.sh current-issue-playbook` for the
 recommended current-issue inspection and execution-contract mutation commands.
 Use `./scripts/paperclip-api.sh comment-template ...`,

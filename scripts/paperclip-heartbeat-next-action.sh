@@ -178,6 +178,34 @@ fi
 
 if [[ "$next_action_state" == "refresh_blocked_artifacts" || "$blocked_flag" == "true" ]]; then
   refresh_log_file="$(mktemp)"
+  if [[ "$json_mode" == "1" ]]; then
+    if "$REFRESH_ARTIFACTS" --json "$output_dir" "$paperclip_secret_id" "$cursor_secret_id" >"$refresh_log_file"; then
+      :
+    else
+      cat "$refresh_log_file" >&2
+      rm -f "$refresh_log_file" "$diagnosis_file"
+      exit 1
+    fi
+    latest_manifest_path="$output_dir/osiris-paperclip-runtime-latest.json"
+    refresh_result_json_file="$(mktemp)"
+    python3 - "$refresh_log_file" >"$refresh_result_json_file" <<'PY'
+import json
+import sys
+
+payload = json.load(open(sys.argv[1]))
+json.dump({"refresh_result": payload}, sys.stdout)
+PY
+    emit_json \
+      "refresh_blocked_artifacts" \
+      "blocked" \
+      "Blocked on Paperclip auth. Refresh the canonical blocked-heartbeat artifacts and use the standalone blocked update payload." \
+      "$latest_manifest_path" \
+      "" \
+      "" \
+      "$refresh_result_json_file"
+    rm -f "$refresh_result_json_file" "$refresh_log_file" "$diagnosis_file"
+    exit 0
+  fi
   if "$REFRESH_ARTIFACTS" "$output_dir" "$paperclip_secret_id" "$cursor_secret_id" >"$refresh_log_file"; then
     :
   else
@@ -186,15 +214,6 @@ if [[ "$next_action_state" == "refresh_blocked_artifacts" || "$blocked_flag" == 
     exit 1
   fi
   latest_manifest_path="$output_dir/osiris-paperclip-runtime-latest.json"
-  if [[ "$json_mode" == "1" ]]; then
-    emit_json \
-      "refresh_blocked_artifacts" \
-      "blocked" \
-      "Blocked on Paperclip auth. Refresh the canonical blocked-heartbeat artifacts and use the standalone blocked update payload." \
-      "$latest_manifest_path"
-    rm -f "$refresh_log_file" "$diagnosis_file"
-    exit 0
-  fi
   cat "$refresh_log_file"
   cat <<EOF
 Heartbeat disposition: blocked on Paperclip auth.

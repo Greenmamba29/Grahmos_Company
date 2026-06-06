@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPORT_WRITER="$ROOT_DIR/scripts/paperclip-write-runtime-report.sh"
 SNAPSHOT_WRITER="$ROOT_DIR/scripts/paperclip-write-runtime-snapshot.sh"
 BLOCKED_WRITER="$ROOT_DIR/scripts/paperclip-write-blocked-update.sh"
+VALIDATOR="$ROOT_DIR/scripts/paperclip-validate-artifacts.sh"
 
 usage() {
   cat <<'EOF'
@@ -30,6 +31,7 @@ Notes:
   - OUTPUT_DIR defaults to reports.
   - This is the single-command refresh path for blocked Paperclip heartbeats.
   - Add `--json` for a machine-readable refresh result.
+  - The helper validates the refreshed artifact set before returning success.
 EOF
 }
 
@@ -62,6 +64,11 @@ fi
 
 if [[ ! -x "$BLOCKED_WRITER" ]]; then
   echo "error: missing helper: $BLOCKED_WRITER" >&2
+  exit 1
+fi
+
+if [[ ! -x "$VALIDATOR" ]]; then
+  echo "error: missing helper: $VALIDATOR" >&2
   exit 1
 fi
 
@@ -189,12 +196,22 @@ PY
 
 cp "$latest_manifest_path" "$archive_dir/$(basename "$latest_manifest_path")"
 
+validation_json_file="$(mktemp)"
+if "$VALIDATOR" --json "$output_dir" >"$validation_json_file"; then
+  :
+else
+  cat "$validation_json_file" >&2
+  rm -f "$writer_log_file" "$validation_json_file"
+  exit 1
+fi
+
 if [[ "$json_mode" == "1" ]]; then
-  python3 - "$latest_manifest_path" "$output_dir" "$archive_dir" <<'PY'
+  python3 - "$latest_manifest_path" "$output_dir" "$archive_dir" "$validation_json_file" <<'PY'
 import json
 import sys
 
 latest_manifest = json.load(open(sys.argv[1]))
+validation_result = json.load(open(sys.argv[4]))
 payload = {
     "schema_version": 1,
     "artifact_type": "paperclip_refresh_result",
@@ -202,11 +219,12 @@ payload = {
     "archive_dir": sys.argv[3],
     "latest_manifest_path": sys.argv[1],
     "latest_manifest": latest_manifest,
+    "validation_result": validation_result,
 }
 json.dump(payload, sys.stdout, indent=2)
 sys.stdout.write("\n")
 PY
-  rm -f "$writer_log_file"
+  rm -f "$writer_log_file" "$validation_json_file"
   exit 0
 fi
 
@@ -214,3 +232,5 @@ cat "$writer_log_file"
 rm -f "$writer_log_file"
 printf 'Refreshed runtime artifacts in %s\n' "$output_dir"
 printf 'Archived runtime artifacts in %s\n' "$archive_dir"
+printf 'Validated runtime artifacts in %s\n' "$output_dir"
+rm -f "$validation_json_file"
