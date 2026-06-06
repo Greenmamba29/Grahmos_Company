@@ -78,6 +78,10 @@ Grahmos_Company/
 
 ## Troubleshooting Guide
 
+For review procedures when a local Hermes-backed agent looks active but is not
+producing work, use:
+`skills/grahmmos-paperclip/SILENT_ACTIVE_RUN_REVIEW.md`
+
 ### Error: "Failed to determine repository default branch"
 **Cause:** Starting ref field was empty, forcing auto-detection
 **Fix:** Set Starting ref = main in Cursor Cloud adapter config
@@ -98,6 +102,14 @@ Grahmos_Company/
 **Cause:** Hermes Agent (local) workspace not initialized
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
+
+### Review: silent active run on a local agent
+**Symptoms:** The run is marked active in Paperclip but produces no durable work,
+comments, or logs.
+**First response:** Follow the silent-run review playbook to classify whether the
+problem is a missing `hermes` binary, a bad workspace checkout, a missing
+instructions bundle, or a dependency blocker:
+`skills/grahmmos-paperclip/SILENT_ACTIVE_RUN_REVIEW.md`
 
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
