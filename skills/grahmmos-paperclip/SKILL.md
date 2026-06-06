@@ -104,6 +104,8 @@ those run-scoped debug endpoints remain blocked here as well.
 The JSON payload now includes `heartbeat_next_action_state` so automation can choose
 between refreshing blocked artifacts, warning on session-only visibility, or using
 the current-issue playbook.
+The machine-readable outputs also include `schema_version` and `artifact_type` so
+consumers can validate the contract before parsing fields.
 
 Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 `me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,

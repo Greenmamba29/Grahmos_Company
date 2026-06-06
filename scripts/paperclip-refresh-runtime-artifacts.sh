@@ -102,6 +102,8 @@ def rel(path: Path) -> str:
     return os.path.relpath(path, workspace_root)
 
 manifest = {
+    "schema_version": 1,
+    "artifact_type": "paperclip_runtime_latest_manifest",
     "generated_at": timestamp,
     "workspace_root": str(workspace_root),
     "git": {

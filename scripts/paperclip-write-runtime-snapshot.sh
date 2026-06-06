@@ -87,6 +87,8 @@ commit_sha = sys.argv[6]
 runtime_status = int(sys.argv[7])
 
 payload = {
+    "schema_version": 1,
+    "artifact_type": "paperclip_runtime_snapshot",
     "generated_at": timestamp,
     "git": {
         "branch": branch_name,

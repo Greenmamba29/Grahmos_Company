@@ -164,6 +164,8 @@ next_helper_commands = [
 
 def emit_json(payload: dict, exit_code: int):
     payload = {
+        "schema_version": 1,
+        "artifact_type": "paperclip_runtime_diagnosis",
         "summary": summary,
         "exit_code": exit_code,
         **payload,

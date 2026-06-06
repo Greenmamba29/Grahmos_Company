@@ -1,11 +1,15 @@
 {
-  "generated_at": "2026-06-06T00:49:10Z",
+  "schema_version": 1,
+  "artifact_type": "paperclip_runtime_snapshot",
+  "generated_at": "2026-06-06T00:57:03Z",
   "git": {
     "branch": "cursor/paperclip-runtime-tooling-82aa",
-    "commit": "67fcedc295deb028c4ab118e463817a9cf058281"
+    "commit": "75d9eef7ac5c2d974417e9fcc81df0e2f0452cc1"
   },
   "runtime_check_exit_code": 2,
   "runtime": {
+    "schema_version": 1,
+    "artifact_type": "paperclip_runtime_diagnosis",
     "summary": {
       "health_status": 200,
       "deployment_mode": "authenticated",

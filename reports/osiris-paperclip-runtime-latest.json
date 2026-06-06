@@ -1,9 +1,11 @@
 {
-  "generated_at": "20260606T004909Z",
+  "schema_version": 1,
+  "artifact_type": "paperclip_runtime_latest_manifest",
+  "generated_at": "20260606T005701Z",
   "workspace_root": "/workspace",
   "git": {
     "branch": "cursor/paperclip-runtime-tooling-82aa",
-    "commit": "67fcedc295deb028c4ab118e463817a9cf058281"
+    "commit": "75d9eef7ac5c2d974417e9fcc81df0e2f0452cc1"
   },
   "latest": {
     "report_path": "/workspace/reports/osiris-paperclip-runtime-report.md",
@@ -14,16 +16,16 @@
     "blocked_update_relative_path": "reports/osiris-paperclip-blocked-update.json",
     "latest_manifest_path": "/workspace/reports/osiris-paperclip-runtime-latest.json",
     "latest_manifest_relative_path": "reports/osiris-paperclip-runtime-latest.json",
-    "latest_archive_dir": "/workspace/reports/history/20260606T004909Z",
-    "latest_archive_dir_relative_path": "reports/history/20260606T004909Z",
-    "archive_report_path": "/workspace/reports/history/20260606T004909Z/osiris-paperclip-runtime-report.md",
-    "archive_report_relative_path": "reports/history/20260606T004909Z/osiris-paperclip-runtime-report.md",
-    "archive_snapshot_path": "/workspace/reports/history/20260606T004909Z/osiris-paperclip-runtime-snapshot.json",
-    "archive_snapshot_relative_path": "reports/history/20260606T004909Z/osiris-paperclip-runtime-snapshot.json",
-    "archive_blocked_update_path": "/workspace/reports/history/20260606T004909Z/osiris-paperclip-blocked-update.json",
-    "archive_blocked_update_relative_path": "reports/history/20260606T004909Z/osiris-paperclip-blocked-update.json",
-    "archive_manifest_path": "/workspace/reports/history/20260606T004909Z/osiris-paperclip-runtime-latest.json",
-    "archive_manifest_relative_path": "reports/history/20260606T004909Z/osiris-paperclip-runtime-latest.json"
+    "latest_archive_dir": "/workspace/reports/history/20260606T005701Z",
+    "latest_archive_dir_relative_path": "reports/history/20260606T005701Z",
+    "archive_report_path": "/workspace/reports/history/20260606T005701Z/osiris-paperclip-runtime-report.md",
+    "archive_report_relative_path": "reports/history/20260606T005701Z/osiris-paperclip-runtime-report.md",
+    "archive_snapshot_path": "/workspace/reports/history/20260606T005701Z/osiris-paperclip-runtime-snapshot.json",
+    "archive_snapshot_relative_path": "reports/history/20260606T005701Z/osiris-paperclip-runtime-snapshot.json",
+    "archive_blocked_update_path": "/workspace/reports/history/20260606T005701Z/osiris-paperclip-blocked-update.json",
+    "archive_blocked_update_relative_path": "reports/history/20260606T005701Z/osiris-paperclip-blocked-update.json",
+    "archive_manifest_path": "/workspace/reports/history/20260606T005701Z/osiris-paperclip-runtime-latest.json",
+    "archive_manifest_relative_path": "reports/history/20260606T005701Z/osiris-paperclip-runtime-latest.json"
   },
   "runtime": {
     "diagnosis": "missing_paperclip_auth",

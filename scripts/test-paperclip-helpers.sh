@@ -646,6 +646,8 @@ pass "paperclip-write-blocked-update writes a standalone blocked payload"
 cleanup_last
 
 run_mock_runtime_check_json "degraded-health-auth-blocked"
+assert_stdout_json_value "schema_version" "1"
+assert_stdout_json_value "artifact_type" "paperclip_runtime_diagnosis"
 assert_stdout_json_value "diagnosis" "missing_paperclip_auth"
 assert_stdout_json_value "issue_operations_blocked" "true"
 assert_stdout_json_value "summary.paperclip_api_key_injected" "false"
@@ -659,6 +661,8 @@ pass "paperclip-runtime-check emits structured JSON diagnosis"
 cleanup_last
 
 run_mock_runtime_check_json "board-session-ok" 0
+assert_stdout_json_value "schema_version" "1"
+assert_stdout_json_value "artifact_type" "paperclip_runtime_diagnosis"
 assert_stdout_json_value "diagnosis" "board_session_ok"
 assert_stdout_json_value "api_helper_ready" "false"
 assert_stdout_json_value "heartbeat_next_action_state" "warn_session_only"
@@ -666,6 +670,8 @@ pass "paperclip-runtime-check reports session-only next action state"
 cleanup_last
 
 PAPERCLIP_API_KEY="paperclip-test-token" run_mock_runtime_check_json "api-key-ok" 0
+assert_stdout_json_value "schema_version" "1"
+assert_stdout_json_value "artifact_type" "paperclip_runtime_diagnosis"
 assert_stdout_json_value "diagnosis" "paperclip_api_key_ok"
 assert_stdout_json_value "api_helper_ready" "true"
 assert_stdout_json_value "heartbeat_next_action_state" "current_issue_playbook"
@@ -696,6 +702,8 @@ import json
 import sys
 
 data = json.load(open(sys.argv[1]))
+assert data["schema_version"] == 1
+assert data["artifact_type"] == "paperclip_runtime_snapshot"
 assert data["runtime"]["diagnosis"] in {"missing_paperclip_auth", "health_unavailable", "unexpected_session_status", "board_session_ok", "paperclip_api_key_ok", "paperclip_api_key_rejected", "paperclip_api_key_inbox_lookup_failed", "run_issue_lookup_failed"}
 assert "blocked_issue_payload" in data["unblock"]
 assert "adapter_env_payload" in data["unblock"]
@@ -742,6 +750,8 @@ import json
 import sys
 
 data = json.load(open(sys.argv[1]))
+assert data["schema_version"] == 1
+assert data["artifact_type"] == "paperclip_runtime_latest_manifest"
 assert data["runtime"]["heartbeat_next_action_state"] == "refresh_blocked_artifacts"
 assert data["runtime"]["issue_operations_blocked"] is True
 assert data["latest"]["latest_archive_dir"]
