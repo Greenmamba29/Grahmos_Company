@@ -46,6 +46,26 @@ runtime.
    - `GET /api/heartbeat-runs/{runId}/log?offset=0&limitBytes=8192` -> `401 Unauthorized`
    - `GET /api/heartbeat-runs/{runId}/workspace-operations` -> `401 Unauthorized`
 
+## Continuation delta from the resumed heartbeat
+
+The follow-up wake supplied a run summary that was not available during the
+first pass:
+
+- Reviewed run: `72b3b21b-a55d-465c-9012-1cd4c81ae017`
+- Agent: Athena (`opencode_local`)
+- Invocation: timer / system
+- Source issue: none
+- Started at: `2026-06-05T22:57:27.699Z`
+- Process started at: `2026-06-05T22:58:06.128Z`
+- Last output at: none recorded
+- Last output sequence: `0`
+- Silent for: `1h`
+- Process metadata: pid `2240`, process group `2240`, in-memory handle `yes`
+- Recent run events:
+  - `2026-06-05T22:57:56.128Z lifecycle info: run started`
+  - `2026-06-05T22:58:06.078Z adapter.invoke info: adapter invocation`
+- Run-log tail: no excerpt was available
+
 ## Findings
 
 - The Paperclip service is up, but operational issue and run endpoints are
@@ -57,12 +77,21 @@ runtime.
 - No comments, child issues, or existing unblock records were attached to the
   wake payload, so there is no alternate issue-thread evidence to review from
   the current workspace.
+- The continuation summary materially narrows the likely failure mode:
+  Athena's process started, but the run never emitted a single output event
+  after `adapter.invoke`, which is more consistent with a stalled adapter or
+  missing log bridge than with intentionally quiet background work.
+- Because the invocation was `timer / system` and had no source issue, there is
+  no visible user-facing task context that would justify snoozing a fully silent
+  run for another hour.
 
 ## Conclusion
 
-`GRA-82` is currently blocked on Paperclip runtime access rather than on a code
-change inside this repository. From the present Cursor Cloud environment, the
-Athena run cannot be reviewed directly.
+`GRA-82` is still blocked on Paperclip runtime access rather than on a code
+change inside this repository, but the continuation summary is enough to make a
+run-specific recommendation: Athena's run appears stalled before first output
+and should be canceled, not snoozed, once an authenticated operator can
+preserve any remaining artifacts and invoke the explicit run action.
 
 ## Recommended disposition
 
@@ -76,12 +105,24 @@ Athena run cannot be reviewed directly.
   2. a supported machine credential such as `PAPERCLIP_API_KEY`, or
   3. the missing Athena run transcript/work product attached to the issue thread
 
+## Run decision once access exists
+
+1. Re-check:
+   - `GET /api/heartbeat-runs/{runId}/events?afterSeq=0&limit=200`
+   - `GET /api/heartbeat-runs/{runId}/log?offset=0&limitBytes=262144`
+   - `GET /api/heartbeat-runs/{runId}/workspace-operations`
+2. If the run still shows no output beyond `adapter.invoke`, cancel run
+   `72b3b21b-a55d-465c-9012-1cd4c81ae017` via the explicit heartbeat-run cancel
+   route rather than snoozing it.
+3. Record the issue comment/status as blocked only if the auth gap still
+   prevents review after the operator attempts the cancellation workflow.
+
 ## Exact blocked payload
 
 ```json
 {
   "status": "blocked",
-  "comment": "Blocked.\n\nUnblock owner: Paperclip board/operator or workspace administrator\nRequired action: provide the CEO agent runtime with board-authenticated access, PAPERCLIP_API_KEY, or the missing Athena run transcript/work product\n\nDetails: The current Cursor Cloud shell can reach /api/health but receives 401 responses from /api/auth/get-session, /api/issues/{issueId}*, and /api/heartbeat-runs/{runId}*."
+  "comment": "Blocked.\n\nUnblock owner: Paperclip board/operator or workspace administrator\nRequired action: provide the CEO agent runtime with board-authenticated access, PAPERCLIP_API_KEY, or the missing Athena run transcript/work product\n\nDetails: The current Cursor Cloud shell can reach /api/health but receives 401 responses from /api/auth/get-session, /api/issues/{issueId}*, and /api/heartbeat-runs/{runId}*. The resumed heartbeat summary also shows Athena run 72b3b21b-a55d-465c-9012-1cd4c81ae017 emitted no output after adapter.invoke and should be canceled once an authenticated operator can preserve artifacts."
 }
 ```
 

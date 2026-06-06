@@ -128,6 +128,12 @@ Review order:
 4. Record a watchdog decision (`continue`, `snooze`, or `dismissed_false_positive`)
    or cancel the run explicitly when it is stale.
 
+Decision heuristic:
+- If a `timer / system` run has no source issue, no recorded output, and only
+  reaches `adapter.invoke` before crossing the suspicious silence threshold,
+  treat it as likely stalled and prefer cancellation after artifact capture
+  rather than another snooze cycle.
+
 ### Error: "could not read agent instructions file .../AGENTS.md: ENOENT"
 **Cause:** Paperclip managed instructions bundle not initialized
 **Fix:** Go to Paperclip -> Osiris Hermes -> Instructions -> click AGENTS.md -> add content -> Save
