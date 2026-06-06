@@ -1,0 +1,24 @@
+{
+  "adapterType": "cursor_cloud",
+  "adapterConfig": {
+    "repoUrl": "https://github.com/Greenmamba29/Grahmos_Company",
+    "startingRef": "main",
+    "env": {
+      "CURSOR_API_KEY": {
+        "type": "secret_ref",
+        "secretId": "YOUR_CURSOR_SECRET_ID",
+        "version": "latest"
+      },
+      "PAPERCLIP_API_KEY": {
+        "type": "secret_ref",
+        "secretId": "YOUR_PAPERCLIP_SECRET_ID",
+        "version": "latest"
+      },
+      "GH_TOKEN": {
+        "type": "secret_ref",
+        "secretId": "YOUR_GH_TOKEN_SECRET_ID",
+        "version": "latest"
+      }
+    }
+  }
+}
