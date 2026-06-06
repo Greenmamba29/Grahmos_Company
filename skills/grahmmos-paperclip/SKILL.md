@@ -71,10 +71,29 @@ Grahmos_Company/
   README.md          # Repository readme
   LICENSE            # MIT License
   .gitignore         # Git ignore
+  docs/
+    security/
+      README.md                              # Security operations pack index
+      api-key-rotation-policy.md             # Rotation cadence and procedure
+      docker-security-hardening.md           # Container hardening baseline
+      vps-secrets-management-audit-2026-06-06.md
   skills/
     grahmmos-paperclip/
       SKILL.md       # This file - company setup documentation
 ```
+
+## Security operations baseline
+
+The repo now includes a dedicated security operations pack under `docs/security`
+covering:
+
+- API key rotation requirements for Cursor, GitHub, Paperclip, and related
+  operator-managed credentials
+- Docker hardening expectations for VPS-hosted workloads
+- a dated secrets-management audit capturing current gaps and follow-up actions
+
+This gives future heartbeats a durable source of truth even when the private
+Paperclip board cannot be mutated from the current runtime.
 
 ## Troubleshooting Guide
 
