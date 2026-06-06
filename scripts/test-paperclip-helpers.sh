@@ -985,6 +985,14 @@ assert_stdout_json_value "heartbeat_disposition" "blocked"
 assert_stdout_json_nonempty "artifacts.latest_manifest_path"
 assert_stdout_json_value "latest_manifest.schema_version" "1"
 assert_stdout_json_value "latest_manifest.artifact_type" "paperclip_runtime_latest_manifest"
+assert_stdout_json_value "blocked_update_payload.status" "blocked"
+python3 - "$LAST_STDOUT_FILE" <<'PY'
+import json
+import sys
+
+data = json.load(open(sys.argv[1]))
+assert isinstance(data["recommended_commands"], list) and len(data["recommended_commands"]) >= 2
+PY
 rm -rf "${LAST_HEARTBEAT_OUTPUT_DIR}"
 unset LAST_HEARTBEAT_OUTPUT_DIR
 pass "paperclip-heartbeat-next-action emits blocked JSON result"
@@ -1006,6 +1014,13 @@ assert_stdout_json_value "schema_version" "1"
 assert_stdout_json_value "artifact_type" "paperclip_heartbeat_next_action"
 assert_stdout_json_value "next_action_state" "warn_session_only"
 assert_stdout_json_value "heartbeat_disposition" "session_only"
+python3 - "$LAST_STDOUT_FILE" <<'PY'
+import json
+import sys
+
+data = json.load(open(sys.argv[1]))
+assert isinstance(data["recommended_commands"], list) and len(data["recommended_commands"]) >= 2
+PY
 rm -rf "${LAST_HEARTBEAT_OUTPUT_DIR}"
 unset LAST_HEARTBEAT_OUTPUT_DIR
 pass "paperclip-heartbeat-next-action emits session-only JSON result"
@@ -1036,6 +1051,7 @@ import sys
 
 data = json.load(open(sys.argv[1]))
 assert isinstance(data["playbook_commands"], list) and len(data["playbook_commands"]) >= 3
+assert data["recommended_commands"] == data["playbook_commands"]
 PY
 rm -rf "${LAST_HEARTBEAT_OUTPUT_DIR}"
 unset LAST_HEARTBEAT_OUTPUT_DIR

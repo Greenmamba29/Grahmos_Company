@@ -135,13 +135,21 @@ payload = {
 }
 
 if manifest_path:
+    latest_manifest = json.load(open(manifest_path))
     payload["artifacts"] = {
         "report_path": str(Path(output_dir) / "osiris-paperclip-runtime-report.md"),
         "snapshot_path": str(Path(output_dir) / "osiris-paperclip-runtime-snapshot.json"),
         "blocked_update_path": str(Path(output_dir) / "osiris-paperclip-blocked-update.json"),
         "latest_manifest_path": manifest_path,
     }
-    payload["latest_manifest"] = json.load(open(manifest_path))
+    payload["latest_manifest"] = latest_manifest
+    blocked_update_path = Path(output_dir) / "osiris-paperclip-blocked-update.json"
+    if blocked_update_path.exists():
+        payload["blocked_update_payload"] = json.load(open(blocked_update_path))
+    payload["recommended_commands"] = [
+        "./scripts/paperclip-heartbeat-next-action.sh reports YOUR_PAPERCLIP_SECRET_ID [YOUR_CURSOR_SECRET_ID]",
+        "./scripts/paperclip-heartbeat-next-action.sh --json reports YOUR_PAPERCLIP_SECRET_ID [YOUR_CURSOR_SECRET_ID]",
+    ]
 
 if playbook_command:
     payload["playbook_command"] = playbook_command
@@ -149,6 +157,15 @@ if playbook_text:
     payload["playbook_text"] = playbook_text
 if extra_json_path:
     payload.update(json.load(open(extra_json_path)))
+
+if action_state == "warn_session_only":
+    payload["recommended_commands"] = [
+        "./scripts/paperclip-heartbeat-next-action.sh reports YOUR_PAPERCLIP_SECRET_ID [YOUR_CURSOR_SECRET_ID]",
+        "./scripts/paperclip-heartbeat-next-action.sh --json reports YOUR_PAPERCLIP_SECRET_ID [YOUR_CURSOR_SECRET_ID]",
+    ]
+
+if action_state == "current_issue_playbook" and "playbook_commands" in payload:
+    payload["recommended_commands"] = payload["playbook_commands"]
 
 json.dump(payload, sys.stdout, indent=2)
 sys.stdout.write("\n")
