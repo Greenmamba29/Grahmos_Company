@@ -71,6 +71,8 @@ Grahmos_Company/
   README.md          # Repository readme
   LICENSE            # MIT License
   .gitignore         # Git ignore
+  scripts/
+    update-paperclip-issue.sh  # Authenticated Paperclip issue status/comment helper
   skills/
     grahmmos-paperclip/
       SKILL.md       # This file - company setup documentation
@@ -98,6 +100,43 @@ Grahmos_Company/
 **Cause:** Hermes Agent (local) workspace not initialized
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
+
+### Error: "Board authentication required" or "Unauthorized" during issue review
+**Cause:** The Cursor Cloud runtime receives `PAPERCLIP_*` context variables, but those values do not authenticate shell requests to the private Paperclip board API.
+
+**Observed behavior from Cursor Cloud:**
+- `GET /api/auth/get-session` -> `401 {"error":"Board authentication required"}`
+- `GET /api/issues/{issueId}` -> `401 {"error":"Unauthorized"}`
+- `GET /api/companies/{companyId}/issues` -> `401 {"error":"Unauthorized"}`
+
+**Fix:** Inject a dedicated Paperclip service credential (`PAPERCLIP_API_KEY` or `PAPERCLIP_API_KEY_FILE`) for shell-based issue updates, or use a board-authenticated browser session for board-only workflows.
+
+### Authenticated issue update helper
+This repository includes `scripts/update-paperclip-issue.sh` for the common closeout path once a Paperclip API credential is available.
+
+The helper sends:
+- `PATCH /api/issues/{issueId}`
+- `Authorization: Bearer $PAPERCLIP_API_KEY`
+- `X-Paperclip-Run-Id: $PAPERCLIP_RUN_ID`
+
+Supported inputs:
+- positional `ISSUE_ID`
+- positional `STATUS`
+- optional `--comment "text"`
+- optional `--comment-file path`
+- optional comment content from stdin
+
+Example usage:
+
+```bash
+scripts/update-paperclip-issue.sh GRA-97 done \
+  --comment-file reports/GRA-97-productivity-review.md
+
+scripts/update-paperclip-issue.sh GRA-40 blocked \
+  --comment "Blocked on authenticated Paperclip access."
+```
+
+If the runtime does not have `PAPERCLIP_API_KEY` or `PAPERCLIP_API_KEY_FILE`, the helper exits early with a clear error instead of attempting an unauthenticated issue write.
 
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
