@@ -23,7 +23,7 @@ GrahmOS runs on a self-hosted Paperclip instance at: paperclip-agra.srv1675664.h
 | Hermes-GTM | General - Sales and GTM Lead | Claude Code (local) | Idle |
 | Daedalus | General - UX/UI Lead | Claude Code (local) | Idle |
 | Lyra | General - AI/ML Engineer | Claude Code (local) | Idle |
-| Prometheus | General - Platform and Infrastructure | Claude Code (local) | Idle |
+| Prometheus | General - Platform and Infrastructure | OpenCode (local) | Idle |
 
 ## Brands / Projects
 - Hermes
@@ -98,6 +98,18 @@ Grahmos_Company/
 **Cause:** Hermes Agent (local) workspace not initialized
 **Fix:** This adapter requires the hermes binary in PATH and a valid working directory.
   Check that the Paperclip Docker container has hermes installed and the project workspace exists.
+
+### Error: "`opencode models` timed out after 20s"
+**Cause:** The OpenCode local adapter performs a model-discovery preflight before the task body runs. On slower hosts or providers with large model catalogs, `opencode models` can exceed the fixed 20s discovery timeout and the run fails before any agent output is emitted.
+
+**Fix:**
+1. Upgrade Paperclip to a build that includes the `opencode-local` model-validation fix from paperclipai/paperclip PR #2353. That change raises discovery timeout to 60s, adds a per-model validation cache, and supports partial timeout recovery.
+2. For a known-good agent configuration, set `PAPERCLIP_SKIP_MODEL_VALIDATION=true` in the Paperclip runtime environment to bypass the flaky preflight entirely.
+3. Validate the runtime directly on the host with `opencode models` before retrying the run. If that command is slow or hangs, fix provider connectivity or trim the configured provider/model set before restarting the agent.
+
+**Notes:**
+- This failure happens before the actual task prompt executes, so "silent run" symptoms are expected.
+- Large OpenRouter-backed model lists are a known trigger for this failure mode.
 
 ## Heartbeat Schedule
 - Heartbeat on interval: ON
