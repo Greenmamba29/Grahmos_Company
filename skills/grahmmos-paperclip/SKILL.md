@@ -106,6 +106,8 @@ between refreshing blocked artifacts, warning on session-only visibility, or usi
 the current-issue playbook.
 The machine-readable outputs also include `schema_version` and `artifact_type` so
 consumers can validate the contract before parsing fields.
+The checked-in schema reference for those machine-readable artifacts lives at
+`docs/paperclip-artifact-schemas.json`.
 
 Once auth is available, use `./scripts/paperclip-api.sh` to query `session`,
 `me`, `inbox-lite`, issue details, issue comments, `POST /api/issues/{issueId}/comments`,

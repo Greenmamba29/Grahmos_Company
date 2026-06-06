@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "artifact_type": "paperclip_schema_bundle",
+  "schemas": {
+    "paperclip_runtime_diagnosis": {
+      "description": "Machine-readable output from ./scripts/paperclip-runtime-check.sh --json.",
+      "required_fields": {
+        "schema_version": "integer",
+        "artifact_type": "\"paperclip_runtime_diagnosis\"",
+        "summary": "object",
+        "exit_code": "integer",
+        "diagnosis": "string",
+        "issue_operations_blocked": "boolean",
+        "heartbeat_next_action_state": "string"
+      },
+      "notable_optional_fields": {
+        "access_path": "string",
+        "issue_count": "integer",
+        "server_response": "string|null",
+        "health_probe_detail": "string|null",
+        "api_helper_ready": "boolean",
+        "unblock_owner": "string",
+        "required_action": "string",
+        "next_helper_commands": "string[]"
+      },
+      "heartbeat_next_action_state_values": [
+        "refresh_blocked_artifacts",
+        "warn_session_only",
+        "current_issue_playbook"
+      ]
+    },
+    "paperclip_runtime_snapshot": {
+      "description": "Machine-readable snapshot written by ./scripts/paperclip-write-runtime-snapshot.sh.",
+      "required_fields": {
+        "schema_version": "integer",
+        "artifact_type": "\"paperclip_runtime_snapshot\"",
+        "generated_at": "string",
+        "git": "object",
+        "runtime_check_exit_code": "integer",
+        "runtime": "paperclip_runtime_diagnosis object",
+        "unblock": "object"
+      },
+      "notable_unblock_fields": {
+        "owner": "string",
+        "required_action": "string",
+        "blocked_issue_payload": "object",
+        "adapter_env_payload": "object",
+        "replay_commands": "string[]"
+      }
+    },
+    "paperclip_runtime_latest_manifest": {
+      "description": "Stable latest-manifest written by ./scripts/paperclip-refresh-runtime-artifacts.sh.",
+      "required_fields": {
+        "schema_version": "integer",
+        "artifact_type": "\"paperclip_runtime_latest_manifest\"",
+        "generated_at": "string",
+        "workspace_root": "string",
+        "git": "object",
+        "latest": "object",
+        "file_metadata": "object",
+        "runtime": "object"
+      },
+      "latest_fields": {
+        "report_path": "string",
+        "report_relative_path": "string",
+        "snapshot_path": "string",
+        "snapshot_relative_path": "string",
+        "blocked_update_path": "string",
+        "blocked_update_relative_path": "string",
+        "latest_manifest_path": "string",
+        "latest_manifest_relative_path": "string",
+        "latest_archive_dir": "string",
+        "latest_archive_dir_relative_path": "string",
+        "archive_report_path": "string",
+        "archive_report_relative_path": "string",
+        "archive_snapshot_path": "string",
+        "archive_snapshot_relative_path": "string",
+        "archive_blocked_update_path": "string",
+        "archive_blocked_update_relative_path": "string",
+        "archive_manifest_path": "string",
+        "archive_manifest_relative_path": "string"
+      },
+      "file_metadata_entry": {
+        "path": "string",
+        "relative_path": "string",
+        "size_bytes": "integer",
+        "sha256": "64-char lowercase hex string"
+      }
+    },
+    "paperclip_refresh_result": {
+      "description": "Machine-readable output from ./scripts/paperclip-refresh-runtime-artifacts.sh --json.",
+      "required_fields": {
+        "schema_version": "integer",
+        "artifact_type": "\"paperclip_refresh_result\"",
+        "output_dir": "string",
+        "archive_dir": "string",
+        "latest_manifest_path": "string",
+        "latest_manifest": "paperclip_runtime_latest_manifest object"
+      }
+    },
+    "paperclip_heartbeat_next_action": {
+      "description": "Machine-readable output from ./scripts/paperclip-heartbeat-next-action.sh --json.",
+      "required_fields": {
+        "schema_version": "integer",
+        "artifact_type": "\"paperclip_heartbeat_next_action\"",
+        "diagnosis": "paperclip_runtime_diagnosis object",
+        "heartbeat_disposition": "string",
+        "next_action_state": "string",
+        "message": "string",
+        "output_dir": "string"
+      },
+      "heartbeat_disposition_values": [
+        "blocked",
+        "session_only",
+        "ready"
+      ],
+      "next_action_state_values": [
+        "refresh_blocked_artifacts",
+        "warn_session_only",
+        "current_issue_playbook"
+      ],
+      "conditional_fields": {
+        "blocked": {
+          "artifacts": "object",
+          "latest_manifest": "paperclip_runtime_latest_manifest object",
+          "blocked_update_payload": "object",
+          "recommended_commands": "string[]"
+        },
+        "session_only": {
+          "recommended_commands": "string[]"
+        },
+        "ready": {
+          "playbook_command": "string",
+          "playbook_text": "string",
+          "playbook_commands": "string[]",
+          "recommended_commands": "string[]"
+        }
+      }
+    }
+  }
+}
