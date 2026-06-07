@@ -66,6 +66,31 @@ cleanup_last() {
   unset LAST_STDOUT_FILE LAST_STDERR_FILE
 }
 
+wait_for_mock_server() {
+  local port="$1"
+  python3 - "$port" <<'PY'
+import socket
+import sys
+import time
+
+port = int(sys.argv[1])
+deadline = time.time() + 5
+last_error = None
+while time.time() < deadline:
+    sock = socket.socket()
+    sock.settimeout(0.25)
+    try:
+        sock.connect(("127.0.0.1", port))
+        sock.close()
+        raise SystemExit(0)
+    except Exception as exc:
+        last_error = exc
+        sock.close()
+        time.sleep(0.05)
+raise SystemExit(f"mock server on port {port} did not start: {last_error}")
+PY
+}
+
 assert_stdout_json_value() {
   local path="$1"
   local expected="$2"
@@ -246,6 +271,7 @@ PY
   server_pid=$!
 
   trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' RETURN
+  wait_for_mock_server "$port"
   run_expect 2 env \
     PAPERCLIP_API_URL="http://127.0.0.1:$port" \
     PAPERCLIP_AGENT_ID="agent-123" \
@@ -408,6 +434,7 @@ PY
   server_pid=$!
 
   trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' RETURN
+  wait_for_mock_server "$port"
   run_expect "$expected_exit" env \
     PAPERCLIP_API_URL="http://127.0.0.1:$port" \
     PAPERCLIP_AGENT_ID="agent-123" \
@@ -565,6 +592,7 @@ PY
   server_pid=$!
 
   trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true; rm -rf "$output_dir"' RETURN
+  wait_for_mock_server "$port"
   run_expect 0 env \
     PAPERCLIP_API_URL="http://127.0.0.1:$port" \
     PAPERCLIP_AGENT_ID="agent-123" \
@@ -723,6 +751,7 @@ PY
   server_pid=$!
 
   trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true; rm -rf "$output_dir"' RETURN
+  wait_for_mock_server "$port"
   run_expect 0 env \
     PAPERCLIP_API_URL="http://127.0.0.1:$port" \
     PAPERCLIP_AGENT_ID="agent-123" \
@@ -1081,6 +1110,7 @@ assert_stdout_json_value "artifact_type" "paperclip_heartbeat_next_action"
 assert_stdout_json_value "next_action_state" "refresh_blocked_artifacts"
 assert_stdout_json_value "heartbeat_disposition" "blocked"
 assert_stdout_json_nonempty "artifacts.latest_manifest_path"
+assert_stdout_json_nonempty "artifacts.validation_path"
 assert_stdout_json_value "latest_manifest.schema_version" "1"
 assert_stdout_json_value "latest_manifest.artifact_type" "paperclip_runtime_latest_manifest"
 assert_stdout_json_value "blocked_update_payload.status" "blocked"

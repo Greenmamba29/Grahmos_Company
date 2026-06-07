@@ -140,6 +140,7 @@ if manifest_path:
         "report_path": str(Path(output_dir) / "osiris-paperclip-runtime-report.md"),
         "snapshot_path": str(Path(output_dir) / "osiris-paperclip-runtime-snapshot.json"),
         "blocked_update_path": str(Path(output_dir) / "osiris-paperclip-blocked-update.json"),
+        "validation_path": str(Path(output_dir) / "osiris-paperclip-runtime-validation.json"),
         "latest_manifest_path": manifest_path,
     }
     payload["latest_manifest"] = latest_manifest

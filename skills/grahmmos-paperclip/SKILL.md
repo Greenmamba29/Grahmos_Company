@@ -154,7 +154,8 @@ If the shell only has run visibility without API-helper readiness, it prints a
 warning instead of pretending issue mutations are ready.
 If another tool needs a machine-readable result from that entry point, add `--json`;
 the blocked result embeds the latest manifest, blocked update payload, and
-recommended commands plus the refresh helper result, while the ready result
+recommended commands plus the refresh helper result and canonical artifact paths,
+while the ready result
 includes structured playbook commands.
 Once auth is fixed, run `./scripts/paperclip-api.sh current-issue-playbook` for the
 recommended current-issue inspection and execution-contract mutation commands.

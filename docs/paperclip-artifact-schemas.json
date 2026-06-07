@@ -107,7 +107,8 @@
         "archive_dir": "string",
         "latest_manifest_path": "string",
         "latest_manifest": "paperclip_runtime_latest_manifest object",
-        "validation_result": "paperclip_artifact_validation_result object"
+        "validation_result": "paperclip_artifact_validation_result object",
+        "validation_artifact_path": "string"
       }
     },
     "paperclip_heartbeat_next_action": {
@@ -148,6 +149,16 @@
           "playbook_commands": "string[]",
           "recommended_commands": "string[]"
         }
+      }
+    },
+    "paperclip_heartbeat_artifacts": {
+      "description": "Artifact path object embedded in blocked heartbeat-next-action JSON results.",
+      "required_fields": {
+        "report_path": "string",
+        "snapshot_path": "string",
+        "blocked_update_path": "string",
+        "validation_path": "string",
+        "latest_manifest_path": "string"
       }
     },
     "paperclip_artifact_validation_result": {

@@ -112,7 +112,8 @@ This is the Company run main repo for Grahmos.
 - Add `--json` to `paperclip-heartbeat-next-action.sh` when downstream tooling needs
   a single machine-readable result describing the chosen next action and any
   refreshed artifact paths. The blocked JSON result now embeds the latest manifest,
-  the blocked update payload, the refresh helper result, and recommended commands;
+  the blocked update payload, the refresh helper result, canonical artifact paths
+  including the validation artifact, and recommended commands;
   the ready JSON result includes structured playbook commands.
 
 The comment helper accepts the raw JSON body expected by `POST /api/issues/{issueId}/comments`,
