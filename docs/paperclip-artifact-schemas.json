@@ -74,6 +74,8 @@
         "snapshot_relative_path": "string",
         "blocked_update_path": "string",
         "blocked_update_relative_path": "string",
+        "validation_path": "string",
+        "validation_relative_path": "string",
         "latest_manifest_path": "string",
         "latest_manifest_relative_path": "string",
         "latest_archive_dir": "string",
@@ -84,6 +86,8 @@
         "archive_snapshot_relative_path": "string",
         "archive_blocked_update_path": "string",
         "archive_blocked_update_relative_path": "string",
+        "archive_validation_path": "string",
+        "archive_validation_relative_path": "string",
         "archive_manifest_path": "string",
         "archive_manifest_relative_path": "string"
       },

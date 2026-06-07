@@ -145,11 +145,13 @@ if latest_manifest is not None:
         "report_path",
         "snapshot_path",
         "blocked_update_path",
+        "validation_path",
         "latest_manifest_path",
         "latest_archive_dir",
         "archive_report_path",
         "archive_snapshot_path",
         "archive_blocked_update_path",
+        "archive_validation_path",
         "archive_manifest_path",
     ]:
         record(key in latest and isinstance(latest.get(key), str) and latest.get(key), f"latest manifest includes {key}")
@@ -162,9 +164,11 @@ if latest_manifest is not None:
         "report": report_path.resolve(),
         "snapshot": snapshot_path.resolve(),
         "blocked_update": blocked_update_path.resolve(),
+        "validation": (target_dir / "osiris-paperclip-runtime-validation.json").resolve(),
         "archive_report": Path(latest.get("archive_report_path", "")).resolve() if latest.get("archive_report_path") else None,
         "archive_snapshot": Path(latest.get("archive_snapshot_path", "")).resolve() if latest.get("archive_snapshot_path") else None,
         "archive_blocked_update": Path(latest.get("archive_blocked_update_path", "")).resolve() if latest.get("archive_blocked_update_path") else None,
+        "archive_validation": Path(latest.get("archive_validation_path", "")).resolve() if latest.get("archive_validation_path") else None,
     }
 
     for key, path in expected_paths.items():

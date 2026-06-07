@@ -114,7 +114,29 @@ cp "$report_path" "$archive_dir/$(basename "$report_path")"
 cp "$snapshot_path" "$archive_dir/$(basename "$snapshot_path")"
 cp "$blocked_path" "$archive_dir/$(basename "$blocked_path")"
 
-python3 - "$ROOT_DIR" "$report_path" "$snapshot_path" "$blocked_path" "$archive_dir" "$latest_manifest_path" "$timestamp" "$branch_name" "$commit_sha" <<'PY'
+# Seed a placeholder validation artifact so the latest manifest can
+# consistently reference and fingerprint the full canonical artifact set.
+python3 - "$validation_path" "$output_dir" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = {
+    "schema_version": 1,
+    "artifact_type": "paperclip_artifact_validation_result",
+    "target_dir": str(Path(sys.argv[2]).resolve()),
+    "valid": False,
+    "checks": [],
+    "warnings": ["placeholder validation artifact before final validation pass"],
+    "errors": [],
+}
+
+Path(sys.argv[1]).write_text(json.dumps(payload, indent=2) + "\n")
+PY
+cp "$validation_path" "$archive_dir/$(basename "$validation_path")"
+
+write_latest_manifest() {
+  python3 - "$ROOT_DIR" "$report_path" "$snapshot_path" "$blocked_path" "$validation_path" "$archive_dir" "$latest_manifest_path" "$timestamp" "$branch_name" "$commit_sha" <<'PY'
 import hashlib
 import json
 import os
@@ -125,16 +147,18 @@ workspace_root = Path(sys.argv[1]).resolve()
 report_path = Path(sys.argv[2]).resolve()
 snapshot_path = Path(sys.argv[3]).resolve()
 blocked_path = Path(sys.argv[4]).resolve()
-archive_dir = Path(sys.argv[5]).resolve()
-manifest_path = Path(sys.argv[6]).resolve()
-timestamp = sys.argv[7]
-branch_name = sys.argv[8]
-commit_sha = sys.argv[9]
+validation_path = Path(sys.argv[5]).resolve()
+archive_dir = Path(sys.argv[6]).resolve()
+manifest_path = Path(sys.argv[7]).resolve()
+timestamp = sys.argv[8]
+branch_name = sys.argv[9]
+commit_sha = sys.argv[10]
 
 snapshot = json.loads(snapshot_path.read_text())
 archive_report_path = archive_dir / report_path.name
 archive_snapshot_path = archive_dir / snapshot_path.name
 archive_blocked_path = archive_dir / blocked_path.name
+archive_validation_path = archive_dir / validation_path.name
 archive_manifest_path = archive_dir / manifest_path.name
 
 def rel(path: Path) -> str:
@@ -165,6 +189,8 @@ manifest = {
         "snapshot_relative_path": rel(snapshot_path),
         "blocked_update_path": str(blocked_path),
         "blocked_update_relative_path": rel(blocked_path),
+        "validation_path": str(validation_path),
+        "validation_relative_path": rel(validation_path),
         "latest_manifest_path": str(manifest_path),
         "latest_manifest_relative_path": rel(manifest_path),
         "latest_archive_dir": str(archive_dir),
@@ -175,6 +201,8 @@ manifest = {
         "archive_snapshot_relative_path": rel(archive_snapshot_path),
         "archive_blocked_update_path": str(archive_blocked_path),
         "archive_blocked_update_relative_path": rel(archive_blocked_path),
+        "archive_validation_path": str(archive_validation_path),
+        "archive_validation_relative_path": rel(archive_validation_path),
         "archive_manifest_path": str(archive_manifest_path),
         "archive_manifest_relative_path": rel(archive_manifest_path),
     },
@@ -182,9 +210,11 @@ manifest = {
         "report": file_metadata(report_path),
         "snapshot": file_metadata(snapshot_path),
         "blocked_update": file_metadata(blocked_path),
+        "validation": file_metadata(validation_path),
         "archive_report": file_metadata(archive_report_path),
         "archive_snapshot": file_metadata(archive_snapshot_path),
         "archive_blocked_update": file_metadata(archive_blocked_path),
+        "archive_validation": file_metadata(archive_validation_path),
     },
     "runtime": {
         "diagnosis": snapshot.get("runtime", {}).get("diagnosis"),
@@ -195,6 +225,9 @@ manifest = {
 
 manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
 PY
+}
+
+write_latest_manifest
 
 cp "$latest_manifest_path" "$archive_dir/$(basename "$latest_manifest_path")"
 
@@ -209,6 +242,8 @@ fi
 
 cp "$validation_json_file" "$validation_path"
 cp "$validation_path" "$archive_dir/$(basename "$validation_path")"
+write_latest_manifest
+cp "$latest_manifest_path" "$archive_dir/$(basename "$latest_manifest_path")"
 
 if [[ "$json_mode" == "1" ]]; then
   python3 - "$latest_manifest_path" "$output_dir" "$archive_dir" "$validation_json_file" "$validation_path" <<'PY'

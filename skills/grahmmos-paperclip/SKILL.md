@@ -131,7 +131,8 @@ If the heartbeat should refresh both standard artifacts together, run
 That also writes `osiris-paperclip-blocked-update.json`, the standalone blocked
 issue-update payload for the execution contract, `osiris-paperclip-runtime-validation.json`
 as the canonical validation result, and `osiris-paperclip-runtime-latest.json`
-as the stable latest manifest with file size/hash metadata, plus timestamped archive copies under
+as the stable latest manifest with file size/hash metadata for the generated
+payloads including the validation artifact, plus timestamped archive copies under
 `OUTPUT_DIR/history/`.
 Add `--json` when another tool needs the refresh result as a machine-readable wrapper
 around the latest manifest, archive directory, and validation result.

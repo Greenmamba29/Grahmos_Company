@@ -1,8 +1,8 @@
 # Osiris Hermes Paperclip Runtime Report
 
-- Generated at: 2026-06-06T20:21:58Z
+- Generated at: 2026-06-07T03:58:42Z
 - Git branch: cursor/paperclip-runtime-tooling-82aa
-- Git commit: 37c66892b557aa11c51596403c2756f0c887c6fd
+- Git commit: e27933f4b325c557432918f3ea661d013f928b7c
 - Runtime check exit code: 2
 - Operator handoff exit code: 0
 

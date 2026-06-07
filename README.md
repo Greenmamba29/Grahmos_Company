@@ -85,7 +85,8 @@ This is the Company run main repo for Grahmos.
   That also writes `osiris-paperclip-blocked-update.json`, a standalone blocked
   issue-update payload, `osiris-paperclip-runtime-validation.json` as the canonical
   validation result, and `osiris-paperclip-runtime-latest.json` as a stable pointer
-  to the newest canonical files, size/hash metadata for the generated payloads, plus timestamped archive copies under
+  to the newest canonical files, size/hash metadata for the generated payloads
+  including the validation artifact, plus timestamped archive copies under
   `OUTPUT_DIR/history/`.
 - Add `--json` to `paperclip-refresh-runtime-artifacts.sh` when automation needs a
   machine-readable refresh result containing the latest manifest, archive dir, and
